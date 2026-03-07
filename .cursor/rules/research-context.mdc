@@ -1,0 +1,45 @@
+---
+applyTo: '**'
+---
+# Software Engineering Research Knowledge Base
+
+This workspace is a comprehensive software engineering knowledge base organized by domain.
+
+## Structure Overview
+- **01-11 folders**: Core knowledge domains (numbered for logical ordering)
+- **playground/**: Code experiments and proof-of-concepts
+- **references/**: External resources (books, papers, courses, bookmarks)
+- **journal/**: Chronological learning notes and insights
+
+## How to Navigate & Use Context
+1. Always check the relevant domain folder's `README.md` first for an index of topics
+2. Each topic file follows a standard template: TL;DR → Key Concepts → Deep Dive → Code Examples → Trade-offs → References → Personal Notes
+3. Cross-references between topics use relative markdown links
+4. `journal/` contains chronological insights — useful for understanding learning progression
+5. `playground/` has runnable code examples — reference these for practical demonstrations
+6. `references/` has curated external links organized by type (books, papers, courses)
+
+## Domain Map
+| Folder | Domain |
+|--------|--------|
+| 01-fundamentals | CS fundamentals: data structures, algorithms, design patterns, OOP, FP |
+| 02-system-design | System design, architecture, scalability, distributed systems |
+| 03-languages | Programming languages deep dives |
+| 04-frontend | Frontend engineering: React, Next.js, CSS, performance, a11y |
+| 05-backend | Backend engineering: API design, auth, GraphQL, gRPC |
+| 06-devops-infra | DevOps, CI/CD, containers, orchestration, cloud, IaC |
+| 07-databases | SQL, NoSQL, Redis, Elasticsearch, database internals |
+| 08-security | Application security, OWASP, encryption, secure coding |
+| 09-testing | Testing strategies, TDD/BDD, performance testing |
+| 10-soft-skills | Communication, leadership, interviewing, project management |
+| 11-ai-ml | AI/ML for software engineers, LLMs, prompt engineering |
+
+## Naming Conventions
+- Folders: `kebab-case`
+- Topic files: `kebab-case.md`
+- Journal entries: `DD-topic-slug.md` inside `YYYY/MM/` folders
+- Code examples: named by language convention (`.ts`, `.py`, `.go`, etc.)
+
+## Response Guidelines
+- Explain in Vietnamese, keep technical keywords in English
+- Follow the standard response format: Overview → Details → Attention Points → Examples → Diagram → Summary
