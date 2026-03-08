@@ -12,6 +12,7 @@ Core computer science and software engineering foundations.
 | Object-Oriented Programming | [oop/](./oop/) | 🔲 Not started |
 | Functional Programming | [functional-programming/](./functional-programming/) | 🔲 Not started |
 | Complexity Analysis | [complexity-analysis/](./complexity-analysis/) | 🔲 Not started |
+| Refactoring | [refactoring/](./refactoring/) | 📗 Notes from book |
 
 ## Suggested Learning Path
 
