@@ -21,3 +21,7 @@ venv/
 # Environment
 .env
 .env.local
+
+# Large PDF files (track via Git LFS or keep local only)
+# Uncomment the line below if you do NOT want PDFs in git:
+# sources/**/*.pdf

@@ -23,6 +23,7 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 
 | Section | Description |
 |---------|-------------|
+| [sources/](./sources/) | Original PDF files (books, papers, guides) for AI reading |
 | [playground/](./playground/) | Code experiments and proof-of-concepts |
 | [references/](./references/) | Books, papers, courses, bookmarks |
 | [journal/](./journal/) | Chronological learning notes and insights |
@@ -58,8 +59,9 @@ Each topic follows this structure for consistency:
 
 ## How to Use This Repo
 
-1. **Research a topic** → Find or create the file in the appropriate domain folder
-2. **Follow the template** → Keep format consistent for AI context retrieval
-3. **Add code experiments** → Put runnable examples in `playground/`
-4. **Log insights** → Write journal entries for key learnings
-5. **Ask the AI** → Use Cursor AI to deep dive, review, or expand on any topic
+1. **Drop a PDF** → Put it in `sources/books/`, `sources/papers/`, or `sources/guides/`
+2. **Ask the AI** → "Read `sources/books/xyz.pdf` and create notes"
+3. **Research a topic** → Find or create the file in the appropriate domain folder
+4. **Follow the template** → Keep format consistent for AI context retrieval
+5. **Add code experiments** → Put runnable examples in `playground/`
+6. **Log insights** → Write journal entries for key learnings
