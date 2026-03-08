@@ -460,6 +460,7 @@ Clean Code is highly prescriptive. Some guidelines are debated in the community:
 | Ch.10 SRP, Cohesion, Extract Class | [Dive Into Refactoring — Moving Features](../refactoring/dive-into-refactoring.md#2-moving-features-between-objects) | Move Method, Move Field, Extract Class, Inline Class |
 | Ch.6 Law of Demeter, Hide Delegate | [Dive Into Refactoring — Couplers](../refactoring/dive-into-refactoring.md#category-5-couplers) | Feature Envy, Message Chains, Middle Man |
 | Ch.7 Error Handling, Null Object | [Dive Into Refactoring — Simplifying Conditionals](../refactoring/dive-into-refactoring.md#4-simplifying-conditional-expressions) | Introduce Null Object, Guard Clauses |
+| Meaningful Names, Clean Functions | [How to Land Big Tech Jobs — Interview Prep](../../10-soft-skills/interviewing/how-to-land-big-tech-jobs.md#8-preparing-for-the-interviews) | Writing clean code in coding interviews |
 
 ---
 
