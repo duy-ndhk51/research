@@ -13,6 +13,7 @@ Core computer science and software engineering foundations.
 | Functional Programming | [functional-programming/](./functional-programming/) | 🔲 Not started |
 | Complexity Analysis | [complexity-analysis/](./complexity-analysis/) | 🔲 Not started |
 | Refactoring | [refactoring/](./refactoring/) | 📗 Notes from book |
+| Clean Code | [clean-code/](./clean-code/) | 📗 Notes from book |
 
 ## Suggested Learning Path
 
