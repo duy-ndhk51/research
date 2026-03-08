@@ -26,6 +26,7 @@ Use `kebab-case` for filenames:
 |------|-------|--------|--------|---------------|
 | `books/alexander-shvets-dive-Into-refactoring-2019.pdf` | Dive Into Refactoring | Alexander Shvets | 01-fundamentals | [Yes](../01-fundamentals/refactoring/dive-into-refactoring.md) |
 | `books/clean-code-a-handbook-of-agile-software-craftmanship.pdf` | Clean Code | Robert C. Martin | 01-fundamentals | [Yes](../01-fundamentals/clean-code/clean-code.md) |
+| `books/kyle-simpson-you-dont-know-js.pdf` | You Don't Know JS (1st Ed.) | Kyle Simpson | 03-languages | [Yes](../03-languages/javascript/you-dont-know-js.md) |
 
 ### Papers
 

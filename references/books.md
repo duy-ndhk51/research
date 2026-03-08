@@ -8,6 +8,7 @@ Tracking technical books — organized by status and domain.
 |------|--------|-----------|-------|--------|
 | Clean Code | Robert C. Martin | [PDF](../sources/books/clean-code-a-handbook-of-agile-software-craftmanship.pdf) | [Notes](../01-fundamentals/clean-code/clean-code.md) | 01-fundamentals |
 | Dive Into Refactoring | Alexander Shvets | [PDF](../sources/books/alexander-shvets-dive-Into-refactoring-2019.pdf) | [Notes](../01-fundamentals/refactoring/dive-into-refactoring.md) | 01-fundamentals |
+| You Don't Know JS (1st Ed.) | Kyle Simpson | [PDF](../sources/books/kyle-simpson-you-dont-know-js.pdf) | [Notes](../03-languages/javascript/you-dont-know-js.md) | 03-languages |
 
 ## Currently Reading
 
