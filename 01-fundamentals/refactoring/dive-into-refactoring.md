@@ -2,7 +2,7 @@
 
 > **Author:** Alexander Shvets (Refactoring.Guru)
 > **Year:** 2019 | **Pages:** 336 | **Code Examples:** Java
-> **Source PDF:** [../../sources/books/alexander-shvets-dive-Into-refactoring-2019.pdf](../../sources/books/alexander-shvets-dive-Into-refactoring-2019.pdf)
+> **Source PDF:** [../../sources/books/alexander-shvets-dive-into-refactoring-2019.pdf](../../sources/books/alexander-shvets-dive-into-refactoring-2019.pdf)
 
 ## TL;DR
 

@@ -5,7 +5,7 @@
 > **Year:** 2014 (First Edition)
 > **ISBN:** 978-1-449-34013-1
 > **Pages:** 704
-> **Source:** [PDF](../../sources/books/eric-t-freeman-elisabeth-robson-head-first-javaScript-programming-a-brain-friendly-guide-o-reilly-media-2014.pdf)
+> **Source:** [PDF](../../sources/books/eric-t-freeman-elisabeth-robson-head-first-javascript-programming-a-brain-friendly-guide-o-reilly-media-2014.pdf)
 
 ## Overview
 
