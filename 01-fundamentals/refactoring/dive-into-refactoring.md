@@ -238,10 +238,24 @@ Move functionality along class inheritance hierarchy.
 
 ---
 
+## Cross-References
+
+| Topic in This Book | Related Notes | Section |
+|--------------------|---------------|---------|
+| Code Smells (all categories) | [Clean Code — Ch.17 Smells & Heuristics](../clean-code/clean-code.md#chapter-17-smells-and-heuristics) | G1–G36 general heuristics, C1–C5 comments, F1–F4 functions |
+| Bloaters (Long Method, Large Class) | [Clean Code — Ch.3 Functions](../clean-code/clean-code.md#chapter-3-functions) | Small functions, do one thing, argument limits |
+| Dispensables (Comments smell) | [Clean Code — Ch.4 Comments](../clean-code/clean-code.md#chapter-4-comments) | Good vs bad comments, "comments are a failure" |
+| Couplers (Feature Envy, Law of Demeter) | [Clean Code — Ch.6 Objects & Data Structures](../clean-code/clean-code.md#chapter-6-objects-and-data-structures) | Law of Demeter, Data/Object Anti-Symmetry |
+| When to Refactor | [Clean Code — Ch.9 Unit Tests](../clean-code/clean-code.md#chapter-9-unit-tests) | TDD Red/Green/Refactor cycle, F.I.R.S.T. principles |
+| Simplifying Conditionals (Null Object) | [Clean Code — Ch.7 Error Handling](../clean-code/clean-code.md#chapter-7-error-handling) | Don't return null, Special Case Pattern |
+
+---
+
 ## References
 
 - **Book:** "Refactoring: Improving the Design of Existing Code" — Martin Fowler
 - **Book:** "Refactoring to Patterns" — Joshua Kerievsky
+- **Related:** "Clean Code" — Robert C. Martin ([notes](../clean-code/clean-code.md))
 - **Website:** [refactoring.guru](https://refactoring.guru)
 - **Related topics:** Design Patterns (the book recommends learning patterns alongside refactoring)
 

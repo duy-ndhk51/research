@@ -26,7 +26,19 @@ When user asks to read a PDF:
 1. Read the PDF from `sources/` using the Read tool
 2. Summarize and create structured notes in the relevant domain folder (01-11)
 3. Link notes back to the original PDF: `[Source PDF](../../sources/books/filename.pdf)`
-4. Update the `sources/README.md` index table
+4. Update these indexes (all 4 required):
+   - `sources/README.md` — add entry to Books/Papers/Guides table
+   - `references/books.md` — move book to Completed table with PDF + Notes links
+   - `XX-domain/README.md` — add to Topics table AND Source Books table
+5. Add `## Cross-References` section in the new notes linking to related existing notes
+6. Update existing related notes to link back to the new notes
+
+## Linking Convention
+- Every note file must have a `## Cross-References` section before `## References`
+- Cross-reference table format: `| Topic in This Book | Related Notes | Section |`
+- `references/books.md` is the master book index: Completed table has columns for PDF link + Notes link
+- Each domain `README.md` has a `## Source Books` table linking book → notes → key topics
+- Navigation is bidirectional: source ↔ notes ↔ related notes ↔ domain index
 
 ## Domain Map
 | Folder | Domain |
@@ -48,6 +60,11 @@ When user asks to read a PDF:
 - Topic files: `kebab-case.md`
 - Journal entries: `DD-topic-slug.md` inside `YYYY/MM/` folders
 - Code examples: named by language convention (`.ts`, `.py`, `.go`, etc.)
+
+## Restrictions
+- Do NOT search the web. Only use existing workspace files and training knowledge.
+- Prioritize notes already created in the knowledge base over external sources.
+- When answering questions about a book/topic, check if notes exist in the domain folders first.
 
 ## Response Guidelines
 - Explain in Vietnamese, keep technical keywords in English

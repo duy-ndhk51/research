@@ -451,6 +451,18 @@ Clean Code is highly prescriptive. Some guidelines are debated in the community:
 
 ---
 
+## Cross-References
+
+| Topic in This Book | Related Notes | Section |
+|--------------------|---------------|---------|
+| Ch.17 Code Smells (Comments, Duplication, Feature Envy...) | [Dive Into Refactoring — Code Smells](../refactoring/dive-into-refactoring.md#part-1-code-smells-22-smells-in-5-categories) | 22 smells in 5 categories with signs & treatments |
+| Ch.3 Extract Method, Ch.17 DRY | [Dive Into Refactoring — Composing Methods](../refactoring/dive-into-refactoring.md#1-composing-methods) | Extract Method, Inline Method, Replace Temp with Query |
+| Ch.10 SRP, Cohesion, Extract Class | [Dive Into Refactoring — Moving Features](../refactoring/dive-into-refactoring.md#2-moving-features-between-objects) | Move Method, Move Field, Extract Class, Inline Class |
+| Ch.6 Law of Demeter, Hide Delegate | [Dive Into Refactoring — Couplers](../refactoring/dive-into-refactoring.md#category-5-couplers) | Feature Envy, Message Chains, Middle Man |
+| Ch.7 Error Handling, Null Object | [Dive Into Refactoring — Simplifying Conditionals](../refactoring/dive-into-refactoring.md#4-simplifying-conditional-expressions) | Introduce Null Object, Guard Clauses |
+
+---
+
 ## References
 
 - **Companion Book:** "The Clean Coder" — Robert C. Martin (professional behavior)

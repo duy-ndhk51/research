@@ -2,6 +2,13 @@
 
 Tracking technical books — organized by status and domain.
 
+## Completed
+
+| Book | Author | Source PDF | Notes | Domain |
+|------|--------|-----------|-------|--------|
+| Clean Code | Robert C. Martin | [PDF](../sources/books/clean-code-a-handbook-of-agile-software-craftmanship.pdf) | [Notes](../01-fundamentals/clean-code/clean-code.md) | 01-fundamentals |
+| Dive Into Refactoring | Alexander Shvets | [PDF](../sources/books/alexander-shvets-dive-Into-refactoring-2019.pdf) | [Notes](../01-fundamentals/refactoring/dive-into-refactoring.md) | 01-fundamentals |
+
 ## Currently Reading
 
 _None yet_
@@ -11,7 +18,6 @@ _None yet_
 ### Fundamentals
 - [ ] "Introduction to Algorithms" — Cormen, Leiserson, Rivest, Stein (CLRS)
 - [ ] "Design Patterns" — Gang of Four
-- [ ] "Clean Code" — Robert C. Martin
 - [ ] "The Pragmatic Programmer" — Hunt & Thomas
 - [ ] "Structure and Interpretation of Computer Programs" — Abelson & Sussman
 
@@ -30,7 +36,3 @@ _None yet_
 - [ ] "Site Reliability Engineering" — Google SRE Team
 - [ ] "The Phoenix Project" — Kim, Behr, Spafford
 - [ ] "Kubernetes in Action" — Marko Lukša
-
-## Completed
-
-_None yet — start reading and move books here!_

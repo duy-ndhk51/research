@@ -15,6 +15,13 @@ Core computer science and software engineering foundations.
 | Refactoring | [refactoring/](./refactoring/) | 📗 Notes from book |
 | Clean Code | [clean-code/](./clean-code/) | 📗 Notes from book |
 
+## Source Books
+
+| Book | Author | Notes | Key Topics Covered |
+|------|--------|-------|--------------------|
+| Clean Code | Robert C. Martin | [clean-code.md](./clean-code/clean-code.md) | Naming, functions, comments, formatting, error handling, TDD, classes, systems, concurrency, smells & heuristics |
+| Dive Into Refactoring | Alexander Shvets | [dive-into-refactoring.md](./refactoring/dive-into-refactoring.md) | 22 code smells (5 categories), 66 refactoring techniques (6 categories) |
+
 ## Suggested Learning Path
 
 1. Complexity Analysis (Big-O notation)
