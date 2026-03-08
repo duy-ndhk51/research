@@ -58,7 +58,7 @@ When user asks to read a PDF:
 ## Naming Conventions
 - Folders: `kebab-case`
 - Topic files: `kebab-case.md`
-- Journal entries: `DD-topic-slug.md` inside `YYYY/MM/` folders
+- Journal entries: `DD.md` (one file per day) inside `YYYY/MM/` folders
 - Code examples: named by language convention (`.ts`, `.py`, `.go`, etc.)
 
 ## Restrictions

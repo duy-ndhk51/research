@@ -1,6 +1,6 @@
 # Learning Journal
 
-Chronological notes, insights, and reflections on the learning journey.
+Daily notes, insights, and reflections on the software engineering journey.
 
 ## Structure
 
@@ -8,19 +8,22 @@ Chronological notes, insights, and reflections on the learning journey.
 journal/
 └── YYYY/
     └── MM/
-        └── DD-topic-slug.md
+        └── DD.md       ← one file per day
 ```
 
 ## Entry Template
 
 ```markdown
-# YYYY-MM-DD — Topic
+# YYYY-MM-DD
+
+## What I Worked On
+<!-- Tasks, projects, decisions made today -->
 
 ## What I Learned
-<!-- Key takeaways from today -->
+<!-- Key takeaways -->
 
 ## Key Insights
-<!-- Non-obvious things I discovered -->
+<!-- Non-obvious things discovered -->
 
 ## Questions
 <!-- Open questions to investigate later -->
@@ -34,4 +37,4 @@ journal/
 ### 2026
 
 #### March
-- [08 - Getting Started](./2026/03/08-getting-started.md)
+- [08](./2026/03/08.md) — Research repo setup, accounting table UI, indexed 3 books
