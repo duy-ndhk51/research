@@ -32,6 +32,7 @@ Use `kebab-case` for filenames:
 | `books/how-to-land-big-tech-jobs.pdf` | How I Landed 10+ Big Tech Interviews Without Applying | Evgeny Shigol | 10-soft-skills | [Yes](../10-soft-skills/interviewing/how-to-land-big-tech-jobs.md) |
 | `books/learning-patterns-final-v11.pdf` | Learning Patterns | Lydia Hallie & Addy Osmani | 04-frontend | [Yes](../04-frontend/react/learning-patterns.md) |
 | `books/learning-react-modern-patterns-for-developing-react-apps-alex-banks-eve-porcello-oreilly-media-2020.pdf` | Learning React (2nd Ed.) | Alex Banks & Eve Porcello | 04-frontend | [Yes](../04-frontend/react/learning-react.md) |
+| `books/bytebytego-system-design.pdf` | ByteByteGo System Design | Alex Xu | 02-system-design | [Yes](../02-system-design/bytebytego-system-design.md) |
 | `books/michael-morrison-head-first-javascript-oreilly-media-2008.pdf` | Head First JavaScript | Michael Morrison | 03-languages | No |
 
 ### Papers
