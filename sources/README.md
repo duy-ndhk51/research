@@ -28,6 +28,7 @@ Use `kebab-case` for filenames:
 | `books/clean-code-a-handbook-of-agile-software-craftmanship.pdf` | Clean Code | Robert C. Martin | 01-fundamentals | [Yes](../01-fundamentals/clean-code/clean-code.md) |
 | `books/kyle-simpson-you-dont-know-js.pdf` | You Don't Know JS (1st Ed.) | Kyle Simpson | 03-languages | [Yes](../03-languages/javascript/you-dont-know-js.md) |
 | `books/eric-t-freeman-elisabeth-robson-head-first-javascript-programming-a-brain-friendly-guide-o-reilly-media-2014.pdf` | Head First JavaScript Programming | Eric T. Freeman & Elisabeth Robson | 03-languages | [Yes](../03-languages/javascript/head-first-javascript-programming.md) |
+| `books/gayle-laakmann-mcdowell-cracking-the-coding-interview-189-programming-questions-and-solutions-careercup-2015.pdf` | Cracking the Coding Interview (6th Ed.) | Gayle Laakmann McDowell | 10-soft-skills | [Yes](../10-soft-skills/interviewing/cracking-the-coding-interview.md) |
 | `books/how-to-land-big-tech-jobs.pdf` | How I Landed 10+ Big Tech Interviews Without Applying | Evgeny Shigol | 10-soft-skills | [Yes](../10-soft-skills/interviewing/how-to-land-big-tech-jobs.md) |
 | `books/michael-morrison-head-first-javascript-oreilly-media-2008.pdf` | Head First JavaScript | Michael Morrison | 03-languages | No |
 
