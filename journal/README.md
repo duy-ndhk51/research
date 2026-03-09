@@ -38,3 +38,4 @@ journal/
 
 #### March
 - [08](./2026/03/08.md) — Research repo setup, accounting table UI, indexed 3 books
+- [09](./2026/03/09.md) — FinTech double-entry accounting, SNDQ Detail Accounting table + contacts update, indexed 4 more books
