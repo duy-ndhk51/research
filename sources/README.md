@@ -31,6 +31,7 @@ Use `kebab-case` for filenames:
 | `books/gayle-laakmann-mcdowell-cracking-the-coding-interview-189-programming-questions-and-solutions-careercup-2015.pdf` | Cracking the Coding Interview (6th Ed.) | Gayle Laakmann McDowell | 10-soft-skills | [Yes](../10-soft-skills/interviewing/cracking-the-coding-interview.md) |
 | `books/how-to-land-big-tech-jobs.pdf` | How I Landed 10+ Big Tech Interviews Without Applying | Evgeny Shigol | 10-soft-skills | [Yes](../10-soft-skills/interviewing/how-to-land-big-tech-jobs.md) |
 | `books/learning-patterns-final-v11.pdf` | Learning Patterns | Lydia Hallie & Addy Osmani | 04-frontend | [Yes](../04-frontend/react/learning-patterns.md) |
+| `books/learning-react-modern-patterns-for-developing-react-apps-alex-banks-eve-porcello-oreilly-media-2020.pdf` | Learning React (2nd Ed.) | Alex Banks & Eve Porcello | 04-frontend | [Yes](../04-frontend/react/learning-react.md) |
 | `books/michael-morrison-head-first-javascript-oreilly-media-2008.pdf` | Head First JavaScript | Michael Morrison | 03-languages | No |
 
 ### Papers

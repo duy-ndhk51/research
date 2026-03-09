@@ -19,6 +19,7 @@ Frontend development, frameworks, performance, and user experience.
 | Book | Author | Notes | Key Topics |
 |------|--------|-------|------------|
 | Learning Patterns | Lydia Hallie & Addy Osmani | [Notes](./react/learning-patterns.md) | Design patterns (Singleton, Proxy, Provider, Observer, HOC, Hooks, Compound), rendering patterns (CSR, SSR, SSG, ISR, RSC, Islands), performance patterns (code splitting, tree shaking, PRPL, virtualization) |
+| Learning React (2nd Ed.) | Alex Banks & Eve Porcello | [Notes](./react/learning-react.md) | React fundamentals, Hooks (useState, useEffect, useReducer, useMemo), Context API, Suspense, Error Boundaries, Fiber, React Router, SSR, testing (Jest, React Testing Library, TypeScript) |
 
 ## Key Areas
 
