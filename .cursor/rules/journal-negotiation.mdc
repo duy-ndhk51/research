@@ -1,0 +1,35 @@
+---
+description: Auto-sync journal Business Impact entries with salary negotiation evidence log
+globs: journal/**/*.md
+alwaysApply: false
+---
+
+# Journal ↔ Salary Negotiation Link
+
+## Context
+- `journal/YYYY/MM/DD.md` contains daily work logs with a **Business Impact** section
+- `10-soft-skills/interviewing/salary-negotiation-leverage.md` contains the salary negotiation preparation doc with an **Evidence Log** table
+
+## When writing or updating a journal entry
+
+1. **Always include a "Business Impact" section** after "What I Worked On"
+2. Reframe technical work in business/CEO language using these categories:
+   - 🚀 Shipped: [feature] → [who benefits and how]
+   - ⚡ Unblocked: [what was stuck] → [now the team/business can...]
+   - 🛡️ Prevented: [risk/bug] → [what would have happened without this fix]
+   - 📈 Accelerated: [process] → [estimated time/cost saved]
+3. **After writing Business Impact**, automatically append a one-liner summary for each SNDQ item to the **Evidence Log** table in `10-soft-skills/interviewing/salary-negotiation-leverage.md`
+4. Evidence Log format: `| Date | What happened | Business impact |`
+
+## Framing rules (Ben = CEO, values delivery speed)
+- Frame everything as business value, NOT technical achievement
+- "Shipped feature X across Y modules" > "Refactored component Z"
+- "Fixed blocker that stopped all deployments" > "Resolved heap memory issue"
+- "Reducing build time so team ships faster" > "Found circular dependency"
+- Always answer: "So what? How does this help the business?"
+
+## Also track in Business Impact
+- Turnaround time (assigned → shipped)
+- Independence level (did you need handholding?)
+- Cross-module scope (how many areas touched?)
+- Multiplier effect (how many people/processes unblocked?)
