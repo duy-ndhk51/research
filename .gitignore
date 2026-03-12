@@ -24,3 +24,10 @@ venv/
 
 # Large PDF files (keep local only)
 sources/**/*.pdf
+
+# Playground experiments (local sandbox, keep README + SUMMARY only)
+playground/*
+!playground/README.md
+!playground/*/
+playground/*/**
+!playground/*/SUMMARY.md

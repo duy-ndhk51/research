@@ -1,0 +1,49 @@
+---
+description: Context and review conventions for playground code snippets
+globs: playground/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Playground Snippet Context
+
+Playground files are **isolated code snippets** extracted from real projects for experimentation and review. They may inline utilities or omit imports that exist in the real codebase.
+
+## Before Reviewing
+
+1. **Read the header comment** at the top of each file — it contains the project context, tech stack, and review scope
+2. **Don't assume** inline utilities (like `cn()`) are misplaced — they're often inlined for isolation purposes
+3. **Check "Review focus"** to know what feedback is wanted
+4. **Check "Out of scope"** to avoid false-positive reviews
+
+## Default Assumptions (unless header says otherwise)
+
+- React 19 — `ref` is a normal prop, no `forwardRef` needed
+- Follows **shadcn/ui philosophy**: simple, composable, copy-paste friendly, named exports
+- `cn()` from `@/lib/utils` (may be inlined in snippets)
+- Don't suggest over-engineering (debounce, complex state, icons) unless asked
+
+## Header Template
+
+Every playground snippet should include this header:
+
+```typescript
+/**
+ * @playground <Component Name>
+ * @source <original file path or "new">
+ * @stack React 19, Next.js 15, Tailwind v4, shadcn/ui
+ *
+ * Context:
+ * - <key context point 1>
+ * - <key context point 2>
+ *
+ * Review focus: <what feedback is wanted>
+ * Out of scope: <what to skip/ignore>
+ */
+```
+
+## Review Behavior
+
+- If header is missing, **ask the user** for context before reviewing
+- Severity levels: Critical (a11y violations, bugs) > High > Medium > Low
+- Always check if `role` attributes have matching keyboard behavior implemented
+- Respect the component's philosophy — don't suggest patterns from different ecosystems
