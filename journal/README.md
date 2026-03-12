@@ -19,6 +19,22 @@ journal/
 ## What I Worked On
 <!-- Tasks, projects, decisions made today -->
 
+## Business Impact
+<!-- Reframe today's work in CEO/business language.
+     Ask yourself: "If Ben (CEO) saw this, what would matter to him?"
+     Categories:
+     - 🚀 Shipped: [feature] → [who benefits and how]
+     - ⚡ Unblocked: [what was stuck] → [now the team/business can...]
+     - 🛡️ Prevented: [risk/bug] → [what would have happened without this fix]
+     - 📈 Accelerated: [process] → [estimated time/cost saved]
+     
+     Also track:
+     - Turnaround time (assigned → shipped)
+     - Independence level (did you need handholding?)
+     - Cross-module scope (how many areas touched?)
+     - Multiplier effect (how many people/processes did you unblock?)
+-->
+
 ## What I Learned
 <!-- Key takeaways -->
 
