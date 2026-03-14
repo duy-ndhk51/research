@@ -2,6 +2,12 @@
 
 Backend development, API design, and server-side technologies.
 
+## SNDQ-Specific
+
+| Topic | File | Status |
+|-------|------|--------|
+| Accounting Module | [sndq-accounting-module.md](./sndq-accounting-module.md) | 📝 In progress |
+
 ## Topics
 
 | Topic | Folder | Status |
