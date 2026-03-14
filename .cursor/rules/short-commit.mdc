@@ -1,0 +1,23 @@
+---
+description: Generate short, concise git commit messages
+alwaysApply: true
+---
+
+# Short Commit Messages
+
+When creating git commits, follow these rules:
+
+- **Max 50 characters** for the subject line
+- Use **imperative mood** (e.g., "add", "fix", "update", not "added", "fixed", "updated")
+- **No period** at the end of the subject line
+- **Lowercase** first word (unless it's a proper noun or acronym)
+- Use conventional commit prefixes when appropriate:
+  - `feat:` new feature
+  - `fix:` bug fix
+  - `docs:` documentation only
+  - `refactor:` code restructuring
+  - `chore:` maintenance tasks
+  - `style:` formatting, no logic change
+  - `test:` adding/updating tests
+- **No body** unless explicitly requested — keep it to a single line
+- Be specific but brief: prefer `fix: resolve null check in auth` over `fix: fix bug`
