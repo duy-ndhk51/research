@@ -1,0 +1,13 @@
+---
+description: Enforce English-only content in this repository
+alwaysApply: true
+---
+
+# English Only
+
+All content in this repository must be written in **English**.
+
+- Notes, explanations, comments, and documentation: English only
+- Table headers, descriptions, and summaries: English only
+- Do not mix Vietnamese or any other language into markdown files
+- Technical terms should remain in their original English form

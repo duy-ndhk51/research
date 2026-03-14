@@ -67,5 +67,5 @@ When user asks to read a PDF:
 - When answering questions about a book/topic, check if notes exist in the domain folders first.
 
 ## Response Guidelines
-- Explain in Vietnamese, keep technical keywords in English
+- All content must be written in English only
 - Follow the standard response format: Overview → Details → Attention Points → Examples → Diagram → Summary
