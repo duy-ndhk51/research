@@ -161,3 +161,6 @@ _Every time you do something notable at SNDQ, add a one-liner here. Pull from yo
 | Mar 13 | Shipped Toolbar component to staging with overflow fix | Users always have access to all filters — UX improvement across the platform |
 | Mar 13 | Started export PDF & XLSX for 4 accounting reports | Directly enables financial reporting for accountants and managers |
 | Mar 13 | Established reusable compound component methodology | Next similar components will be built 2-3x faster |
+| Mar 14 | Near-complete export PDF & XLSX for 3 accounting reports | Self-serve financial reporting for accountants, eliminates manual data extraction |
+| Mar 14 | Pair testing with BA + Customer Support | Validated export against real business needs — prevents costly post-release rework |
+| Mar 14 | Created backend enhancement task from pair testing | Proactive cross-layer ownership, keeps delivery pipeline moving |
