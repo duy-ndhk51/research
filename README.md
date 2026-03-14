@@ -19,6 +19,12 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 | [10](./10-soft-skills/) | **Soft Skills** | Communication, leadership, interviewing, project management |
 | [11](./11-ai-ml/) | **AI/ML** | LLMs, prompt engineering, MLOps, AI tools |
 
+## Reading Plans
+
+| Plan | Description |
+|------|-------------|
+| [sndq-fe-reading-plan.md](./sndq-fe-reading-plan.md) | Strategic reading plan mapping research topics → sndq-fe contribution impact |
+
 ## Other Sections
 
 | Section | Description |
