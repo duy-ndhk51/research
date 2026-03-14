@@ -334,11 +334,13 @@ There are two main categories: **Applications** and **UI Components**.
 
 These feel similar to general system design interviews, but focus on the **client side**: application architecture and client-side implementation details.
 
-Modern web apps are interactive (Gmail, Facebook, YouTube, ChatGPT, Google Calendar). They use JavaScript to dynamically change content and URL without full page refreshes.
+Modern web apps are interactive and rich applications that can do virtually what desktop applications can (Gmail, Facebook, YouTube, ChatGPT, Google Calendar). They are dynamic — page navigations usually don't require a full page refresh; the app uses JavaScript to fetch remote data and dynamically change the contents and URL (SPA behavior).
 
-Common architectures: **MVC**, **MVVM**, **Flux/Redux** (unidirectional).
+Common architectures: **MVC**, **MVVM**, **Flux/Redux** (unidirectional). React is one of the most popular libraries for building interactive web apps and many React apps adopt a Flux/Redux-based architecture.
 
-**Key approach**: Design high-level architecture → identify components and APIs → dive deep into unique/interesting areas.
+> **Important**: Different applications have their own **unique aspects and talking points**. Focus on the parts that are unique to the application — don't spend too much time on general stuff applicable to all questions.
+
+**Key approach**: Design high-level architecture → identify components and APIs → dive deep into areas that are **interesting/unique** to the problem.
 
 #### Common Application Questions
 
@@ -363,7 +365,7 @@ Common architectures: **MVC**, **MVVM**, **Flux/Redux** (unidirectional).
 
 ### 5.2 UI Component Questions
 
-Building UI components is a core expectation of Front End Engineers. Interview questions focus on **complex** components (not trivial ones like text/button/badge).
+In modern front end development, it is common to use component libraries: jQuery UI, Bootstrap, Material UI, Chakra UI, etc. Building UI components is a core expectation of Front End Engineers. Interview questions focus on **complex** components (autocomplete, dropdown, modal) — not trivial ones like text/button/badge.
 
 **Key approach**: 
 1. Determine subcomponents
@@ -392,7 +394,7 @@ You may need to write a small amount of code to:
 ```
 
 #### Theming Customization
-You will almost certainly be expected to design a way for developers to customize the component appearance (CSS variables, className props, theme providers, etc.).
+You will almost certainly be expected to design a way for developers to customize the component appearance (CSS variables, className props, theme providers, etc.). Refer to [UI Components API Design Principles](https://www.greatfrontend.com/front-end-interview-guidebook/user-interface-components-api-design-principles) for an overview and comparison of different approaches.
 
 #### Common UI Component Questions
 
@@ -450,6 +452,8 @@ You will almost certainly be expected to design a way for developers to customiz
 | Back-end system design comparison | [ByteByteGo System Design](./bytebytego-system-design.md) | RADIO focuses on client-side; ByteByteGo focuses on distributed systems |
 | System design interview framework | [System Design Interview Vol.1](./system-design-interview-vol1.md) | RADIO's R step parallels the "Understand the Problem" step; both emphasize structured approaches |
 | API design (REST, GraphQL) | [ByteByteGo System Design](./bytebytego-system-design.md#1-communication-protocols) | RADIO's Interface section uses HTTP APIs; ByteByteGo covers REST best practices in depth |
+| RADIO applied: News Feed | [News Feed (Facebook)](./greatfrontend-news-feed-facebook.md) | Cursor pagination, virtualized lists, optimistic updates, SSR+CSR hybrid |
+| RADIO applied: Pinterest | [Pinterest](./greatfrontend-pinterest.md) | Masonry layout, absolute positioning, paint scheduling, responsive images |
 
 ---
 
@@ -459,6 +463,6 @@ You will almost certainly be expected to design a way for developers to customiz
 - [RADIO Framework](https://www.greatfrontend.com/system-design/framework)
 - [Common Mistakes](https://www.greatfrontend.com/system-design/common-mistakes)
 - [Evaluation Criteria](https://www.greatfrontend.com/system-design/evaluation-axes)
-- [Types of Questions](https://www.greatfrontend.com/system-design/types-of-questions)
+- [Types of Questions](https://www.greatfrontend.com/front-end-system-design-playbook/types-of-questions)
 - [Excalidraw](https://excalidraw.com/) — Free drawing tool for architecture diagrams
 - [diagrams.net](https://app.diagrams.net/) — Free drawing tool for architecture diagrams
