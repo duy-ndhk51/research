@@ -1,0 +1,52 @@
+---
+description: Keep the root README.md Topic Index up-to-date when creating or deleting research notes
+globs: "**/[0-9][0-9]-*/**/*.md"
+alwaysApply: false
+---
+
+# Update Topic Index
+
+When creating a **new** research note (`.md` file) inside any domain folder (`01-*` through `11-*`), you MUST append a row to the **Topic Index** table in `README.md`.
+
+## Format
+
+```
+| <next #> | [<H1 title from new file>](./<relative-path>) | <Domain> | `tag1`, `tag2` |
+```
+
+- `#` — increment from the last row number
+- Title — use the exact `# H1` heading from the new file
+- Domain — map folder prefix to domain name (see table below)
+- Tags — add 2–3 lowercase, hyphenated keywords relevant to the topic
+
+## Domain Map
+
+| Folder prefix | Domain |
+|---------------|--------|
+| 01-* | Fundamentals |
+| 02-* | System Design |
+| 03-* | Languages |
+| 04-* | Frontend |
+| 05-* | Backend |
+| 06-* | DevOps & Infra |
+| 07-* | Databases |
+| 08-* | Security |
+| 09-* | Testing |
+| 10-* | Soft Skills |
+| 11-* | AI/ML |
+
+## When creating a playground experiment
+
+Append a row to the **Playground experiments** table instead:
+
+```
+| <next #> | [<Title>](./playground/<folder>/SUMMARY.md) | <Short description> |
+```
+
+## When deleting a note
+
+Remove the corresponding row and re-number subsequent rows.
+
+## Rebuild from scratch
+
+Run `bash scripts/update-topic-index.sh` to regenerate the full index from the file system. Tags will be left empty for manual review.

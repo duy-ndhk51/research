@@ -21,6 +21,7 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 
 ## Topic Index
 
+<!-- TOPIC-INDEX-START -->
 | # | Topic | Domain | Tags |
 |---|-------|--------|------|
 | 1 | [Clean Code: A Handbook of Agile Software Craftsmanship](./01-fundamentals/clean-code/clean-code.md) | Fundamentals | `clean-code`, `best-practices` |
@@ -41,12 +42,15 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 | 16 | [Cracking the Coding Interview](./10-soft-skills/interviewing/cracking-the-coding-interview.md) | Soft Skills | `interview`, `algorithms` |
 | 17 | [How I Landed 10+ Big Tech Interviews Without Applying](./10-soft-skills/interviewing/how-to-land-big-tech-jobs.md) | Soft Skills | `interview`, `career` |
 | 18 | [Salary Negotiation — My Leverage Points](./10-soft-skills/interviewing/salary-negotiation-leverage.md) | Soft Skills | `negotiation`, `career` |
+<!-- TOPIC-INDEX-END -->
 
 **Playground experiments:**
 
+<!-- PLAYGROUND-INDEX-START -->
 | # | Topic | Description |
 |---|-------|-------------|
 | 1 | [Toolbar Compound Component](./playground/12-Mar-2026-sndq-toolbar-component/SUMMARY.md) | Reusable compound component following shadcn/ui philosophy |
+<!-- PLAYGROUND-INDEX-END -->
 
 ## Reading Plans
 
