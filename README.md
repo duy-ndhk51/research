@@ -18,6 +18,7 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 | [09](./09-testing/) | **Testing** | Unit, integration, E2E, TDD/BDD, performance testing |
 | [10](./10-soft-skills/) | **Soft Skills** | Communication, leadership, interviewing, project management |
 | [11](./11-ai-ml/) | **AI/ML** | LLMs, prompt engineering, MLOps, AI tools |
+| [12](./12-sndq/) | **SNDQ** | Company-specific: architecture, modules, codebase deep dives |
 
 ## Topic Index
 
@@ -37,11 +38,12 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 | 11 | [Learning Patterns](./04-frontend/react/learning-patterns.md) | Frontend | `react`, `design-patterns` |
 | 12 | [Learning React — Modern Patterns for Developing React Apps](./04-frontend/react/learning-react.md) | Frontend | `react`, `hooks` |
 | 13 | [A (Mostly) Complete Guide to React Rendering Behavior](./04-frontend/react/react-rendering-behavior.md) | Frontend | `react`, `performance`, `rendering` |
-| 14 | [SNDQ — Accounting Module Deep Dive](./05-backend/sndq-accounting-module.md) | Backend | `sndq`, `accounting`, `backend` |
-| 15 | [SNDQ — Payment Request Module Deep Dive](./05-backend/sndq-payment-request-module.md) | Backend | `sndq`, `payments`, `backend` |
-| 16 | [Cracking the Coding Interview](./10-soft-skills/interviewing/cracking-the-coding-interview.md) | Soft Skills | `interview`, `algorithms` |
-| 17 | [How I Landed 10+ Big Tech Interviews Without Applying](./10-soft-skills/interviewing/how-to-land-big-tech-jobs.md) | Soft Skills | `interview`, `career` |
-| 18 | [Salary Negotiation — My Leverage Points](./10-soft-skills/interviewing/salary-negotiation-leverage.md) | Soft Skills | `negotiation`, `career` |
+| 14 | [Cracking the Coding Interview](./10-soft-skills/interviewing/cracking-the-coding-interview.md) | Soft Skills | `interview`, `algorithms` |
+| 15 | [How I Landed 10+ Big Tech Interviews Without Applying](./10-soft-skills/interviewing/how-to-land-big-tech-jobs.md) | Soft Skills | `interview`, `career` |
+| 16 | [Salary Negotiation — My Leverage Points](./10-soft-skills/interviewing/salary-negotiation-leverage.md) | Soft Skills | `negotiation`, `career` |
+| 17 | [SNDQ — Accounting Module Deep Dive](./12-sndq/backend/sndq-accounting-module.md) | SNDQ | `sndq`, `accounting`, `backend` |
+| 18 | [SNDQ — Payment Request Module Deep Dive](./12-sndq/backend/sndq-payment-request-module.md) | SNDQ | `sndq`, `payments`, `backend` |
+| 19 | [Reading Plan: Research → sndq-fe Contribution](./12-sndq/frontend/sndq-fe-reading-plan.md) | SNDQ | `sndq`, `frontend`, `reading-plan` |
 <!-- TOPIC-INDEX-END -->
 
 **Playground experiments:**
@@ -56,7 +58,7 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 
 | Plan | Description |
 |------|-------------|
-| [sndq-fe-reading-plan.md](./sndq-fe-reading-plan.md) | Strategic reading plan mapping research topics → sndq-fe contribution impact |
+| [sndq-fe-reading-plan.md](./12-sndq/frontend/sndq-fe-reading-plan.md) | Strategic reading plan mapping research topics → sndq-fe contribution impact |
 
 ## Other Sections
 

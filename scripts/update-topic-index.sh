@@ -28,6 +28,7 @@ domain_label() {
     09-*) echo "Testing" ;;
     10-*) echo "Soft Skills" ;;
     11-*) echo "AI/ML" ;;
+    12-*) echo "SNDQ" ;;
     *)    echo "Other" ;;
   esac
 }

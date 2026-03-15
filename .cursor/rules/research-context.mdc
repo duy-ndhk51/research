@@ -55,6 +55,7 @@ When user asks to read a PDF:
 | 09-testing | Testing strategies, TDD/BDD, performance testing |
 | 10-soft-skills | Communication, leadership, interviewing, project management |
 | 11-ai-ml | AI/ML for software engineers, LLMs, prompt engineering |
+| 12-sndq | Company-specific: SNDQ architecture, modules, codebase deep dives |
 
 ## Naming Conventions
 - Folders: `kebab-case`
