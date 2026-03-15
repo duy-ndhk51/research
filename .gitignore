@@ -22,6 +22,9 @@ venv/
 .env
 .env.local
 
+# Auto-generated files
+INDEX.md
+
 # Large PDF files (keep local only)
 sources/**/*.pdf
 
