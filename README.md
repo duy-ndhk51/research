@@ -19,6 +19,35 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 | [10](./10-soft-skills/) | **Soft Skills** | Communication, leadership, interviewing, project management |
 | [11](./11-ai-ml/) | **AI/ML** | LLMs, prompt engineering, MLOps, AI tools |
 
+## Topic Index
+
+| # | Topic | Domain | Tags |
+|---|-------|--------|------|
+| 1 | [Clean Code: A Handbook of Agile Software Craftsmanship](./01-fundamentals/clean-code/clean-code.md) | Fundamentals | `clean-code`, `best-practices` |
+| 2 | [Dive Into Refactoring](./01-fundamentals/refactoring/dive-into-refactoring.md) | Fundamentals | `refactoring`, `code-quality` |
+| 3 | [Autocomplete — Front End System Design](./02-system-design/autocomplete-fe-system-design.md) | System Design | `frontend`, `system-design` |
+| 4 | [ByteByteGo — System Design Visual Reference](./02-system-design/bytebytego-system-design.md) | System Design | `architecture`, `scalability` |
+| 5 | [GreatFrontEnd — FE System Design Playbook](./02-system-design/greatfrontend-fe-system-design.md) | System Design | `frontend`, `system-design` |
+| 6 | [GreatFrontEnd — News Feed (Facebook)](./02-system-design/greatfrontend-news-feed-facebook.md) | System Design | `frontend`, `system-design` |
+| 7 | [GreatFrontEnd — Pinterest](./02-system-design/greatfrontend-pinterest.md) | System Design | `frontend`, `system-design` |
+| 8 | [System Design Interview Vol 1](./02-system-design/system-design-interview-vol1.md) | System Design | `architecture`, `interview` |
+| 9 | [Head First JavaScript Programming](./03-languages/javascript/head-first-javascript-programming.md) | Languages | `javascript`, `beginner` |
+| 10 | [You Don't Know JS (1st Edition)](./03-languages/javascript/you-dont-know-js.md) | Languages | `javascript`, `deep-dive` |
+| 11 | [Learning Patterns](./04-frontend/react/learning-patterns.md) | Frontend | `react`, `design-patterns` |
+| 12 | [Learning React — Modern Patterns for Developing React Apps](./04-frontend/react/learning-react.md) | Frontend | `react`, `hooks` |
+| 13 | [A (Mostly) Complete Guide to React Rendering Behavior](./04-frontend/react/react-rendering-behavior.md) | Frontend | `react`, `performance`, `rendering` |
+| 14 | [SNDQ — Accounting Module Deep Dive](./05-backend/sndq-accounting-module.md) | Backend | `sndq`, `accounting`, `backend` |
+| 15 | [SNDQ — Payment Request Module Deep Dive](./05-backend/sndq-payment-request-module.md) | Backend | `sndq`, `payments`, `backend` |
+| 16 | [Cracking the Coding Interview](./10-soft-skills/interviewing/cracking-the-coding-interview.md) | Soft Skills | `interview`, `algorithms` |
+| 17 | [How I Landed 10+ Big Tech Interviews Without Applying](./10-soft-skills/interviewing/how-to-land-big-tech-jobs.md) | Soft Skills | `interview`, `career` |
+| 18 | [Salary Negotiation — My Leverage Points](./10-soft-skills/interviewing/salary-negotiation-leverage.md) | Soft Skills | `negotiation`, `career` |
+
+**Playground experiments:**
+
+| # | Topic | Description |
+|---|-------|-------------|
+| 1 | [Toolbar Compound Component](./playground/12-Mar-2026-sndq-toolbar-component/SUMMARY.md) | Reusable compound component following shadcn/ui philosophy |
+
 ## Reading Plans
 
 | Plan | Description |
