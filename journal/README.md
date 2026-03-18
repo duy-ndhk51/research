@@ -61,3 +61,4 @@ journal/
 - [14](./2026/03/14.md) — Near-complete export for 3 report types, pair testing with BA + Customer Support
 - [16](./2026/03/16.md) — Refactored Assign Payment to floating sheet, skeleton loading, Provision Fund detail view
 - [17](./2026/03/17.md) — Account Invoice overview, Quick Access blocks, sidebar building navigation
+- [18](./2026/03/18.md) — Chart of accounts revert, owner balance sheet grouped by owner, detailed owner transactions

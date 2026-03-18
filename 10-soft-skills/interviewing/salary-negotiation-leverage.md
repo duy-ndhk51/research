@@ -172,3 +172,6 @@ _Every time you do something notable at SNDQ, add a one-liner here. Pull from yo
 | Mar 17 | Quick Access blocks for sub-accounting pages | Reduces clicks to reach daily-use pages, compounds into time savings |
 | Mar 17 | Sidebar building navigation (My Buildings + Workspace) | Eliminates back-to-list navigation for multi-building managers — core daily workflow |
 | Mar 17 | Building dashboard as command center | Cross-feature integration: assign payment + invoices + quick access + sidebar in one hub |
+| Mar 18 | Reverted chart of accounts to account module | Fixed UX regression — accountants find it where they expect, reducing daily friction |
+| Mar 18 | Owner balance sheet grouped by owner | Owners and accountants see financial position per owner at a glance — core syndic feature |
+| Mar 18 | Detailed owner balance sheet with transactions by property | Full financial transparency per owner with property-level drill-down, eliminates manual cross-referencing |
