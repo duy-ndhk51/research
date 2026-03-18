@@ -56,3 +56,8 @@ journal/
 - [08](./2026/03/08.md) — Research repo setup, accounting table UI, indexed 3 books
 - [09](./2026/03/09.md) — FinTech double-entry accounting, SNDQ Detail Accounting table + contacts update, indexed 4 more books
 - [10](./2026/03/10.md) — Shipped Detail Account Floating Sheet + contact representative to staging, indexed System Design Interview Vol. 1
+- [12](./2026/03/12.md) — Launched Notes at Table Row across 3 modules, fixed out-of-heap memory build blocker
+- [13](./2026/03/13.md) — Shipped Toolbar component to staging, started export PDF & XLSX for accounting
+- [14](./2026/03/14.md) — Near-complete export for 3 report types, pair testing with BA + Customer Support
+- [16](./2026/03/16.md) — Refactored Assign Payment to floating sheet, skeleton loading, Provision Fund detail view
+- [17](./2026/03/17.md) — Account Invoice overview, Quick Access blocks, sidebar building navigation

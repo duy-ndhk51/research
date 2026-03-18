@@ -164,3 +164,11 @@ _Every time you do something notable at SNDQ, add a one-liner here. Pull from yo
 | Mar 14 | Near-complete export PDF & XLSX for 3 accounting reports | Self-serve financial reporting for accountants, eliminates manual data extraction |
 | Mar 14 | Pair testing with BA + Customer Support | Validated export against real business needs — prevents costly post-release rework |
 | Mar 14 | Created backend enhancement task from pair testing | Proactive cross-layer ownership, keeps delivery pipeline moving |
+| Mar 16 | Refactored Assign Payment flow to floating sheet | In-context payment workflow reduces friction in most frequent accounting action |
+| Mar 16 | Role-specific UX for steward and syndic | Tailored experience reduces confusion and support overhead |
+| Mar 16 | Organized skeleton loading for building dashboard | Improved perceived performance for the most-used page in the platform |
+| Mar 16 | Provision Fund with in-context assign payment | Accountants handle fund transactions + payments in one place, no navigation |
+| Mar 17 | Account Invoice overview with floating sheet details | Invoice visibility at a glance, drill-down without leaving dashboard |
+| Mar 17 | Quick Access blocks for sub-accounting pages | Reduces clicks to reach daily-use pages, compounds into time savings |
+| Mar 17 | Sidebar building navigation (My Buildings + Workspace) | Eliminates back-to-list navigation for multi-building managers — core daily workflow |
+| Mar 17 | Building dashboard as command center | Cross-feature integration: assign payment + invoices + quick access + sidebar in one hub |
