@@ -44,6 +44,7 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 | 17 | [SNDQ — Accounting Module Deep Dive](./12-sndq/backend/sndq-accounting-module.md) | SNDQ | `sndq`, `accounting`, `backend` |
 | 18 | [SNDQ — Payment Request Module Deep Dive](./12-sndq/backend/sndq-payment-request-module.md) | SNDQ | `sndq`, `payments`, `backend` |
 | 19 | [Reading Plan: Research → sndq-fe Contribution](./12-sndq/frontend/sndq-fe-reading-plan.md) | SNDQ | `sndq`, `frontend`, `reading-plan` |
+| 20 | [SNDQ Contribution Plan — 4 Pillars](./12-sndq/sndq-contribution-plan.md) | SNDQ | `sndq`, `contribution`, `plan`, `optimization`, `backend` |
 <!-- TOPIC-INDEX-END -->
 
 **Playground experiments:**
@@ -59,6 +60,7 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 | Plan | Description |
 |------|-------------|
 | [sndq-fe-reading-plan.md](./12-sndq/frontend/sndq-fe-reading-plan.md) | Strategic reading plan mapping research topics → sndq-fe contribution impact |
+| [sndq-contribution-plan.md](./12-sndq/sndq-contribution-plan.md) | 4-pillar plan: FE optimization, dashboards, UI system, backend ownership |
 
 ## Other Sections
 

@@ -16,6 +16,12 @@ Company-specific knowledge base for **SNDQ** — covering architecture, modules,
 | Accounting Module | [sndq-accounting-module.md](./backend/sndq-accounting-module.md) | 📝 In progress |
 | Payment Request Module | [sndq-payment-request-module.md](./backend/sndq-payment-request-module.md) | 📝 In progress |
 
+## Contribution Plans
+
+| Topic | File | Status |
+|-------|------|--------|
+| 4-Pillar Contribution Plan | [sndq-contribution-plan.md](./sndq-contribution-plan.md) | 📝 In progress |
+
 ## Frontend
 
 | Topic | File | Status |
