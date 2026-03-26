@@ -45,6 +45,7 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 | 18 | [SNDQ — Payment Request Module Deep Dive](./12-sndq/backend/sndq-payment-request-module.md) | SNDQ | `sndq`, `payments`, `backend` |
 | 19 | [Reading Plan: Research → sndq-fe Contribution](./12-sndq/frontend/sndq-fe-reading-plan.md) | SNDQ | `sndq`, `frontend`, `reading-plan` |
 | 20 | [SNDQ Contribution Plan — 4 Pillars](./12-sndq/sndq-contribution-plan.md) | SNDQ | `sndq`, `contribution`, `plan`, `optimization`, `backend` |
+| 21 | [Zod v3 → v4 Migration Plan — sndq-fe](./12-sndq/frontend/zod-v3-to-v4-migration-plan.md) | SNDQ | `sndq`, `zod`, `migration`, `performance` |
 <!-- TOPIC-INDEX-END -->
 
 **Playground experiments:**

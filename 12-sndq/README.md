@@ -27,6 +27,7 @@ Company-specific knowledge base for **SNDQ** — covering architecture, modules,
 | Topic | File | Status |
 |-------|------|--------|
 | FE Reading Plan | [sndq-fe-reading-plan.md](./frontend/sndq-fe-reading-plan.md) | 📝 In progress |
+| Zod v3 → v4 Migration Plan | [zod-v3-to-v4-migration-plan.md](./frontend/zod-v3-to-v4-migration-plan.md) | 📝 In progress |
 
 ## Playground Experiments
 
