@@ -3,9 +3,9 @@
 Live data sheet for recording all measurements taken during the Zod v3 → v4 migration of `sndq-fe`. Fill in values as you run the measurement commands at each checkpoint.
 
 **Created**: 2026-03-27
-**How to measure**: See [Metrics & Measurement Guide](./zod-v4-migration-metrics-guide.md) for commands, scripts, and caveats.
-**Migration tracking**: See [Progress Tracker](./zod-v4-migration-progress.md) for per-file checklists.
-**Related**: [Migration Plan](./zod-v3-to-v4-migration-plan.md) · [Ticket Summary](./zod-v4-migration-ticket.md)
+**How to measure**: See [Metrics & Measurement Guide](./metrics-guide.md) for commands, scripts, and caveats.
+**Migration tracking**: See [Progress Tracker](./progress.md) for per-file checklists.
+**Related**: [Migration Plan](./README.md) · [Ticket Summary](./ticket.md)
 
 ---
 
@@ -22,7 +22,7 @@ Live data sheet for recording all measurements taken during the Zod v3 → v4 mi
 
 ## Quick Measurement Commands
 
-Copy-paste reference for each measurement session. Full explanations in [Metrics Guide](./zod-v4-migration-metrics-guide.md).
+Copy-paste reference for each measurement session. Full explanations in [Metrics Guide](./metrics-guide.md).
 
 ```bash
 cd sndq-fe
@@ -107,7 +107,7 @@ Additional constant metrics across all runs:
 
 ### Codebase Counts
 
-> Values from [Migration Plan audit](./zod-v3-to-v4-migration-plan.md#current-state-audit). Exact counts TBD via measurement commands.
+> Values from [Migration Plan audit](./README.md#current-state-audit). Exact counts TBD via measurement commands.
 
 | Count | Value |
 |-------|-------|
@@ -424,7 +424,7 @@ Reference to saved measurement output files (from the `measure-zod-migration.sh`
 
 | Label | Filename | Date | Notes |
 |-------|----------|------|-------|
-| Baseline | [zod-v4-baseline-analysis.md](./zod-v4-baseline-analysis.md) | 2026-03-28 | 5 raw runs + detailed analysis |
+| Baseline | [baseline-analysis.md](./baseline-analysis.md) | 2026-03-28 | 5 raw runs + detailed analysis |
 | After Batch 1 | `metrics-after-batch-1-YYYYMMDD-HHMMSS.txt` | | |
 | After Batch 2 | `metrics-after-batch-2-YYYYMMDD-HHMMSS.txt` | | |
 | After Batch 3 | `metrics-after-batch-3-YYYYMMDD-HHMMSS.txt` | | |
@@ -435,8 +435,8 @@ Reference to saved measurement output files (from the `measure-zod-migration.sh`
 
 ## References
 
-- [Baseline Analysis](./zod-v4-baseline-analysis.md) — Detailed analysis of pre-migration benchmark runs, bottleneck identification, Zod v4 impact projections
-- [Metrics & Measurement Guide](./zod-v4-migration-metrics-guide.md) — How to measure, scripts, caveats, incremental strategy
-- [Migration Progress Tracker](./zod-v4-migration-progress.md) — Per-file checklists and batch tables
-- [Migration Plan](./zod-v3-to-v4-migration-plan.md) — Breaking changes catalog, testing strategy, risk analysis
-- [Ticket Summary](./zod-v4-migration-ticket.md) — Concise version for task tracking
+- [Baseline Analysis](./baseline-analysis.md) — Detailed analysis of pre-migration benchmark runs, bottleneck identification, Zod v4 impact projections
+- [Metrics & Measurement Guide](./metrics-guide.md) — How to measure, scripts, caveats, incremental strategy
+- [Migration Progress Tracker](./progress.md) — Per-file checklists and batch tables
+- [Migration Plan](./README.md) — Breaking changes catalog, testing strategy, risk analysis
+- [Ticket Summary](./ticket.md) — Concise version for task tracking

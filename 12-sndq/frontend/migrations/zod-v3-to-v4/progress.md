@@ -5,9 +5,9 @@ Tracks the gradual file-by-file migration from `"zod"` (v3) to `"zod/v4"` import
 **Created**: 2026-03-27
 **Status**: Not started
 **Approach**: Gradual migration via `"zod/v4"` subpath (no big-bang upgrade)
-**Related**: [Zod v3 → v4 Migration Plan](./zod-v3-to-v4-migration-plan.md) — full breaking changes catalog, testing strategy, and risk analysis
-**Ticket**: [Zod v4 Migration — Ticket Summary](./zod-v4-migration-ticket.md) — concise version for task tracking
-**Metrics record**: [Metrics Record](./zod-v4-migration-metrics-record.md) — actual recorded measurements
+**Related**: [Zod v3 → v4 Migration Plan](./README.md) — full breaking changes catalog, testing strategy, and risk analysis
+**Ticket**: [Zod v4 Migration — Ticket Summary](./ticket.md) — concise version for task tracking
+**Metrics record**: [Metrics Record](./metrics-record.md) — actual recorded measurements
 
 ---
 
@@ -76,7 +76,7 @@ For each schema file:
 ## Baseline Metrics
 
 > Run these commands **before starting any migration** and record values below.
-> For detailed measurement instructions, caveats, and the all-in-one script, see the [Metrics & Measurement Guide](./zod-v4-migration-metrics-guide.md).
+> For detailed measurement instructions, caveats, and the all-in-one script, see the [Metrics & Measurement Guide](./metrics-guide.md).
 
 ### How to Capture
 
@@ -395,7 +395,7 @@ Standard checklist for migrating any individual schema file. Copy this for each 
 
 ## Commands Reference
 
-> For comprehensive measurement guide with scripts and caveats, see [Metrics & Measurement Guide](./zod-v4-migration-metrics-guide.md).
+> For comprehensive measurement guide with scripts and caveats, see [Metrics & Measurement Guide](./metrics-guide.md).
 
 ```bash
 # === Metrics ===
@@ -460,7 +460,7 @@ rg -l 'required_error|invalid_type_error' src/ --glob '*.ts' | sort
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-27 | Use gradual `"zod/v4"` subpath migration instead of big-bang upgrade | Zod 3.25.76 already installed; subpath approach allows file-by-file migration with zero version conflicts; can pause at any point |
-| 2026-03-27 | Use Schema Snapshot Tests + zodResolver Smoke Tests only | High ROI, low maintenance, ~550 lines total; catches silent `.default()` behavior changes that compiler cannot detect. See [testing strategy](./zod-v3-to-v4-migration-plan.md#pre-migration-testing-strategy) |
+| 2026-03-27 | Use Schema Snapshot Tests + zodResolver Smoke Tests only | High ROI, low maintenance, ~550 lines total; catches silent `.default()` behavior changes that compiler cannot detect. See [testing strategy](./README.md#pre-migration-testing-strategy) |
 | 2026-03-27 | Batch by risk level (transform → nativeEnum → error APIs → simple) | `.transform()` + `.default()` files are the only ones with silent runtime behavior changes; other batches have compiler-guided fixes |
 | | | |
 
@@ -468,9 +468,9 @@ rg -l 'required_error|invalid_type_error' src/ --glob '*.ts' | sort
 
 ## References
 
-- [Migration Plan (full)](./zod-v3-to-v4-migration-plan.md) — Breaking changes catalog, testing strategy, risk analysis
-- [Metrics & Measurement Guide](./zod-v4-migration-metrics-guide.md) — Detailed guide to measuring migration impact with scripts, caveats, and incremental strategy
-- [Ticket Summary](./zod-v4-migration-ticket.md) — Concise version for task tracking and sub-ticket splitting
+- [Migration Plan (full)](./README.md) — Breaking changes catalog, testing strategy, risk analysis
+- [Metrics & Measurement Guide](./metrics-guide.md) — Detailed guide to measuring migration impact with scripts, caveats, and incremental strategy
+- [Ticket Summary](./ticket.md) — Concise version for task tracking and sub-ticket splitting
 - [Zod Versioning Strategy](https://zod.dev/v4/versioning) — Official docs on the `"zod/v4"` subpath approach
 - [Zod v4 Changelog](https://v4.zod.dev/v4/changelog) — Complete breaking changes list
-- [SNDQ Contribution Plan](../sndq-contribution-plan.md) — Pillar 1: FE optimization (this migration is a concrete initiative)
+- [SNDQ Contribution Plan](../../../sndq-contribution-plan.md) — Pillar 1: FE optimization (this migration is a concrete initiative)

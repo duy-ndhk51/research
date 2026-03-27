@@ -1,6 +1,6 @@
 # Zod v3 → v4 Migration — Ticket Summary
 
-Concise ticket-ready summary distilled from the full [Migration Plan](./zod-v3-to-v4-migration-plan.md) and [Progress Tracker](./zod-v4-migration-progress.md). Designed to be split into sub-tickets.
+Concise ticket-ready summary distilled from the full [Migration Plan](./README.md) and [Progress Tracker](./progress.md). Designed to be split into sub-tickets.
 
 **Created**: 2026-03-27
 **Status**: Ready for ticket creation
@@ -30,9 +30,9 @@ Migrate **gradually** file-by-file (`"zod"` → `"zod/v4"` import), not big-bang
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 1 | Catalog breaking changes from Zod v4 changelog | Done | 14 categories — see [Migration Plan §Breaking Changes](./zod-v3-to-v4-migration-plan.md) |
+| 1 | Catalog breaking changes from Zod v4 changelog | Done | 14 categories — see [Migration Plan §Breaking Changes](./README.md) |
 | 2 | Verify `@hookform/resolvers` compatibility with v4 | **Pending** | **#1 blocker** — if incompatible, 100% forms break |
-| 3 | Define test types with rationale | Done | Schema Snapshot + zodResolver Smoke — see [Migration Plan §Testing](./zod-v3-to-v4-migration-plan.md) |
+| 3 | Define test types with rationale | Done | Schema Snapshot + zodResolver Smoke — see [Migration Plan §Testing](./README.md) |
 | 4 | Audit all 100+ forms: list, priority, complexity, route | **Pending** | Identify unused forms, rank by business priority |
 | 5 | Capture baseline metrics | **Pending** | `tsc --diagnostics`, `next build`, bundle size |
 | 6 | Upgrade `zod` to 3.25.76 in `package.json` | **Pending** | Verify zero regressions after install |
@@ -105,7 +105,7 @@ Start with **low-business-priority, easy-to-test forms** to recognize patterns b
 
 ## Metrics to Track
 
-> Full measurement guide with scripts, caveats, and reporting templates: [Metrics & Measurement Guide](./zod-v4-migration-metrics-guide.md)
+> Full measurement guide with scripts, caveats, and reporting templates: [Metrics & Measurement Guide](./metrics-guide.md)
 
 ### Primary Metrics (measure every batch)
 
@@ -163,7 +163,7 @@ Start with **low-business-priority, easy-to-test forms** to recognize patterns b
 
 ## Related Documents
 
-- [Full Migration Plan](./zod-v3-to-v4-migration-plan.md) — breaking changes catalog, testing strategy details, risk analysis
-- [Migration Progress Tracker](./zod-v4-migration-progress.md) — per-file checklist, batch tables, metrics dashboard
-- [Metrics & Measurement Guide](./zod-v4-migration-metrics-guide.md) — detailed guide to measuring migration impact with scripts, caveats, and incremental strategy
-- [Metrics Record](./zod-v4-migration-metrics-record.md) — actual recorded measurement data per batch
+- [Full Migration Plan](./README.md) — breaking changes catalog, testing strategy details, risk analysis
+- [Migration Progress Tracker](./progress.md) — per-file checklist, batch tables, metrics dashboard
+- [Metrics & Measurement Guide](./metrics-guide.md) — detailed guide to measuring migration impact with scripts, caveats, and incremental strategy
+- [Metrics Record](./metrics-record.md) — actual recorded measurement data per batch

@@ -3,8 +3,8 @@
 Comprehensive guide to measuring the performance impact of migrating `sndq-fe` from Zod v3 to Zod v4. Covers what metrics to track, exactly how to measure them, and the strategy for incremental measurement during a gradual file-by-file migration.
 
 **Created**: 2026-03-27
-**Related**: [Migration Plan](./zod-v3-to-v4-migration-plan.md) · [Progress Tracker](./zod-v4-migration-progress.md) · [Ticket Summary](./zod-v4-migration-ticket.md)
-**Record sheet**: [Metrics Record](./zod-v4-migration-metrics-record.md) — fill in actual measurements here
+**Related**: [Migration Plan](./README.md) · [Progress Tracker](./progress.md) · [Ticket Summary](./ticket.md)
+**Record sheet**: [Metrics Record](./metrics-record.md) — fill in actual measurements here
 
 ---
 
@@ -754,6 +754,6 @@ If you or teammates push other changes between measurements, the delta might not
 - [TypeScript Performance Wiki — Using `--generateTrace`](https://github.com/microsoft/TypeScript/wiki/Performance#using---generatetrace)
 - [Perfetto UI](https://ui.perfetto.dev/) — Trace visualization tool
 - [Zod v4 Changelog](https://zod.dev/v4/changelog) — Performance claims and benchmarks
-- [Migration Plan](./zod-v3-to-v4-migration-plan.md) — Full breaking changes catalog and risk analysis
-- [Migration Progress Tracker](./zod-v4-migration-progress.md) — Per-file checklists and metrics dashboard
-- [Ticket Summary](./zod-v4-migration-ticket.md) — Concise version for task tracking
+- [Migration Plan](./README.md) — Full breaking changes catalog and risk analysis
+- [Migration Progress Tracker](./progress.md) — Per-file checklists and metrics dashboard
+- [Ticket Summary](./ticket.md) — Concise version for task tracking

@@ -4,7 +4,7 @@ Detailed analysis of the `tsc --noEmit --diagnostics` benchmark runs captured **
 
 **Date**: 2026-03-28
 **Branch**: `perf/SQ-20365` (based off `dev` @ `7b26c713`)
-**Related**: [Metrics Record](./zod-v4-migration-metrics-record.md) · [Migration Plan](./zod-v3-to-v4-migration-plan.md)
+**Related**: [Metrics Record](./metrics-record.md) · [Migration Plan](./README.md)
 
 ---
 
@@ -216,7 +216,7 @@ Running at 81% of heap limit leaves minimal headroom. Any increase in codebase c
 
 ### Recommended baseline values
 
-These are the values to use in the [Metrics Record](./zod-v4-migration-metrics-record.md):
+These are the values to use in the [Metrics Record](./metrics-record.md):
 
 | Metric | Baseline Value |
 |--------|---------------|
@@ -350,8 +350,8 @@ During migration, focus on these metrics in order of importance:
 
 ## References
 
-- [Metrics Record](./zod-v4-migration-metrics-record.md) — structured recording sheet
-- [Migration Plan](./zod-v3-to-v4-migration-plan.md) — breaking changes, risk analysis, execution plan
-- [Metrics & Measurement Guide](./zod-v4-migration-metrics-guide.md) — commands, scripts, caveats
+- [Metrics Record](./metrics-record.md) — structured recording sheet
+- [Migration Plan](./README.md) — breaking changes, risk analysis, execution plan
+- [Metrics & Measurement Guide](./metrics-guide.md) — commands, scripts, caveats
 - [TypeScript Performance Wiki](https://github.com/microsoft/TypeScript/wiki/Performance) — official guidance on tsc performance
 - [Zod v4 Announcement](https://zod.dev/v4) — performance claims and API changes

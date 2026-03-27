@@ -9,9 +9,9 @@ Zod v4 delivers **14x faster string parsing**, **7x faster array parsing**, and 
 **Status**: Planning
 **Estimated effort**: 5–8 days (including pre-migration tests + validation)
 **Testing strategy**: Schema Snapshot Tests (primary) + zodResolver Smoke Tests (secondary) — ~550 lines, 15 files, 3-4 hours
-**Ticket summary**: [Zod v4 Migration — Ticket Summary](./zod-v4-migration-ticket.md) — concise version for task tracking
-**Metrics guide**: [Metrics & Measurement Guide](./zod-v4-migration-metrics-guide.md) — how to measure migration impact incrementally
-**Metrics record**: [Metrics Record](./zod-v4-migration-metrics-record.md) — actual recorded measurements
+**Ticket summary**: [Zod v4 Migration — Ticket Summary](./ticket.md) — concise version for task tracking
+**Metrics guide**: [Metrics & Measurement Guide](./metrics-guide.md) — how to measure migration impact incrementally
+**Metrics record**: [Metrics Record](./metrics-record.md) — actual recorded measurements
 
 ---
 
@@ -1764,11 +1764,11 @@ This allows gradual migration file-by-file if a big-bang approach is too risky.
 
 | Topic | Related Notes | Relevance |
 |-------|--------------|-----------|
-| **Migration progress tracker** | [zod-v4-migration-progress.md](./zod-v4-migration-progress.md) | **Tracks batch-by-batch progress, metrics, and per-file checklist** |
-| React rendering behavior | [react-rendering-behavior.md](../../04-frontend/react/react-rendering-behavior.md) | Form re-render performance benefits from faster Zod parsing |
-| Learning patterns | [learning-patterns.md](../../04-frontend/react/learning-patterns.md) | Tree shaking patterns relevant to Zod v4 bundle improvements |
-| sndq-fe reading plan | [sndq-fe-reading-plan.md](./sndq-fe-reading-plan.md) | Form patterns section maps to Zod usage |
-| sndq contribution plan | [sndq-contribution-plan.md](../sndq-contribution-plan.md) | FE optimization pillar — this migration is a concrete initiative |
+| **Migration progress tracker** | [progress.md](./progress.md) | **Tracks batch-by-batch progress, metrics, and per-file checklist** |
+| React rendering behavior | [react-rendering-behavior.md](../../../../04-frontend/react/react-rendering-behavior.md) | Form re-render performance benefits from faster Zod parsing |
+| Learning patterns | [learning-patterns.md](../../../../04-frontend/react/learning-patterns.md) | Tree shaking patterns relevant to Zod v4 bundle improvements |
+| sndq-fe reading plan | [sndq-fe-reading-plan.md](../../sndq-fe-reading-plan.md) | Form patterns section maps to Zod usage |
+| sndq contribution plan | [sndq-contribution-plan.md](../../../sndq-contribution-plan.md) | FE optimization pillar — this migration is a concrete initiative |
 
 ---
 
