@@ -5,8 +5,13 @@
 Zod v4 delivers **14x faster string parsing**, **7x faster array parsing**, and **6.5x faster object parsing** with a smaller bundle via improved tree shaking. The `sndq-fe` codebase has **~103 files** importing Zod across **100+ form schemas**, making this a high-impact but high-effort migration. The biggest risks are silent behavior changes in `.default()`, `@hookform/resolvers` compatibility, and `z.nativeEnum()` removal across ~44 files.
 
 **Created**: 2026-03-27
+**Updated**: 2026-03-27 (testing strategy finalized)
 **Status**: Planning
 **Estimated effort**: 5–8 days (including pre-migration tests + validation)
+**Testing strategy**: Schema Snapshot Tests (primary) + zodResolver Smoke Tests (secondary) — ~550 lines, 15 files, 3-4 hours
+**Ticket summary**: [Zod v4 Migration — Ticket Summary](./zod-v4-migration-ticket.md) — concise version for task tracking
+**Metrics guide**: [Metrics & Measurement Guide](./zod-v4-migration-metrics-guide.md) — how to measure migration impact incrementally
+**Metrics record**: [Metrics Record](./zod-v4-migration-metrics-record.md) — actual recorded measurements
 
 ---
 
@@ -18,6 +23,9 @@ Zod v4 delivers **14x faster string parsing**, **7x faster array parsing**, and 
 - [Benefits](#benefits)
 - [Risks & Mitigation](#risks--mitigation)
 - [Pre-Migration Testing Strategy](#pre-migration-testing-strategy)
+  - [Schema Snapshot Tests — PRIMARY](#selected-schema-snapshot-tests-vitest--primary)
+  - [zodResolver Smoke Tests — SECONDARY](#selected-zodresolver-smoke-tests-vitest--secondary)
+  - [Combined Testing Approach](#combined-testing-approach-how-the-two-types-work-together)
 - [TypeScript Compile Time Benchmarking](#typescript-compile-time-benchmarking)
 - [Migration Execution Plan](#migration-execution-plan)
 - [Rollback Strategy](#rollback-strategy)
@@ -685,146 +693,769 @@ rg '\.Values\.' --glob '*.ts' --glob '*.tsx' sndq-fe/src/
 
 ## Pre-Migration Testing Strategy
 
+### Testing Decision: Selection Criteria
+
+The testing strategy for this migration was evaluated against four criteria:
+
+1. **High ROI** — Each test must catch real migration regressions, not theoretical edge cases
+2. **Low maintenance cost** — Tests should not become a burden after migration is complete
+3. **High coverage-to-effort ratio** — Maximize the number of breaking changes detected per line of test code
+4. **Minimal boilerplate** — Reusable patterns over repetitive per-schema test files
+
 ### Why Tests Are Essential
 
-With only **5 test files** in the entire `src/` directory (and only 1 testing a Zod schema), the codebase has near-zero safety net for schema changes. The `.default()` behavior change alone can silently alter data flowing through dozens of forms without any TypeScript or runtime error. Tests are the **only way** to catch these silent regressions.
+With only **6 test files** in the entire `src/` directory (and only 1 testing a Zod schema), the codebase has near-zero safety net for schema changes. The `.default()` behavior change alone can silently alter data flowing through dozens of forms without any TypeScript or runtime error. Tests are the **only way** to catch these silent regressions.
 
-### Phase 1: Schema Behavior Snapshot Tests (Priority: CRITICAL)
+The TypeScript compiler (`tsc --noEmit`) will catch many breaking changes — removed APIs like `invalid_type_error`, `required_error`, single-argument `z.record()`, `.Enum`/`.Values` accessor removal, and type signature changes. But the compiler **cannot** catch:
 
-**Goal**: Capture exact parsing behavior of all critical schemas before migration.
+- `.default()` short-circuit behavior producing different runtime output
+- `.default()` + `.optional()` now populating keys that were previously absent
+- `.transform()` + `.default()` chain producing different values
+- Error map precedence changes (schema-level now wins over contextual)
+- `z.any()` / `z.unknown()` no longer being optional in objects
+- `zodResolver` internal API breakage (`._def` → `._zod.def`)
 
-**Target**: All schema files in the top-10 complexity list, plus all schemas using `.transform()` + `.default()` combinations.
+These silent behavior changes are precisely what the testing strategy targets.
 
-**Test pattern**:
+### Test Types Evaluated
+
+| Test Type | ROI | Maintenance | Boilerplate | Coverage | Decision |
+|-----------|-----|-------------|-------------|----------|----------|
+| **Schema Snapshot Tests (Vitest)** | Very High | Very Low | Low (factory pattern) | Very High | **SELECTED — PRIMARY** |
+| **zodResolver Smoke Tests (Vitest)** | Critical | Very Low | Very Low (~30 lines) | High for #1 blocker | **SELECTED — SECONDARY** |
+| E2E Tests (Playwright) | High per test | Very High | Very High | Low per test | Rejected |
+| Component Render Tests (RTL) | Medium | High | Very High | Medium | Rejected |
+| Property-Based Tests (fast-check) | Medium | Low | High initial | Very High | Rejected |
+| Contract/Type Tests | Low | Low | Low | Medium | Redundant (`tsc` covers this) |
+| nativeEnum Accessor Tests | Medium | Low | Low | Low (narrow scope) | Absorbed into snapshot tests |
+
+### Why Other Test Types Were Rejected
+
+#### E2E Tests (Playwright) — Rejected
+
+**What it would do**: Navigate to a form page, fill in fields, submit, verify success/error states in a real browser.
+
+**Why rejected**:
+- The codebase has **100+ forms using zodResolver**. Writing an E2E test for each is prohibitively expensive (~50-100 lines per form, authentication setup, staging API dependency, seed data management).
+- Playwright tests are **inherently brittle** — they break when CSS selectors change, when API responses differ, when staging is down. This violates the "low maintenance" criterion.
+- Playwright tests are **slow** — a full suite of 100+ form tests would add 10-30 minutes to CI.
+- The ROI per test is high (true end-to-end validation), but the ROI per hour of engineering time is low compared to schema snapshots.
+- **Better use**: Manual QA of the 6 most critical forms (lease, purchase invoice v1/v2, contact, broadcast, fee configurator) after migration. Not automated.
+
+#### Component Render Tests (React Testing Library) — Rejected
+
+**What it would do**: Render a form component, simulate user input, verify that validation messages appear and form data is correct.
+
+**Why rejected**:
+- Form components in `sndq-fe` depend on **deep provider trees**: `WorkspacesContext`, `QueryClientProvider`, `IntlProvider` (next-intl), React Hook Form's `FormProvider`, and often module-specific context providers.
+- Mocking all providers for 100+ forms creates **massive boilerplate** that is fragile and expensive to maintain.
+- The actual risk being tested (Zod parsing behavior) is **buried under layers of React component logic**. A schema snapshot test isolates the exact layer at risk with zero component dependencies.
+- Component render tests are valuable for testing **UI behavior** (conditional rendering, user interactions), not for testing **data transformation correctness** (which is what this migration risks).
+
+#### Property-Based Tests (fast-check) — Rejected
+
+**What it would do**: Generate random inputs conforming to (or violating) schema constraints, verify that parsing behavior is consistent across thousands of generated cases.
+
+**Why rejected**:
+- The migration risk is about **specific, known behavior changes** (`.default()` short-circuits, `nativeEnum` removal, error format changes), not about unknown edge cases. Property-based testing excels at finding edge cases but is overkill for known-issue detection.
+- Setting up `Arbitrary` generators for complex nested schemas (e.g., `leaseFormSchema` with 492 lines, deeply nested objects, conditional refinements, enum dependencies) requires **significant upfront investment** (~100-200 lines per schema).
+- The `.transform()` calls in schemas often cast to external types (e.g., `.transform((data) => data as unknown as ContactV2)`), which makes it difficult for property-based generators to produce meaningful output validation.
+- **Better use**: After migration stabilizes, property-based tests could be added for long-term schema correctness. Not justified for a one-time migration safety net.
+
+#### Contract/Type Tests — Rejected (Redundant)
+
+**What it would do**: Verify that `z.infer<typeof schema>` produces the expected TypeScript type, and that certain type assignments compile.
+
+**Why rejected**:
+- `tsc --noEmit` already performs this exact check across the entire codebase. Every `z.infer<>` usage (170+ occurrences across ~100 files) is type-checked at compile time.
+- Writing separate type tests duplicates what the compiler does for free.
+- The real danger is **runtime behavior changes that pass type-checking**, which is exactly what snapshot tests catch.
+
+#### nativeEnum Accessor Tests — Absorbed
+
+**What it would do**: Verify that `.enum.VALUE` works after migrating from `.Enum.VALUE` and `.Values.VALUE`.
+
+**Why absorbed into snapshot tests**:
+- Schema snapshot tests already exercise enum values through the `valid` fixture (which must provide valid enum values to pass parsing).
+- If a `nativeEnum` → `enum` migration is incomplete, the `valid` fixture will fail to parse, and the snapshot test will catch it.
+- The `tsc` compiler will also catch `.Enum` and `.Values` accessor usage as type errors (these properties are removed entirely in v4).
+- A dedicated test type for this narrow concern adds maintenance overhead without meaningful additional coverage.
+
+---
+
+### SELECTED: Schema Snapshot Tests (Vitest) — PRIMARY
+
+#### What This Test Type Does
+
+Schema snapshot tests call `schema.safeParse()` with predetermined fixture data and use Vitest's `toMatchSnapshot()` to capture the **exact output**. On subsequent runs, any difference in output causes the test to fail, showing a precise diff of what changed.
+
+This approach creates a "behavioral fingerprint" of each schema: the exact parsed output for valid data, the exact default values applied, the exact error structure for invalid data. Any silent behavior change in Zod v4 that alters these outputs will be immediately detected.
+
+#### Why This Is the Highest ROI Choice
+
+**1. Directly targets the most dangerous risk**
+
+The `.default()` behavior change (Category 7 in the breaking changes catalog) is the single most dangerous aspect of this migration. It produces:
+- No TypeScript compile error
+- No runtime error
+- No console warning
+- Just **different data** flowing through the application
+
+Example from the actual codebase — `leaseFormSchema` has 21 `.default()` calls:
 
 ```typescript
-// __tests__/schema-snapshots/lease-schema.test.ts
+// src/modules/patrimony/forms/lease/schema.ts (actual code)
+isNewRentalContract: z.boolean().default(true),
+silentRenewal: z.boolean().default(false),
+hasVat: z.boolean().default(false),
+hasIndexation: z.boolean().default(false),
+indexable: z.boolean().default(false),
+payers: z.array(payerSchema).default([]),
+extraCosts: z.array(extraCostSchema).default([]),
+discounts: z.array(discountSchema).default([]),
+// ... 13 more .default() calls
+```
+
+If any of these defaults interact with `.optional()` or `.transform()` in the chain, Zod v4 may produce different output. A snapshot test catches this with zero manual verification effort.
+
+**2. Covers multiple breaking change categories simultaneously**
+
+A single snapshot test file for one schema catches breaking changes across:
+
+| Breaking Change | How Snapshot Catches It |
+|----------------|------------------------|
+| `.default()` short-circuit (Cat. 7) | Parsed output snapshot differs |
+| `.default()` + `.optional()` key presence (Cat. 4.1) | Minimal input snapshot shows new keys |
+| `.transform()` + `.default()` combo (Cat. 7) | Transformed output snapshot differs |
+| `nativeEnum` validation (Cat. 5) | Valid fixture uses enum values; fails if enum broken |
+| `required_error` removal (Cat. 1.2) | Error snapshot shows different error structure |
+| `z.any()` / `z.unknown()` optionality (Cat. 4.6) | Minimal input snapshot fails if key now required |
+| Error map format change (Cat. 2) | Error snapshot captures exact issue structure |
+| `z.record()` single-arg removal (Cat. 10) | Record-containing schemas fail to parse |
+
+**3. Self-generating baseline with `toMatchSnapshot()`**
+
+Unlike explicit assertion tests (where you manually write `expect(result).toEqual({...})`), snapshot tests **auto-generate the expected value** on first run. This means:
+- No need to manually construct expected output objects for complex schemas
+- The snapshot file serves as human-readable documentation of schema behavior
+- Updating after an intentional change is a single command: `pnpm test -- -u`
+
+**4. Near-zero maintenance after migration**
+
+Once the migration is complete and snapshots are updated:
+- Tests only break if someone changes the schema definition (which is exactly when you want regression detection)
+- No external dependencies (no API, no browser, no database)
+- Sub-second execution time per file
+- No mocking or provider setup needed
+
+#### Design: Reusable Test Factory
+
+To minimize boilerplate across 13+ schema test files, a **factory helper** generates the standard test suite from fixtures:
+
+```typescript
+// src/__tests__/helpers/schema-test-factory.ts
 import { describe, it, expect } from 'vitest';
-import { leaseFormSchema } from '@/modules/patrimony/forms/lease/schema';
+import type { ZodSchema } from 'zod';
 
-describe('Lease Form Schema — Pre-migration snapshot', () => {
-  const validInput = {
-    // ... complete valid lease form data
-  };
+interface SchemaFixtures {
+  /** Complete valid input — exercises all fields, transforms, and enum values */
+  valid: Record<string, unknown>;
+  /** Only required fields — exposes default value behavior */
+  minimal: Record<string, unknown>;
+  /** Fields with wrong types — captures error format and structure */
+  invalid?: Record<string, unknown>;
+}
 
-  const minimalInput = {
-    // ... only required fields
-  };
-
-  it('should parse valid input and produce expected output', () => {
-    const result = leaseFormSchema.safeParse(validInput);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data).toMatchSnapshot();
-    }
-  });
-
-  it('should parse minimal input with correct defaults', () => {
-    const result = leaseFormSchema.safeParse(minimalInput);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data).toMatchSnapshot();
-    }
-  });
-
-  it('should reject empty input with expected error structure', () => {
-    const result = leaseFormSchema.safeParse({});
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues.map(i => ({
-        path: i.path,
-        code: i.code,
-        message: i.message,
-      }))).toMatchSnapshot();
-    }
-  });
-
-  it('should reject invalid types with expected errors', () => {
-    const result = leaseFormSchema.safeParse({
-      // ... fields with wrong types
+/**
+ * Generates a standard snapshot test suite for a Zod schema.
+ *
+ * Produces 3-4 tests per schema:
+ * 1. Valid input → snapshots full parsed output (catches .transform() changes)
+ * 2. Minimal input → snapshots defaults (catches .default() behavior changes)
+ * 3. Empty input → snapshots error structure (catches error format changes)
+ * 4. Invalid input → snapshots type error structure (optional)
+ *
+ * Usage:
+ *   describeSchema('LeaseForm', leaseFormSchema, { valid: {...}, minimal: {...} });
+ */
+export function describeSchema(
+  name: string,
+  schema: ZodSchema,
+  fixtures: SchemaFixtures,
+): void {
+  describe(`${name} — migration snapshot`, () => {
+    it('parses valid input and produces expected output', () => {
+      const result = schema.safeParse(fixtures.valid);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data).toMatchSnapshot();
+      }
     });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues.map(i => ({
-        path: i.path,
-        code: i.code,
-        message: i.message,
-      }))).toMatchSnapshot();
+
+    it('parses minimal input with correct defaults', () => {
+      const result = schema.safeParse(fixtures.minimal);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data).toMatchSnapshot();
+      }
+    });
+
+    it('rejects empty input with expected error structure', () => {
+      const result = schema.safeParse({});
+      if (!result.success) {
+        expect(
+          result.error.issues.map((i) => ({
+            path: i.path,
+            code: i.code,
+          })),
+        ).toMatchSnapshot();
+      }
+    });
+
+    if (fixtures.invalid) {
+      it('rejects invalid types with expected errors', () => {
+        const result = schema.safeParse(fixtures.invalid);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(
+            result.error.issues.map((i) => ({
+              path: i.path,
+              code: i.code,
+            })),
+          ).toMatchSnapshot();
+        }
+      });
+    }
+  });
+}
+```
+
+**Why this pattern is optimal:**
+
+- **30 lines of reusable code** replaces what would otherwise be 50-80 lines per schema file
+- Each schema test file reduces to **~20-40 lines** (just import + fixtures + one `describeSchema()` call)
+- The factory enforces consistent test structure across all schemas
+- Adding a new schema test takes <5 minutes (just write fixtures)
+- Error snapshots intentionally capture `path` + `code` only (not `message`), because error messages may intentionally change in the `message` → `error` migration, while `path` and `code` should remain stable
+
+**Why error snapshots exclude `message`:**
+
+The migration plan notes that `message:` is deprecated in favor of `error:`. Error message strings may change as part of the migration (e.g., from `required_error: "..."` to `error: (issue) => "..."`). Including `message` in the snapshot would cause false positives — tests that break due to intentional migration changes rather than actual regressions. Capturing only `path` + `code` ensures snapshots detect **structural** changes (wrong field flagged, wrong error type) without being brittle to message text changes.
+
+#### Target Files: 13 High-Risk Schemas
+
+These files were selected because they contain `.transform()` calls (the highest-risk pattern when combined with `.default()`). Files without `.transform()` are adequately covered by `tsc --noEmit` for compile-time changes.
+
+| # | Schema File | .transform | .default | nativeEnum | superRefine | Risk |
+|---|-------------|-----------|----------|------------|-------------|------|
+| 1 | `patrimony/forms/lease/schema.ts` | 4 | 21 | 6 | 5 | **CRITICAL** |
+| 2 | `financial/forms/purchase-invoice-v2/schema.ts` | 3 | 11 | 1 | 2 | **CRITICAL** |
+| 3 | `financial/forms/purchase-invoice/schema.ts` | 3 | 18 | 2 | 3 | **CRITICAL** |
+| 4 | `components/contact/schema.ts` | 4 | 9 | 0 | 4 | **CRITICAL** |
+| 5 | `financial/forms/cost-settlement/schema.ts` | 2 | 6 | 0 | 1 | **HIGH** |
+| 6 | `financial/forms/close-fiscal-year/schema.ts` | 2 | 9 | 0 | 0 | **HIGH** |
+| 7 | `patrimony/forms/lease/revision/schema.ts` | 3 | — | — | — | **HIGH** |
+| 8 | `patrimony/forms/building/schema.ts` | 2 | — | — | — | **HIGH** |
+| 9 | `financial/forms/purchase-invoice-v2-steward/schema.ts` | 3 | 2 | — | — | **HIGH** |
+| 10 | `patrimony/forms/property/schema.ts` | 1 | — | — | — | **MEDIUM** |
+| 11 | `patrimony/forms/lease/components/lease-deposit/schema.ts` | 1 | 1 | — | — | **MEDIUM** |
+| 12 | `fee-management/FeeConfiguratorForm/schema.ts` | 1 | — | — | — | **MEDIUM** |
+| 13 | `contact-book/.../detail-overview-content/form/schema.ts` | 1 | — | — | — | **MEDIUM** |
+
+**Why only 13 files instead of all 103:**
+
+- These 13 files account for **all `.transform()` usage** in schema files. The `.transform()` + `.default()` combo is the only pattern that produces silent runtime behavior changes.
+- The remaining ~90 schema files use only primitives (`.string()`, `.number()`, `.boolean()`), validators (`.min()`, `.max()`, `.email()`), and structural combinators (`.object()`, `.array()`, `.union()`). For these files, `tsc --noEmit` catches all v4 breaking changes at compile time (removed APIs, changed generics, type signature changes).
+- Testing 13 files instead of 103 reduces effort by **87%** while covering **100%** of the silent behavior change risk.
+
+#### Example: Lease Schema Test File
+
+This shows what an actual test file looks like using the factory pattern. The lease schema (`leaseFormSchema`) is a multi-step form with deeply nested objects, making it the most complex schema in the codebase.
+
+```typescript
+// src/modules/patrimony/forms/lease/__tests__/schema.test.ts
+import { describeSchema } from '@/__tests__/helpers/schema-test-factory';
+import {
+  generalInfoSchema,
+  vatRuleSchema,
+  indexationRuleSchema,
+  extraCostSchema,
+  discountSchema,
+  propertyRentConfigSchema,
+  financialDetailsSchema,
+  leaseFormSchema,
+} from '../schema';
+
+const UUID = '550e8400-e29b-41d4-a716-446655440000';
+const UUID2 = '660e8400-e29b-41d4-a716-446655440001';
+
+// Test individual sub-schemas (more granular failure detection)
+describeSchema('GeneralInfoSchema', generalInfoSchema, {
+  valid: {
+    isNewRentalContract: true,
+    silentRenewal: false,
+    owner: { id: UUID },
+    contractName: 'Test Lease 2026',
+    language: 'en',
+    type: 'residential',
+    creationDate: '2026-01-01',
+    startDate: '2026-02-01',
+    initialDuration: '9_YEARS',
+    endDate: '2035-01-31',
+    propertyIds: [UUID],
+    tenants: [{ id: UUID }],
+    primaryTenantId: UUID,
+  },
+  minimal: {
+    owner: { id: UUID },
+    contractName: 'X',
+    language: 'en',
+    type: 'residential',
+    creationDate: '2026-01-01',
+    startDate: '2026-02-01',
+    initialDuration: '9_YEARS',
+    endDate: null,
+    propertyIds: [UUID],
+    tenants: [{ id: UUID }],
+    primaryTenantId: UUID,
+  },
+});
+
+describeSchema('VatRuleSchema', vatRuleSchema, {
+  valid: { name: 'Standard', percentage: 21, rate: '21' },
+  minimal: { name: 'X', percentage: 0 }, // tests .default('21') on rate
+});
+
+describeSchema('ExtraCostSchema', extraCostSchema, {
+  valid: {
+    rootType: 'lump_sum',
+    type: 'heating',
+    name: 'Heating',
+    amount: 5000,
+    totalAmount: 6050,
+    hasVat: true,
+    vatRate: '21',
+    indexable: false,
+    interval: 'month',
+  },
+  minimal: {
+    rootType: 'lump_sum',
+    type: 'heating',
+    amount: 1000,
+    totalAmount: 1000,
+  },
+});
+
+// Test the full composite schema
+describeSchema('LeaseFormSchema (full)', leaseFormSchema, {
+  valid: {
+    general: {
+      isNewRentalContract: true,
+      silentRenewal: false,
+      owner: { id: UUID },
+      contractName: 'Full Lease Test',
+      language: 'en',
+      type: 'residential',
+      creationDate: '2026-01-01',
+      startDate: '2026-02-01',
+      initialDuration: '9_YEARS',
+      endDate: '2035-01-31',
+      propertyIds: [UUID],
+      tenants: [{ id: UUID }],
+      primaryTenantId: UUID,
+    },
+    rentConfig: {
+      [UUID]: {
+        baseRent: 85000,
+        payers: [{ contactId: UUID, name: 'Tenant A', role: 'tenant', percentage: 100 }],
+        extraCosts: [],
+        discounts: [],
+      },
+    },
+    financial: {
+      rentGeneration: {
+        period: 'calendar',
+        paymentFrequency: '1',
+        documentType: 'expiry_notice',
+      },
+      message: { type: 'structured', content: '+++123/4567/89012+++' },
+      payment: { period: 'current', dateDue: 1 },
+      bankAccounts: [{
+        action: 'create',
+        accountId: UUID2,
+        accountHolder: 'Owner',
+        iban: 'BE68539007547034',
+        usage: ['rent'],
+      }],
+    },
+  },
+  minimal: {
+    general: {
+      owner: { id: UUID },
+      contractName: 'X',
+      language: 'en',
+      type: 'residential',
+      creationDate: '2026-01-01',
+      startDate: '2026-02-01',
+      initialDuration: '9_YEARS',
+      endDate: null,
+      propertyIds: [UUID],
+      tenants: [{ id: UUID }],
+      primaryTenantId: UUID,
+    },
+    rentConfig: {
+      [UUID]: {
+        baseRent: 50000,
+        payers: [{ contactId: UUID, name: 'T', role: 'tenant', percentage: 100 }],
+      },
+    },
+    financial: {
+      rentGeneration: {},
+      message: { type: 'structured', content: '+++000/0000/00000+++' },
+      payment: {},
+      bankAccounts: [{
+        action: 'create',
+        accountId: UUID,
+        accountHolder: 'O',
+        iban: 'BE68539007547034',
+        usage: ['rent'],
+      }],
+    },
+  },
+});
+```
+
+**Key observations about this pattern:**
+
+- Sub-schemas are tested individually (`generalInfoSchema`, `vatRuleSchema`, `extraCostSchema`) for **granular failure detection** — if the full `leaseFormSchema` test fails, the sub-schema tests pinpoint which part broke.
+- The `minimal` fixture deliberately omits optional fields and fields with `.default()` — this is where `.default()` behavior changes will surface.
+- UUIDs are hardcoded constants, not generated — this ensures snapshot stability across runs.
+- Enum values use string literals that match the actual enum values in the codebase (e.g., `'residential'`, `'lump_sum'`, `'calendar'`, `'expiry_notice'`).
+
+#### Example: Contact Schema Test File
+
+The contact schema demonstrates a different pattern — `.optional().default([]).superRefine().transform()` chains on `emails` and `phone_numbers` fields. This chain is particularly susceptible to the `.default()` short-circuit change.
+
+```typescript
+// src/components/contact/__tests__/schema.test.ts
+import { describe, it, expect } from 'vitest';
+import { describeSchema } from '@/__tests__/helpers/schema-test-factory';
+import { contactFormSchema, supplierFormSchema, eidContactFormSchema } from '../schema';
+
+describeSchema('ContactFormSchema', contactFormSchema, {
+  valid: {
+    capacity: 'company',
+    contact_type: 'owner',
+    company_name: 'Test Corp',
+    vat_liable: true,
+    vat_number: 'BE0123456789',
+    emails: [{ value: 'test@example.com', type: 'work' }],
+    phone_numbers: [{ phone_number: '+32470123456', type: 'work' }],
+    language: 'en',
+    correspondence: 'email',
+    address: { street: 'Rue Test 1', city: 'Brussels', postalCode: '1000', country: 'BE' },
+    use_alternative_address: false,
+    representative: 'person',
+    representative_name: 'John Doe',
+  },
+  minimal: {
+    capacity: 'individual',
+    contact_type: 'owner',
+    first_name: 'Jane',
+    language: 'en',
+    correspondence: 'email',
+    address: { street: 'X', city: 'X', postalCode: '1000', country: 'BE' },
+    use_alternative_address: false,
+    // emails and phone_numbers omitted — tests .optional().default([]) behavior
+  },
+});
+
+// Dedicated test for the .optional().default([]).superRefine().transform() chain
+// This is the exact pattern most at risk from .default() short-circuit change
+describe('ContactFormSchema — transform chain behavior', () => {
+  it('trims and filters empty emails when provided', () => {
+    const result = contactFormSchema.safeParse({
+      capacity: 'individual',
+      contact_type: 'owner',
+      first_name: 'Test',
+      emails: [
+        { value: '  test@example.com  ', type: 'work' },
+        { value: '  ', type: 'work' },
+        { value: '', type: 'work' },
+      ],
+      phone_numbers: [],
+      language: 'en',
+      correspondence: 'email',
+      address: { street: 'X', city: 'X', postalCode: '1000', country: 'BE' },
+      use_alternative_address: false,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      // Should trim whitespace and filter out empty values
+      expect(result.data.emails).toMatchSnapshot();
+      expect(result.data.phone_numbers).toMatchSnapshot();
+    }
+  });
+
+  it('applies default empty array when emails/phone_numbers omitted', () => {
+    const result = contactFormSchema.safeParse({
+      capacity: 'individual',
+      contact_type: 'owner',
+      first_name: 'Test',
+      language: 'en',
+      correspondence: 'email',
+      address: { street: 'X', city: 'X', postalCode: '1000', country: 'BE' },
+      use_alternative_address: false,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      // CRITICAL: In Zod 3, .optional().default([]) returns []
+      // In Zod 4, behavior may differ — snapshot catches this
+      expect(result.data.emails).toMatchSnapshot();
+      expect(result.data.phone_numbers).toMatchSnapshot();
     }
   });
 });
+
+describeSchema('SupplierFormSchema', supplierFormSchema, {
+  valid: {
+    supplier_type: 'plumber',
+    company_name: 'Fix-It Corp',
+    vat_liable: false,
+    language: 'en',
+    correspondence: 'email',
+    representative: 'none',
+  },
+  minimal: {
+    supplier_type: 'plumber',
+    company_name: 'X',
+    vat_liable: false,
+    language: 'en',
+    correspondence: 'email',
+    representative: 'none',
+  },
+});
+
+describeSchema('EidContactFormSchema', eidContactFormSchema, {
+  valid: {
+    first_name: 'Jean',
+    last_name: 'Dupont',
+    date_of_birth: '1990-01-15',
+    national_id_number: '90011512345',
+    capacity: 'individual',
+    contact_type: 'owner',
+    emails: [{ value: 'jean@example.com', type: 'personal' }],
+    phone_numbers: [{ phone_number: '+32470123456', type: 'personal' }],
+    language: 'fr',
+    correspondence: 'email',
+    address: { street: 'Rue de la Loi 1', city: 'Bruxelles', postalCode: '1000', country: 'BE' },
+    use_alternative_address: false,
+  },
+  minimal: {
+    first_name: 'J',
+    language: 'en',
+    correspondence: 'email',
+    address: { street: 'X', city: 'X', postalCode: '1000', country: 'BE' },
+    use_alternative_address: false,
+    // Tests .default(true) on remind_expiry
+    // Tests .default(CapacityTypeEnum.INDIVIDUAL) on capacity
+    // Tests .default(ContactTypeEnum.OWNER) on contact_type
+    // Tests .optional().default([]).transform() on emails/phone_numbers
+  },
+});
 ```
 
-**Files to cover (minimum)**:
-1. `src/modules/patrimony/forms/lease/schema.ts`
-2. `src/modules/financial/forms/purchase-invoice-v2/schema.ts`
-3. `src/modules/financial/forms/purchase-invoice/schema.ts`
-4. `src/components/contact/schema.ts`
-5. `src/modules/fee-management/FeeConfiguratorForm/schema.ts`
-6. `src/modules/financial/forms/cost-settlement/CostSettlementForm/schema.ts`
-7. `src/modules/financial/forms/fiscal-year-setup/schema.ts`
-8. `src/modules/financial/forms/provision/ProvisionForm/schema.ts`
-9. `src/modules/patrimony/forms/lease/revision/schema.ts`
-10. `src/modules/broadcasts/schemas/broadcastFormSchema.ts`
+#### Benefits Summary
 
-### Phase 2: Transform + Default Combo Tests (Priority: CRITICAL)
+| Benefit | Explanation |
+|---------|-------------|
+| **Catches silent data changes** | The `.default()` + `.transform()` behavior change produces zero errors but different data. Snapshots are the only automated detection mechanism. |
+| **Zero manual expected-value authoring** | `toMatchSnapshot()` generates the expected value file automatically on first run. No need to manually construct complex nested objects as expected output. |
+| **Self-documenting** | Snapshot files serve as human-readable documentation of "what does this schema produce for these inputs?" — useful beyond just migration. |
+| **Extreme precision** | Snapshot diffs show exactly which field, in which nested path, changed its value. Pinpoints the exact `.default()` or `.transform()` that needs attention. |
+| **Composable with sub-schemas** | Testing `generalInfoSchema`, `extraCostSchema`, `vatRuleSchema` individually (not just the composite `leaseFormSchema`) gives granular failure isolation. |
+| **Fast execution** | Schema snapshot tests run in <100ms per file. No DOM, no API, no browser. Can run on every commit. |
+| **Low false-positive rate** | Snapshots only fail when actual output changes. No flaky tests from network timeouts, race conditions, or CSS changes. |
+| **Reusable beyond migration** | After migration, these tests continue to serve as regression tests for any future schema changes (field additions, validation rule changes, refactoring). |
 
-**Goal**: Specifically test all schemas where `.transform()` and `.default()` coexist — these are the most likely to break silently.
+#### Trade-offs
 
-**Discovery command**:
-```bash
-# Find files that have BOTH .transform and .default
-rg -l '\.transform\(' sndq-fe/src/ --glob '*.ts' | \
-  xargs rg -l '\.default\(' --glob '*.ts'
+| Trade-off | Impact | Mitigation |
+|-----------|--------|------------|
+| **Fixture authoring effort** | Each schema needs valid + minimal fixture objects. For complex schemas like `leaseFormSchema` (492 lines, deeply nested), this takes 15-30 minutes. | The factory pattern reduces per-schema boilerplate to fixtures only. Sub-schema testing (e.g., `generalInfoSchema` independently) uses simpler fixtures. |
+| **Snapshot files are opaque** | `.snap` files can be large and hard to review in PRs. Reviewers may rubber-stamp snapshot updates. | Keep error snapshots to `path` + `code` only (no `message`). Name snapshot tests descriptively so the `.snap` file is self-explanatory. |
+| **Snapshot updates required for intentional changes** | After migration, many snapshots will change intentionally (e.g., `.default()` now populates keys that were previously absent). Each must be reviewed. | Run `pnpm test` first (see what failed), review each diff, then `pnpm test -- -u` to update. The review step is the actual value — it forces conscious acknowledgment of each behavior change. |
+| **Does not test UI rendering** | Snapshot tests verify schema parsing only, not whether the form component renders validation errors correctly. | Manual QA of 6 critical forms covers UI rendering. `zodResolver` smoke tests (below) cover the schema→form integration point. |
+| **Fixtures may not cover all code paths** | A single `valid` + `minimal` fixture pair may not exercise every `.superRefine()` branch or conditional validation. | For critical schemas (lease, contact), add dedicated tests for specific `.superRefine()` paths (see the "transform chain behavior" example above). |
+| **Enum value dependency** | Fixtures hardcode enum string values. If enums change independently of the Zod migration, fixtures break. | Use imported enum constants where possible (e.g., `CapacityTypeEnum.COMPANY`), falling back to string literals only for `as const` arrays where the enum type isn't exported. |
+
+---
+
+### SELECTED: zodResolver Smoke Tests (Vitest) — SECONDARY
+
+#### What This Test Type Does
+
+zodResolver smoke tests verify that `@hookform/resolvers`'s `zodResolver()` function can:
+1. Accept a Zod schema without throwing (instantiation check)
+2. Validate correct data and return no errors (happy path)
+3. Validate incorrect data and return errors (error path)
+
+This is a **compatibility test**, not a behavior test. It does not verify specific error messages or parsed values — it verifies that the integration between `zodResolver` and Zod's internal API still works.
+
+#### Why This Is a Critical Secondary Choice
+
+**The dependency chain risk:**
+
+```
+@hookform/resolvers (zodResolver)
+        ↓ internally accesses
+    schema._def (Zod 3) → schema._zod.def (Zod 4)
+    instanceof ZodEffects (Zod 3) → eliminated (Zod 4)
+    ZodType<Output, Def, Input> (Zod 3) → ZodType<Output, Input> (Zod 4)
+        ↓ consumed by
+    ~103 schema files via zodResolver(schema)
+        ↓ used by
+    ~100+ React form components
 ```
 
-For each file found, write a test that:
-1. Parses `undefined` for the field with `.default()` + `.transform()`
-2. Snapshots the result
-3. After migration, if snapshot changes → need `.prefault()` instead
+If `@hookform/resolvers` does not support Zod v4's internal structure, **100% of forms in the entire application break**. No amount of schema snapshot testing can catch this — it's an integration point between two libraries.
 
-### Phase 3: zodResolver Integration Tests (Priority: HIGH)
+This test must be run **before any migration work begins**:
+1. Install Zod v4 on a throwaway branch
+2. Run the zodResolver smoke test
+3. If it fails → migration is **blocked** until `@hookform/resolvers` ships a compatible version
+4. If it passes → proceed with confidence
 
-**Goal**: Verify that form submission works end-to-end with zodResolver.
+#### Design: Single File, Minimal Boilerplate
+
+The entire zodResolver smoke test suite fits in one file (~50 lines):
 
 ```typescript
-// __tests__/integration/form-resolver.test.ts
+// src/__tests__/zod-resolver-compat.test.ts
+import { describe, it, expect } from 'vitest';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+// Import representative schemas of varying complexity
 import { leaseFormSchema } from '@/modules/patrimony/forms/lease/schema';
+import { contactFormSchema } from '@/components/contact/schema';
+import { amountWithDistributionSchema } from '@/modules/financial/forms/purchase-invoice-v2/schema';
 
-describe('zodResolver compatibility', () => {
-  it('should create a resolver without errors', () => {
-    expect(() => zodResolver(leaseFormSchema)).not.toThrow();
+// Simple schema for end-to-end validation test
+const simpleSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  age: z.number().int().min(0),
+});
+
+describe('zodResolver — Zod version compatibility', () => {
+  describe('instantiation (does not throw)', () => {
+    const schemas = [
+      { name: 'simple object', schema: simpleSchema },
+      { name: 'lease (deeply nested + superRefine)', schema: leaseFormSchema },
+      { name: 'contact (transform chains)', schema: contactFormSchema },
+      { name: 'amount distribution (defaults + enums)', schema: amountWithDistributionSchema },
+    ];
+
+    it.each(schemas)(
+      'creates resolver for "$name" without error',
+      ({ schema }) => {
+        expect(() => zodResolver(schema)).not.toThrow();
+      },
+    );
   });
 
-  it('should validate valid data', async () => {
-    const resolver = zodResolver(leaseFormSchema);
-    const result = await resolver(validData, {}, { fields: {} });
-    expect(result.errors).toEqual({});
-  });
+  describe('validation (resolves correctly)', () => {
+    it('returns no errors for valid data', async () => {
+      const resolver = zodResolver(simpleSchema);
+      const result = await resolver(
+        { name: 'Test', email: 'test@example.com', age: 25 },
+        {},
+        { fields: {}, shouldUseNativeValidation: false } as any,
+      );
+      expect(result.errors).toEqual({});
+      expect(result.values).toBeDefined();
+    });
 
-  it('should return expected errors for invalid data', async () => {
-    const resolver = zodResolver(leaseFormSchema);
-    const result = await resolver({}, {}, { fields: {} });
-    expect(Object.keys(result.errors).length).toBeGreaterThan(0);
+    it('returns errors for invalid data', async () => {
+      const resolver = zodResolver(simpleSchema);
+      const result = await resolver(
+        { name: '', email: 'not-an-email', age: -1 },
+        {},
+        { fields: {}, shouldUseNativeValidation: false } as any,
+      );
+      expect(Object.keys(result.errors).length).toBeGreaterThan(0);
+    });
+
+    it('returns errors for empty data', async () => {
+      const resolver = zodResolver(simpleSchema);
+      const result = await resolver(
+        {},
+        {},
+        { fields: {}, shouldUseNativeValidation: false } as any,
+      );
+      expect(Object.keys(result.errors).length).toBeGreaterThan(0);
+    });
   });
 });
 ```
 
-### Phase 4: nativeEnum Accessor Tests (Priority: MEDIUM)
+**Why this design:**
 
-**Goal**: Verify that all `z.nativeEnum()` migrations preserve enum value access.
+- **`it.each` for instantiation** — Tests multiple schema complexity levels (simple object, deeply nested with superRefine, transform chains, defaults + enums) with zero code duplication.
+- **Simple schema for validation tests** — Uses a trivial schema for the valid/invalid/empty path tests because the goal is testing `zodResolver`'s behavior, not the schema's behavior (that's what snapshot tests are for).
+- **Complex schemas for instantiation only** — The `leaseFormSchema` and `contactFormSchema` are included to verify that `zodResolver` can handle Zod v4's internal representation of complex schemas (effects, transforms, nested objects). Full validation of these schemas would require constructing complete fixture objects, which is already covered by snapshot tests.
+- **`shouldUseNativeValidation: false`** — Matches the default React Hook Form configuration used in the codebase.
 
-```typescript
-// Test that enum values are accessible via .enum (not .Enum or .Values)
-import { myEnumSchema } from '@/path/to/schema';
+#### Benefits Summary
 
-describe('Enum accessor migration', () => {
-  it('should access values via .enum', () => {
-    expect(myEnumSchema.enum.SomeValue).toBeDefined();
-  });
-});
+| Benefit | Explanation |
+|---------|-------------|
+| **Catches the #1 migration blocker** | If `zodResolver` breaks, every form breaks. This test detects incompatibility before any migration effort is invested. |
+| **Extremely low cost** | ~50 lines, one file, sub-second execution. Near-zero maintenance. |
+| **Binary pass/fail** | Either `zodResolver` works with Zod v4 or it doesn't. No ambiguity in results. |
+| **Guards against future resolver updates** | Even after migration, this test catches regressions if `@hookform/resolvers` ships a breaking update. |
+| **Works as a pre-flight check** | Can be run on a throwaway branch with Zod v4 installed to determine if the migration is even feasible, before investing days of work. |
+
+#### Trade-offs
+
+| Trade-off | Impact | Mitigation |
+|-----------|--------|------------|
+| **Does not test form UI** | Verifies resolver function, not that error messages render correctly in components. | Manual QA of 6 critical forms covers UI rendering. |
+| **Does not test all 103 schemas** | Only instantiates 4 representative schemas. A schema with a unique Zod pattern not represented here could still break. | The 4 selected schemas cover the major pattern categories: simple objects, nested objects with superRefine, transform chains, defaults with enums. If these work, simpler schemas will also work (zodResolver processes all schemas through the same internal API). |
+| **Mock-ish `fields` parameter** | The `fields` parameter is cast to `any` because constructing a real `FieldValues` object for complex schemas would require the full React Hook Form context. | This is acceptable because the test targets zodResolver's Zod interaction, not its React Hook Form field mapping. The `fields` parameter is only used for `shouldUseNativeValidation` behavior, which is disabled. |
+| **Does not detect subtle error format differences** | zodResolver may succeed but produce differently formatted error objects that React Hook Form displays incorrectly. | Schema snapshot tests (primary) catch error structure changes at the Zod level. The manual QA step catches display issues. |
+
+---
+
+### Combined Testing Approach: How the Two Types Work Together
+
 ```
+Layer 1: tsc --noEmit (FREE — already in CI)
+├── Catches: removed APIs, type signature changes, generic changes
+├── Covers: ~90 schema files with no .transform()
+└── Cost: zero additional effort
+
+Layer 2: Schema Snapshot Tests (PRIMARY — ~500 lines across 13 files)
+├── Catches: silent .default() changes, .transform() output changes, error structure changes
+├── Covers: 13 high-risk schema files (100% of .transform() usage)
+└── Cost: ~2-3 hours to write fixtures
+
+Layer 3: zodResolver Smoke Tests (SECONDARY — ~50 lines, 1 file)
+├── Catches: @hookform/resolvers internal API incompatibility
+├── Covers: the single integration point between Zod and React Hook Form
+└── Cost: ~30 minutes to write
+
+Layer 4: Manual QA (POST-MIGRATION — no code)
+├── Catches: UI rendering issues, real-world edge cases
+├── Covers: 6 most critical forms (lease, purchase invoice v1/v2, contact, broadcast, fee configurator)
+└── Cost: ~2-3 hours of manual testing
+```
+
+**Total automated test code**: ~550 lines across 15 files
+**Total risk coverage**: All 14 breaking change categories from the catalog
+**Total estimated writing time**: 3-4 hours
+**Ongoing maintenance cost**: Near zero (snapshots only break on intentional schema changes)
 
 ---
 
@@ -974,10 +1605,12 @@ Create a comparison table like:
 
 ### Prerequisites (Before Starting)
 
-- [ ] Verify `@hookform/resolvers` supports Zod v4 (check changelog, GitHub issues, or test in isolation)
+- [ ] Run zodResolver smoke test on throwaway branch with Zod v4 installed (see "zodResolver Smoke Tests" section) — **if this fails, migration is BLOCKED**
+- [ ] Verify `@hookform/resolvers` changelog and GitHub issues for Zod v4 support
 - [ ] Run and save baseline `tsc --diagnostics` and `tsc --generateTrace`
 - [ ] Run and save baseline `next build` timing
-- [ ] Write pre-migration snapshot tests (Phase 1 & 2 from testing strategy)
+- [ ] Write schema snapshot tests for 13 high-risk files + zodResolver smoke tests (see "Pre-Migration Testing Strategy" section)
+- [ ] Run `pnpm test` to generate baseline snapshots on Zod v3
 - [ ] Ensure all existing tests pass
 - [ ] Create a dedicated migration branch: `feat/zod-v4-migration`
 
@@ -1050,9 +1683,11 @@ These won't cause TypeScript errors but will change runtime behavior:
 pnpm test
 ```
 
-- All pre-migration snapshot tests should still pass
-- If any snapshot changed → investigate the behavior change
-- Update snapshots only after confirming the new behavior is correct
+- All 13 schema snapshot tests should still pass — if any snapshot changed, it means Zod v4 produces different output for that schema
+- For each snapshot diff: determine if the change is expected (e.g., `.default()` now populates a key) or a regression
+- If expected: decide whether to accept the new behavior or use `.prefault()` to restore Zod 3 behavior
+- zodResolver smoke tests must pass — if they fail after Step 3 fixes, the `@hookform/resolvers` version needs updating
+- Update snapshots only after confirming each behavior change is intentional: `pnpm test -- -u`
 
 ### Step 6: Manual QA of Critical Forms (Day 4–5)
 
@@ -1129,6 +1764,7 @@ This allows gradual migration file-by-file if a big-bang approach is too risky.
 
 | Topic | Related Notes | Relevance |
 |-------|--------------|-----------|
+| **Migration progress tracker** | [zod-v4-migration-progress.md](./zod-v4-migration-progress.md) | **Tracks batch-by-batch progress, metrics, and per-file checklist** |
 | React rendering behavior | [react-rendering-behavior.md](../../04-frontend/react/react-rendering-behavior.md) | Form re-render performance benefits from faster Zod parsing |
 | Learning patterns | [learning-patterns.md](../../04-frontend/react/learning-patterns.md) | Tree shaking patterns relevant to Zod v4 bundle improvements |
 | sndq-fe reading plan | [sndq-fe-reading-plan.md](./sndq-fe-reading-plan.md) | Form patterns section maps to Zod usage |
@@ -1155,3 +1791,18 @@ This allows gradual migration file-by-file if a big-bang approach is too risky.
 - Consider doing the migration in two PRs: (1) pre-migration tests, (2) actual Zod upgrade. This way the safety net is reviewed and merged independently.
 - The `@hookform/resolvers` compatibility check should be done **before** spending any time on migration work. If it's not compatible, the entire effort is blocked.
 - Post-migration, update the `.cursor/rules/sndq.mdc` rule to reference "Zod v4" instead of "Zod v3".
+
+### Testing Decision Log (2026-03-27)
+
+**Decision**: Use **Schema Snapshot Tests** (primary) + **zodResolver Smoke Tests** (secondary) only.
+
+**Rationale**: The migration's highest risk is silent runtime behavior changes (`.default()` short-circuit, `.transform()` + `.default()` combo, `.optional()` + `.default()` key presence). These cannot be caught by the compiler or by E2E tests cost-effectively. Schema snapshot tests target exactly this risk with minimal boilerplate via a factory helper pattern.
+
+**Rejected alternatives and why**:
+- **E2E (Playwright)**: 100+ forms makes this prohibitively expensive (~50-100 lines per form, staging dependency, auth setup). Maintenance cost too high for a one-time migration.
+- **Component Render Tests (RTL)**: Deep provider tree dependency (`WorkspacesContext`, `QueryClientProvider`, `IntlProvider`, `FormProvider`) makes mocking impractical for 100+ forms.
+- **Property-Based (fast-check)**: Overkill — risk is known behavior changes, not unknown edge cases. Setting up arbitraries for deeply nested schemas (lease = 492 lines) too expensive.
+- **Contract/Type Tests**: Redundant with `tsc --noEmit` which already type-checks all 170+ `z.infer<>` usages.
+- **nativeEnum Accessor Tests**: Absorbed into snapshot tests (valid fixtures exercise enum values; `tsc` catches `.Enum`/`.Values` removal).
+
+**Key numbers**: 13 schema files targeted (100% of `.transform()` usage), ~550 lines total test code, ~3-4 hours writing time, near-zero ongoing maintenance.
