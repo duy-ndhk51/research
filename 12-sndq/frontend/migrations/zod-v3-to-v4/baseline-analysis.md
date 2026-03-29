@@ -16,6 +16,7 @@ Detailed analysis of the `tsc --noEmit --diagnostics` benchmark runs captured **
 - [Statistical Summary](#statistical-summary)
 - [Bottleneck Analysis](#bottleneck-analysis)
 - [Zod v4 Migration — Expected Impact](#zod-v4-migration--expected-impact)
+- [Next.js Build Baseline](#nextjs-build-baseline)
 - [Recommendations](#recommendations)
 
 ---
@@ -313,6 +314,110 @@ With ~44 files using `z.nativeEnum()`, migrating to the unified `z.enum()` remov
 | Needs 8 GB heap? | Yes | Maybe not | **No** (default 4 GB may suffice) |
 
 These estimates are based on Zod community benchmarks and the specific Zod usage patterns in the `sndq-fe` codebase. Actual results will depend on what percentage of total instantiations are Zod-attributable (likely >50% given 103 schema files).
+
+---
+
+## Next.js Build Baseline
+
+### Raw Build Data (3 runs)
+
+All runs executed on the same branch (`perf/SQ-20365`), `.next/` deleted before each, dev server killed.
+
+```
+Command: pnpm build 2>&1 | tee build-output-N.txt
+(Lerna → next build → Next.js 15.5.9)
+```
+
+### Run 1 — `build-output-2.txt`
+
+```
+Compiled successfully in 3.5min
+pnpm build 2>&1  591.78s user  90.08s system  145% cpu  7:48.44 total
+```
+
+### Run 2 — `build-output-3.txt`
+
+```
+Compiled successfully in 4.2min
+pnpm build 2>&1  703.77s user  89.25s system  161% cpu  8:10.83 total
+```
+
+### Run 3 — `build-output-4.txt`
+
+```
+Compiled successfully in 4.9min
+pnpm build 2>&1  748.78s user  116.76s system  152% cpu  9:28.74 total
+```
+
+### Build Timing Analysis
+
+| Run | Compile Phase | Wall-Clock | User | System | CPU % |
+|-----|---------------|------------|------|--------|-------|
+| 1 | 3.5 min | **7:48** (468s) | 591.78s | 90.08s | 145% |
+| 2 | 4.2 min | **8:10** (491s) | 703.77s | 89.25s | 161% |
+| 3 | 4.9 min | **9:28** (569s) | 748.78s | 116.76s | 152% |
+| **Median** | **4.2 min** | **8:10 (491s)** | | | |
+
+| Stat | Wall-Clock (s) | Compile Phase (min) |
+|------|----------------|---------------------|
+| Min | 468 | 3.5 |
+| Max | 569 | 4.9 |
+| Mean | 509 | 4.2 |
+| **Median** | **491** | **4.2** |
+| Range | 101s | 1.4 min |
+| % Variance | **21.6%** | **40%** |
+
+### Variance Analysis
+
+The build time variance (21.6% wall-clock, 40% compile phase) is significantly higher than the `tsc` variance (2.2% CoV). This is because:
+
+1. **Thermal throttling**: Apple Silicon aggressively throttles during sustained 8+ minute CPU-bound workloads. The compile phase is the hottest part, and Run 3 (last to execute) shows the most throttling impact (4.9min compile vs 3.5min on Run 1).
+
+2. **Webpack compilation is multi-phased**: `next build` involves webpack bundling, type checking, static generation, and trace collection. Each phase has independent variance, and they compound.
+
+3. **CPU % fluctuation**: Run 1 used only 145% CPU (less parallelism), while Run 2 hit 161%. This suggests system load or thermal state affected how many parallel webpack workers Next.js could sustain.
+
+4. **User time vs wall-clock**: Run 3 consumed 748.78s user time in 569s wall-clock (1.32x parallelism), while Run 2 consumed 703.77s in 491s (1.43x parallelism). The degrading parallelism ratio across runs confirms progressive thermal throttling.
+
+**Conclusion**: For build time benchmarking, let the machine cool between runs (5+ min gap) and take the median of at least 3 runs. Run 2 (8:10.83) is the most representative as the median.
+
+### Bundle Size (identical across all 3 runs)
+
+| Metric | Value |
+|--------|-------|
+| **First Load JS shared by all** | **232 kB** |
+| Largest shared chunk (`38387-*.js`) | 134 kB |
+| Second shared chunk (`9e84f066-*.js`) | 54.4 kB |
+| Third shared chunk (`e61e4be7-*.js`) | 36.9 kB |
+| Other shared chunks | 7.11 kB |
+| Middleware | 109 kB |
+| Total routes | 123 (all dynamic `ƒ`) |
+
+### Top 10 Heaviest Routes by First-Load JS
+
+| # | Route | Page Size | First-Load JS | Assessment |
+|---|-------|-----------|---------------|------------|
+| 1 | `/patrimony/buildings/detail/[id]/meeting/[meetingId]` | 352 kB | **1.57 MB** | Extreme outlier — page itself is 352 kB |
+| 2 | `/patrimony` | 8.9 kB | **1.29 MB** | Heavy shared chunk tree |
+| 3 | `/contacts/contact/detail/[id]` | 21.8 kB | **1.25 MB** | Contact detail + shared chunks |
+| 4 | `/peppol` | 879 B | **1.25 MB** | Tiny page, heavy shared deps |
+| 5 | `/financial/invoices/sales/[salesId]` | 8.44 kB | **1.23 MB** | Financial module shared tree |
+| 6 | `/patrimony/buildings/detail/[id]` | 549 B | **1.22 MB** | Building detail shared tree |
+| 7 | `/financial/invoices/purchase/[purchaseId]` | 6.21 kB | **1.20 MB** | Invoice detail |
+| 8 | `/financial/invoices/purchase/new-v2` | 18.2 kB | **1.19 MB** | Heavy form page |
+| 9 | `/financial/buildings/[buildingId]` | 18.4 kB | **1.18 MB** | Building financial detail |
+| 10 | `/financial/buildings/[buildingId]/costs` | 730 B | **1.17 MB** | Costs listing |
+
+### Bundle Size — Zod v4 Impact Assessment
+
+Zod contributes to the shared JS chunk (232 kB) which is loaded by every route. The Zod library itself is approximately 13-15 kB gzipped in v3. In v4:
+
+- **Tree shaking improvement**: Zod v4's restructured exports enable better dead code elimination. Top-level validators (`z.email()` instead of `z.string().email()`) avoid pulling in the entire `ZodString` class.
+- **`ZodEffects` class eliminated**: One fewer class in the bundle, though the effect is small (a few KB).
+- **During gradual migration**: Both `zod` (v3 API) and `zod/v4` are resolved from the same package (3.25.76), so there is **no bundle duplication**. Webpack tree-shakes unused exports.
+- **Expected impact**: Small reduction (1-3 kB gzipped) in the 232 kB shared chunk. Bundle size is not the primary benefit of this migration.
+
+The heaviest route (meeting at 1.57 MB) is dominated by page-specific JS (352 kB), not Zod. Zod migration will not meaningfully affect per-route sizes.
 
 ---
 

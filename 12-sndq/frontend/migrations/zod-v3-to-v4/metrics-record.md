@@ -96,14 +96,57 @@ Additional constant metrics across all runs:
 | Parse time range | 3.59–4.23s |
 | Bind time range | 0.74–0.84s |
 
-### Next.js Build
+### Next.js Build (3 runs)
 
-| Field | Value |
-|-------|-------|
-| `next build` wall-clock time | _(not measured yet)_ |
-| `.next/static/chunks/` total size | _(not measured yet)_ |
-| Heaviest route first-load JS | _(not measured yet)_ |
-| Heaviest route name | _(not measured yet)_ |
+> Command: `pnpm build 2>&1 | tee build-output-N.txt` (via Lerna → `next build`)
+> All runs on same branch `perf/SQ-20365`, `.next/` deleted before each run.
+
+| Run | Source File | Compile Phase | Wall-Clock (`time`) | User | System | CPU % |
+|-----|-------------|---------------|---------------------|------|--------|-------|
+| 1 | `build-output-2.txt` | 3.5 min | **7:48.44** (468s) | 591.78s | 90.08s | 145% |
+| 2 | `build-output-3.txt` | 4.2 min | **8:10.83** (491s) | 703.77s | 89.25s | 161% |
+| 3 | `build-output-4.txt` | 4.9 min | **9:28.74** (569s) | 748.78s | 116.76s | 152% |
+| **Median** | | **4.2 min** | **8:10.83 (491s)** | **703.77s** | **90.08s** | **152%** |
+
+| Stat | Wall-Clock (s) | Compile Phase (min) |
+|------|----------------|---------------------|
+| Min | 468 | 3.5 |
+| Max | 569 | 4.9 |
+| Mean | 509 | 4.2 |
+| **Median** | **491** | **4.2** |
+| Range | 101 (21.6%) | 1.4 (40%) |
+
+> **Note**: High variance (21.6% wall-clock range) is expected due to thermal throttling on Apple Silicon during sustained 8+ min builds. The compile phase shows even higher variance (40%) because it's CPU-bound and most affected by throttling. Median is the most reliable reference.
+
+### Bundle Size (consistent across all 3 runs)
+
+| Metric | Value |
+|--------|-------|
+| First Load JS shared by all | **232 kB** |
+| Shared chunk: `38387-*.js` | 134 kB |
+| Shared chunk: `9e84f066-*.js` | 54.4 kB |
+| Shared chunk: `e61e4be7-*.js` | 36.9 kB |
+| Other shared chunks | 7.11 kB |
+| Middleware | 109 kB |
+| Total routes | 123 (all dynamic `ƒ`) |
+| Next.js version | 15.5.9 |
+
+### Top 10 Heaviest Routes by First-Load JS
+
+| # | Route | Size | First Load JS |
+|---|-------|------|---------------|
+| 1 | `/patrimony/buildings/detail/[id]/meeting/[meetingId]` | 352 kB | **1.57 MB** |
+| 2 | `/patrimony` | 8.9 kB | **1.29 MB** |
+| 3 | `/contacts/contact/detail/[id]` | 21.8 kB | **1.25 MB** |
+| 4 | `/peppol` | 879 B | **1.25 MB** |
+| 5 | `/financial/invoices/sales/[salesId]` | 8.44 kB | **1.23 MB** |
+| 6 | `/patrimony/buildings/detail/[id]` | 549 B | **1.22 MB** |
+| 7 | `/financial/invoices/purchase/[purchaseId]` | 6.21 kB | **1.20 MB** |
+| 8 | `/financial/invoices/purchase/new-v2` | 18.2 kB | **1.19 MB** |
+| 9 | `/financial/buildings/[buildingId]` | 18.4 kB | **1.18 MB** |
+| 10 | `/financial/buildings/[buildingId]/costs` | 730 B | **1.17 MB** |
+
+> Most routes above 1 MB first-load share the same large chunk tree. The outlier is the meeting route at 1.57 MB (352 kB page-specific JS).
 
 ### Codebase Counts
 
@@ -340,8 +383,8 @@ Additional constant metrics across all runs:
 
 | Field | Value |
 |-------|-------|
-| `next build` wall-clock time | |
-| `.next/static/chunks/` total size | |
+| `next build` wall-clock time (median of 3) | |
+| Shared JS (all routes) | |
 | Heaviest route first-load JS | |
 | Heaviest route name | |
 
@@ -370,9 +413,9 @@ Additional constant metrics across all runs:
 | `tsc` Check time (s) | 117.08 | | | | |
 | `tsc` Total time (s) | 121.93 | | | | |
 | `tsc` Memory (KB) | 6,776,633 | | | | |
-| `next build` time | _(TBD)_ | | | | |
-| `.next/static/chunks/` | _(TBD)_ | | | | |
-| Heaviest route JS | _(TBD)_ | | | | |
+| `next build` wall-clock (s) | 491 | | | | |
+| Shared JS (all routes) | 232 kB | | | | |
+| Heaviest route first-load JS | 1.57 MB | | | | |
 | Deprecated APIs | ~280+ | 0 | | -100% | |
 | Schema test files | 1 | | | | |
 
@@ -389,9 +432,9 @@ Additional constant metrics across all runs:
 
 ### Bundle Size Trend (start + end only)
 
-| Checkpoint | `.next/static/chunks/` | Heaviest route JS | Notes |
-|------------|------------------------|-------------------|-------|
-| Baseline | | | Single Zod engine |
+| Checkpoint | Shared JS (all routes) | Heaviest Route First-Load JS | Notes |
+|------------|------------------------|------------------------------|-------|
+| Baseline | 232 kB | 1.57 MB | Single Zod v3 engine |
 | Final | | | Single Zod v4 engine |
 | Delta | | | |
 | % Change | | | |
@@ -424,7 +467,10 @@ Reference to saved measurement output files (from the `measure-zod-migration.sh`
 
 | Label | Filename | Date | Notes |
 |-------|----------|------|-------|
-| Baseline | [baseline-analysis.md](./baseline-analysis.md) | 2026-03-28 | 5 raw runs + detailed analysis |
+| Baseline (tsc) | [baseline-analysis.md](./baseline-analysis.md) | 2026-03-28 | 5 tsc runs + detailed analysis |
+| Baseline (build run 1) | `sndq/build-output-2.txt` | 2026-03-28 | 7:48.44 wall-clock, 3.5min compile |
+| Baseline (build run 2) | `sndq/build-output-3.txt` | 2026-03-28 | 8:10.83 wall-clock, 4.2min compile |
+| Baseline (build run 3) | `sndq/build-output-4.txt` | 2026-03-28 | 9:28.74 wall-clock, 4.9min compile |
 | After Batch 1 | `metrics-after-batch-1-YYYYMMDD-HHMMSS.txt` | | |
 | After Batch 2 | `metrics-after-batch-2-YYYYMMDD-HHMMSS.txt` | | |
 | After Batch 3 | `metrics-after-batch-3-YYYYMMDD-HHMMSS.txt` | | |
