@@ -10,7 +10,8 @@ Zod v4 delivers **14x faster string parsing**, **7x faster array parsing**, and 
 **Estimated effort**: 5–8 days (including pre-migration tests + validation)
 **Testing strategy**: Schema Snapshot Tests (primary) + zodResolver Smoke Tests (secondary) — ~550 lines, 15 files, 3-4 hours
 **Ticket summary**: [Zod v4 Migration — Ticket Summary](./ticket.md) — concise version for task tracking
-**Metrics guide**: [Metrics & Measurement Guide](./metrics-guide.md) — how to measure migration impact incrementally
+**How to measure**: [How to Measure](./how-to-measure.md) — step-by-step runbook after each batch
+**Metrics guide**: [Metrics & Measurement Guide](./metrics-guide.md) — full theory on measuring migration impact
 **Metrics record**: [Metrics Record](./metrics-record.md) — actual recorded measurements
 
 ---

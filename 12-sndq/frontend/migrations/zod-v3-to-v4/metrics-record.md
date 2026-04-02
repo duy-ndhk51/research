@@ -3,7 +3,8 @@
 Live data sheet for recording all measurements taken during the Zod v3 → v4 migration of `sndq-fe`. Fill in values as you run the measurement commands at each checkpoint.
 
 **Created**: 2026-03-27
-**How to measure**: See [Metrics & Measurement Guide](./metrics-guide.md) for commands, scripts, and caveats.
+**How to measure**: See [How to Measure](./how-to-measure.md) for the step-by-step runbook after each batch.
+**Full theory**: See [Metrics & Measurement Guide](./metrics-guide.md) for detailed explanations, scripts, and caveats.
 **Migration tracking**: See [Progress Tracker](./progress.md) for per-file checklists.
 **Related**: [Migration Plan](./README.md) · [Ticket Summary](./ticket.md)
 

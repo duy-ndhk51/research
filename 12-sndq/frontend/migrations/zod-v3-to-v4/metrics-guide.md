@@ -4,6 +4,7 @@ Comprehensive guide to measuring the performance impact of migrating `sndq-fe` f
 
 **Created**: 2026-03-27
 **Related**: [Migration Plan](./README.md) · [Progress Tracker](./progress.md) · [Ticket Summary](./ticket.md)
+**Quick runbook**: [How to Measure](./how-to-measure.md) — practical step-by-step after each batch
 **Record sheet**: [Metrics Record](./metrics-record.md) — fill in actual measurements here
 
 ---

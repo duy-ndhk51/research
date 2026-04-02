@@ -5,6 +5,7 @@ Detailed analysis of the `tsc --noEmit --diagnostics` benchmark runs captured **
 **Date**: 2026-03-28
 **Branch**: `perf/SQ-20365` (based off `dev` @ `7b26c713`)
 **Related**: [Metrics Record](./metrics-record.md) · [Migration Plan](./README.md)
+**Next step**: [How to Measure](./how-to-measure.md) — runbook for capturing metrics after each batch
 
 ---
 
