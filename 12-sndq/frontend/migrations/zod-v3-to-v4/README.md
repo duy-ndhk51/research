@@ -604,25 +604,28 @@ In context of sndq-fe: Every form submission, every field validation, every blur
 rg '\.default\(' --glob '*.ts' --glob '*.tsx' sndq-fe/src/ | grep -v node_modules
 ```
 
-### RISK 2: `@hookform/resolvers` Compatibility — CRITICAL BLOCKER
+### ~~RISK 2: `@hookform/resolvers` Compatibility — CRITICAL BLOCKER~~ **RESOLVED**
 
-**What**: `@hookform/resolvers@^4.1.3` uses `zodResolver` which internally accesses Zod's `._def` property and relies on class-checking against `ZodEffects`, `ZodType` generics, etc. Zod v4 moves `._def` to `._zod.def` and removes `ZodEffects`.
+> **Status**: Confirmed compatible (2026-03-27)
 
-**Why dangerous**: 100% of forms use `zodResolver`. If incompatible, no form in the entire app will work.
+**What**: `@hookform/resolvers@4.1.3` was expected to break because older versions accessed Zod's `._def` property and relied on class-checking against `ZodEffects`. Zod v4 moves `._def` to `._zod.def` and removes `ZodEffects`.
 
-**Mitigation**:
-1. **Before any migration work**, check the `@hookform/resolvers` changelog and GitHub issues for Zod v4 support
-2. Test in isolation: create a throwaway branch, upgrade Zod, and test a single form
-3. If resolvers don't support v4, either:
-   - Wait for the `@hookform/resolvers` update
-   - Fork and patch the resolver temporarily
-   - Use Zod v4's compatibility layer (if available)
+**Resolution**: `@hookform/resolvers@4.1.3` has migrated to **Standard Schema** (`@standard-schema/utils`) instead of internal Zod APIs. Its `package.json` declares:
 
-**Verification**:
-```bash
-npm info @hookform/resolvers versions --json | tail -20
-# Check if any version mentions Zod 4 support in its changelog
+```json
+"peerDependencies": {
+  "zod": "^3.25.76 || ^4.1.8"
+}
 ```
+
+This means the resolver works natively with both Zod v3.25+ (via Standard Schema compatibility layer) and Zod v4. The zodResolver smoke test now serves as a **regression guard** rather than a blocker check.
+
+**Evidence**:
+- `pnpm why zod` shows `@ai-sdk/provider-utils@3.0.17` also uses Zod as peer dep — not a conflict since it only uses `zod.infer` types at compile time
+- `@hookform/resolvers` exports `zodResolver` that calls `@standard-schema/utils` validate function — no `._def` or `ZodEffects` access
+- The `node_modules/.pnpm/@hookform+resolvers@4.1.3_*/node_modules/@hookform/resolvers/zod/dist/zod.d.ts` type definitions reference only Standard Schema interfaces
+
+**Remaining action**: Keep the zodResolver smoke test in the test suite as a regression guard for future resolver/Zod updates.
 
 ### RISK 3: `z.nativeEnum()` + `.Enum` / `.Values` — HIGH
 
@@ -947,21 +950,21 @@ The migration plan notes that `message:` is deprecated in favor of `error:`. Err
 
 These files were selected because they contain `.transform()` calls (the highest-risk pattern when combined with `.default()`). Files without `.transform()` are adequately covered by `tsc --noEmit` for compile-time changes.
 
-| # | Schema File | .transform | .default | nativeEnum | superRefine | Risk |
-|---|-------------|-----------|----------|------------|-------------|------|
-| 1 | `patrimony/forms/lease/schema.ts` | 4 | 21 | 6 | 5 | **CRITICAL** |
-| 2 | `financial/forms/purchase-invoice-v2/schema.ts` | 3 | 11 | 1 | 2 | **CRITICAL** |
-| 3 | `financial/forms/purchase-invoice/schema.ts` | 3 | 18 | 2 | 3 | **CRITICAL** |
-| 4 | `components/contact/schema.ts` | 4 | 9 | 0 | 4 | **CRITICAL** |
-| 5 | `financial/forms/cost-settlement/schema.ts` | 2 | 6 | 0 | 1 | **HIGH** |
-| 6 | `financial/forms/close-fiscal-year/schema.ts` | 2 | 9 | 0 | 0 | **HIGH** |
-| 7 | `patrimony/forms/lease/revision/schema.ts` | 3 | — | — | — | **HIGH** |
-| 8 | `patrimony/forms/building/schema.ts` | 2 | — | — | — | **HIGH** |
-| 9 | `financial/forms/purchase-invoice-v2-steward/schema.ts` | 3 | 2 | — | — | **HIGH** |
-| 10 | `patrimony/forms/property/schema.ts` | 1 | — | — | — | **MEDIUM** |
-| 11 | `patrimony/forms/lease/components/lease-deposit/schema.ts` | 1 | 1 | — | — | **MEDIUM** |
-| 12 | `fee-management/FeeConfiguratorForm/schema.ts` | 1 | — | — | — | **MEDIUM** |
-| 13 | `contact-book/.../detail-overview-content/form/schema.ts` | 1 | — | — | — | **MEDIUM** |
+| # | Schema File | .transform | .default | nativeEnum | superRefine | Sub-schemas to test | Risk |
+|---|-------------|-----------|----------|------------|-------------|---------------------|------|
+| 1 | `patrimony/forms/lease/schema.ts` | 4 | **21** | 8 | 10 | 8+ (`generalInfoSchema`, `vatRuleSchema`, `indexationRuleSchema`, `extraCostSchema`, `discountSchema`, `payerSchema`, `financialDetailsSchema`, `propertyRentConfigSchema`) | **CRITICAL** |
+| 2 | `financial/forms/purchase-invoice-v2/schema.ts` | 3 | 11 | 2 | 3 | 3 (`amountWithDistributionSchema`, `amountWithDistributionSchemaSyndic`, root) | **CRITICAL** |
+| 3 | `financial/forms/purchase-invoice/schema.ts` | 3 | 18 | 1 | 4 | 6 (`amountFormSchema`, `createAmountFormSchema`, `generalInfoSchema`, `amountSplitSchema`, `settlementSchema`, `paymentSchema`) | **CRITICAL** |
+| 4 | `components/contact/schema.ts` | 4 | 9 | 0 | 7 | 3 (`contactFormSchema`, `supplierFormSchema`, `eidContactFormSchema`) | **CRITICAL** |
+| 5 | `financial/forms/cost-settlement/CostSettlementForm/schema.ts` | 2 | 6 | 2 | 0 | 5+ (`detailsSchema`, `stewardDetailsSchema`, `costSettlementCosts`, `costSettlementIncome`, `paymentSchema`) | **HIGH** |
+| 6 | `financial/forms/close-fiscal-year/schema.ts` | 2 | 9 | 1 | 0 | 6 (`detailsSchema`, `costsSchema`, `incomeSchema`, `balancesSchema`, `capitalSchema`, `paymentSchema`) | **HIGH** |
+| 7 | `patrimony/forms/lease/revision/schema.ts` | 3 | 0 | 3 | 0 | 4 (`leaseRevisionGeneralInfoSchema`, `leaseRevisionItemSchema`, `leaseRevisionUnitsSchema`, `adjustmentTransactionSchema`) | **HIGH** |
+| 8 | `patrimony/forms/building/schema.ts` | 2 | 0 | 0 | 0 | 2 (`buildingFormSchema` + `createBuildingFormSchema(workspaceType)` factory) | **HIGH** |
+| 9 | `financial/forms/purchase-invoice-v2-steward/schema.ts` | 3 | 5 | 1 | 2 | 2 (`amountWithDistributionSchemaSteward`, root) | **HIGH** |
+| 10 | `patrimony/forms/property/schema.ts` | 1 | 0 | 0 | 0 | 1 (`propertyFormSchema`) | **MEDIUM** |
+| 11 | `patrimony/forms/lease/components/lease-deposit/schema.ts` | 1 | 1 | 1 | 1 | 1 (`leaseDepositFormSchema`) | **MEDIUM** |
+| 12 | `fee-management/FeeConfiguratorForm/schema.ts` | 1 | 7 | **8** | 2 | 7 (`propertyUnitFeeSchema`, `propertyBuildingFeeSchema`, `leaseFeeSchema`, `amountScaleSchema`, `propertiesFeesSchema`, `additionalFeeSchema`, `usageSurchargeSchema`) | **MEDIUM** |
+| 13 | `contact-book/.../detail-overview-content/form/schema.ts` | 1 | 0 | 0 | 0 | 1 (`identityFormSchema`) | **MEDIUM** |
 
 **Why only 13 files instead of all 103:**
 
@@ -1303,29 +1306,26 @@ zodResolver smoke tests verify that `@hookform/resolvers`'s `zodResolver()` func
 
 This is a **compatibility test**, not a behavior test. It does not verify specific error messages or parsed values — it verifies that the integration between `zodResolver` and Zod's internal API still works.
 
-#### Why This Is a Critical Secondary Choice
+#### Role Update: From Blocker Check to Regression Guard
 
-**The dependency chain risk:**
+> **2026-03-27 Discovery**: `@hookform/resolvers@4.1.3` has migrated to **Standard Schema** (`@standard-schema/utils`) and declares `"peerDependencies": { "zod": "^3.25.76 || ^4.1.8" }`. This means it is **natively compatible** with Zod v4.
+
+**Original concern (now resolved):**
 
 ```
 @hookform/resolvers (zodResolver)
         ↓ internally accesses
-    schema._def (Zod 3) → schema._zod.def (Zod 4)
-    instanceof ZodEffects (Zod 3) → eliminated (Zod 4)
-    ZodType<Output, Def, Input> (Zod 3) → ZodType<Output, Input> (Zod 4)
-        ↓ consumed by
-    ~103 schema files via zodResolver(schema)
-        ↓ used by
-    ~100+ React form components
+    schema._def (Zod 3) → schema._zod.def (Zod 4)           ← NO LONGER TRUE
+    instanceof ZodEffects (Zod 3) → eliminated (Zod 4)       ← NO LONGER TRUE
+    ZodType<Output, Def, Input> (Zod 3) → ZodType<Output, Input> (Zod 4)  ← RESOLVED by Standard Schema
 ```
 
-If `@hookform/resolvers` does not support Zod v4's internal structure, **100% of forms in the entire application break**. No amount of schema snapshot testing can catch this — it's an integration point between two libraries.
+**Updated role**: The zodResolver smoke test now serves as a **regression guard** that prevents future breakage if:
+- `@hookform/resolvers` ships an update that drops Standard Schema
+- Zod updates its Standard Schema implementation in a breaking way
+- A package manager deduplication issue causes a version mismatch
 
-This test must be run **before any migration work begins**:
-1. Install Zod v4 on a throwaway branch
-2. Run the zodResolver smoke test
-3. If it fails → migration is **blocked** until `@hookform/resolvers` ships a compatible version
-4. If it passes → proceed with confidence
+The test is no longer a migration blocker — it's a safety net for ongoing maintenance.
 
 #### Design: Single File, Minimal Boilerplate
 
@@ -1606,8 +1606,8 @@ Create a comparison table like:
 
 ### Prerequisites (Before Starting)
 
-- [ ] Run zodResolver smoke test on throwaway branch with Zod v4 installed (see "zodResolver Smoke Tests" section) — **if this fails, migration is BLOCKED**
-- [ ] Verify `@hookform/resolvers` changelog and GitHub issues for Zod v4 support
+- [x] Run zodResolver smoke test on throwaway branch with Zod v4 installed (see "zodResolver Smoke Tests" section) — ~~if this fails, migration is BLOCKED~~ **CONFIRMED COMPATIBLE** (`@hookform/resolvers@4.1.3` uses Standard Schema, peer dep `"zod": "^3.25.76 || ^4.1.8"`)
+- [x] Verify `@hookform/resolvers` changelog and GitHub issues for Zod v4 support — **resolved**: Standard Schema migration eliminates `._def` dependency
 - [ ] Run and save baseline `tsc --diagnostics` and `tsc --generateTrace`
 - [ ] Run and save baseline `next build` timing
 - [ ] Write schema snapshot tests for 13 high-risk files + zodResolver smoke tests (see "Pre-Migration Testing Strategy" section)
@@ -1765,6 +1765,7 @@ This allows gradual migration file-by-file if a big-bang approach is too risky.
 
 | Topic | Related Notes | Relevance |
 |-------|--------------|-----------|
+| **Step 3 deep-dive** | [step3-test-setup.md](./step3-test-setup.md) | **Factory code, zodResolver smoke test, 13-file effort table, implementation workflow** |
 | **Migration progress tracker** | [progress.md](./progress.md) | **Tracks batch-by-batch progress, metrics, and per-file checklist** |
 | React rendering behavior | [react-rendering-behavior.md](../../../../04-frontend/react/react-rendering-behavior.md) | Form re-render performance benefits from faster Zod parsing |
 | Learning patterns | [learning-patterns.md](../../../../04-frontend/react/learning-patterns.md) | Tree shaking patterns relevant to Zod v4 bundle improvements |

@@ -148,21 +148,27 @@ echo "deprecated APIs: $(rg 'required_error|invalid_type_error|\.Enum\.|\.Values
 
 **Target**: 13 files
 
-| # | Schema File | Test Written | Snapshot OK | Import Changed | Test Passed | Manual QA | Committed |
-|---|-------------|:---:|:---:|:---:|:---:|:---:|:---:|
-| 1 | `patrimony/forms/lease/schema.ts` | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| 2 | `financial/forms/purchase-invoice-v2/schema.ts` | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| 3 | `financial/forms/purchase-invoice/schema.ts` | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| 4 | `components/contact/schema.ts` | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| 5 | `financial/forms/cost-settlement/.../schema.ts` | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| 6 | `financial/forms/close-fiscal-year/schema.ts` | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| 7 | `patrimony/forms/lease/revision/schema.ts` | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| 8 | `patrimony/forms/building/schema.ts` | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| 9 | `financial/forms/purchase-invoice-v2-steward/schema.ts` | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| 10 | `patrimony/forms/property/schema.ts` | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| 11 | `patrimony/forms/lease/.../lease-deposit/schema.ts` | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| 12 | `fee-management/FeeConfiguratorForm/schema.ts` | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| 13 | `contact-book/.../detail-overview-content/.../schema.ts` | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| # | Schema File | .default | .transform | nativeEnum | Sub-schemas | Est. Effort | Test | Snap | Import | Pass | QA | Commit |
+|---|-------------|----------|------------|------------|-------------|-------------|:---:|:---:|:---:|:---:|:---:|:---:|
+| 1 | `patrimony/forms/lease/schema.ts` | **21** | 4 | 8 | 8+ | ~1h | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| 2 | `financial/forms/purchase-invoice-v2/schema.ts` | 11 | 3 | 2 | 3 | ~30m | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| 3 | `financial/forms/purchase-invoice/schema.ts` | 18 | 3 | 1 | 6 | ~45m | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| 4 | `components/contact/schema.ts` | 9 | 4 | 0 | 3 | ~30m | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| 5 | `financial/forms/cost-settlement/CostSettlementForm/schema.ts` | 6 | 2 | 2 | 5+ | ~30m | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| 6 | `financial/forms/close-fiscal-year/schema.ts` | 9 | 2 | 1 | 6 | ~30m | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| 7 | `patrimony/forms/lease/revision/schema.ts` | 0 | 3 | 3 | 4 | ~15m | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| 8 | `patrimony/forms/building/schema.ts` | 0 | 2 | 0 | 2 (+ factory fn) | ~20m | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| 9 | `financial/forms/purchase-invoice-v2-steward/schema.ts` | 5 | 3 | 1 | 2 | ~20m | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| 10 | `patrimony/forms/property/schema.ts` | 0 | 1 | 0 | 1 | ~10m | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| 11 | `patrimony/forms/lease/components/lease-deposit/schema.ts` | 1 | 1 | 1 | 1 | ~10m | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| 12 | `fee-management/FeeConfiguratorForm/schema.ts` | 7 | 1 | **8** | 7 | ~30m | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| 13 | `contact-book/.../detail-overview-content/form/schema.ts` | 0 | 1 | 0 | 1 | ~10m | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+
+**Estimated total**: ~4.5-5.5h (factory ~30m + 13 files ~4-5h)
+
+> **Legend**: Test = snapshot test written, Snap = baseline snapshot generated on v3, Import = changed to `"zod/v4"`, Pass = tests pass post-change, QA = manual browser test, Commit = committed
+>
+> **Note**: Files #1 (`lease`) and #3 (`purchase-invoice`) are the heaviest — 21 and 18 `.default()` calls respectively. Start with #10-13 (simpler) to learn patterns before tackling these.
 
 **Batch 1 metrics after completion:**
 
@@ -462,15 +468,23 @@ rg -l 'required_error|invalid_type_error' src/ --glob '*.ts' | sort
 | 2026-03-27 | Use gradual `"zod/v4"` subpath migration instead of big-bang upgrade | Zod 3.25.76 already installed; subpath approach allows file-by-file migration with zero version conflicts; can pause at any point |
 | 2026-03-27 | Use Schema Snapshot Tests + zodResolver Smoke Tests only | High ROI, low maintenance, ~550 lines total; catches silent `.default()` behavior changes that compiler cannot detect. See [testing strategy](./README.md#pre-migration-testing-strategy) |
 | 2026-03-27 | Batch by risk level (transform → nativeEnum → error APIs → simple) | `.transform()` + `.default()` files are the only ones with silent runtime behavior changes; other batches have compiler-guided fixes |
-| | | |
+| 2026-03-27 | `@hookform/resolvers` compatibility confirmed — no longer a blocker | `@hookform/resolvers@4.1.3` uses Standard Schema (`@standard-schema/utils`), peer dep `"zod": "^3.25.76 \|\| ^4.1.8"`. zodResolver smoke test demoted from blocker to regression guard. |
+| 2026-03-28 | Baseline metrics captured (tsc + Next.js build) | 5 tsc runs: 29.15M instantiations, 117s check time, 6.46 GB memory. 3 build runs: 491s median. See [baseline-analysis.md](./baseline-analysis.md) |
+| 2026-04-03 | Detailed 13-file audit completed | Audited all 13 Batch 1 schemas with exact `.default()`, `.transform()`, `nativeEnum`, `.superRefine()` counts and identified all sub-schemas that should be tested individually. See [step3-test-setup.md](./step3-test-setup.md) |
+| 2026-04-03 | Merged Step 3 + Batch 1 into just-in-time per-file workflow | Writing all 13 tests upfront requires context-switching across 13 schemas. Just-in-time: read schema → write test → migrate → QA in one focused session per file. Infra (factory + smoke test) still created once upfront. |
+| 2026-04-03 | Migration paused — `PurchaseInvoiceFormV3` has stiff deadline | V3 form takes priority. Zod migration resumes after V3 is shipped. All research & planning is complete — ready to start immediately once unblocked. |
+| 2026-04-03 | Created ticket-export.md — standalone ticket description | Copy-paste ready markdown for Jira/Linear with full context: motivation, approach, test strategy, migration plan, metrics, risks, effort estimates. See [ticket-export.md](./ticket-export.md) |
 
 ---
 
 ## References
 
+- [Ticket Export](./ticket-export.md) — **Standalone markdown for copy-paste into ticket system**
 - [Migration Plan (full)](./README.md) — Breaking changes catalog, testing strategy, risk analysis
-- [Metrics & Measurement Guide](./metrics-guide.md) — Detailed guide to measuring migration impact with scripts, caveats, and incremental strategy
-- [Ticket Summary](./ticket.md) — Concise version for task tracking and sub-ticket splitting
+- [Step 3 Deep-Dive](./step3-test-setup.md) — Test factory code, zodResolver smoke test, 13-file audit
+- [Metrics & Measurement Guide](./metrics-guide.md) — Detailed guide to measuring migration impact
+- [How to Measure](./how-to-measure.md) — Practical runbook after each batch
+- [Ticket Summary](./ticket.md) — Internal planning version with sub-ticket tracking
 - [Zod Versioning Strategy](https://zod.dev/v4/versioning) — Official docs on the `"zod/v4"` subpath approach
 - [Zod v4 Changelog](https://v4.zod.dev/v4/changelog) — Complete breaking changes list
-- [SNDQ Contribution Plan](../../../sndq-contribution-plan.md) — Pillar 1: FE optimization (this migration is a concrete initiative)
+- [SNDQ Contribution Plan](../../../sndq-contribution-plan.md) — Pillar 1: FE optimization
