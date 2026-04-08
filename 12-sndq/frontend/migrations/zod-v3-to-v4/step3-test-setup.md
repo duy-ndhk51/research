@@ -154,16 +154,9 @@ export function describeSchema(
 
 ### Context Update: From Blocker to Regression Guard
 
-`@hookform/resolvers@4.1.3` has been confirmed compatible with Zod v4:
+Upgraded to `@hookform/resolvers@5.2.2` which has native Zod v4 `zodResolver` support (added in v5.1.0). This supersedes the previous v4.1.3 Standard Schema approach. The upgrade required `react-hook-form@^7.55.0` (upgraded to 7.72.1). Type errors from input/output type inference resolved via centralized wrapper (`src/lib/form/zod-resolver.ts`). See [resolver-wrapper-report.md](./resolver-wrapper-report.md) for details.
 
-```json
-// @hookform/resolvers@4.1.3 package.json
-"peerDependencies": {
-  "zod": "^3.25.76 || ^4.1.8"
-}
-```
-
-The resolver now uses `@standard-schema/utils` instead of Zod internal APIs (`._def`, `ZodEffects` class-checking). This test is kept as a **regression guard** against future breaking changes, not as a migration blocker.
+This test is kept as a **regression guard** against future breaking changes, not as a migration blocker.
 
 ### Code
 

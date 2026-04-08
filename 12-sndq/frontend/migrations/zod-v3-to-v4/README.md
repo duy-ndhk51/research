@@ -5,8 +5,8 @@
 Zod v4 delivers **14x faster string parsing**, **7x faster array parsing**, and **6.5x faster object parsing** with a smaller bundle via improved tree shaking. The `sndq-fe` codebase has **~103 files** importing Zod across **100+ form schemas**, making this a high-impact but high-effort migration. The biggest risks are silent behavior changes in `.default()`, `@hookform/resolvers` compatibility, and `z.nativeEnum()` removal across ~44 files.
 
 **Created**: 2026-03-27
-**Updated**: 2026-03-27 (testing strategy finalized)
-**Status**: Planning
+**Updated**: 2026-04-08 (resolvers v5 upgrade + centralized wrapper approach)
+**Status**: In progress — prerequisite (RHF + resolvers upgrade) completed
 **Estimated effort**: 5–8 days (including pre-migration tests + validation)
 **Testing strategy**: Schema Snapshot Tests (primary) + zodResolver Smoke Tests (secondary) — ~550 lines, 15 files, 3-4 hours
 **Ticket summary**: [Zod v4 Migration — Ticket Summary](./ticket.md) — concise version for task tracking
@@ -40,12 +40,12 @@ Zod v4 delivers **14x faster string parsing**, **7x faster array parsing**, and 
 
 ### Dependency Versions
 
-| Package | Location | Current Version |
-|---------|----------|-----------------|
-| `zod` | `sndq-fe/package.json` | `^3.24.2` |
-| `zod` | `sndq-fe/packages/ui/package.json` | `^3.24.3` |
-| `@hookform/resolvers` | Both `package.json` files | `^4.1.3` |
-| `react-hook-form` | `sndq-fe/package.json` | v7 |
+| Package | Location | Original Version | Current Version |
+|---------|----------|-----------------|-----------------|
+| `zod` | `sndq-fe/package.json` | `^3.24.2` | `^3.25.76` |
+| `zod` | `sndq-fe/packages/ui/package.json` | `^3.24.3` | `^3.24.3` |
+| `@hookform/resolvers` | `sndq-fe/package.json` | `^4.1.3` | `^5.2.2` |
+| `react-hook-form` | `sndq-fe/package.json` | `^7.54.2` | `^7.72.1` |
 
 ### Zod Usage Scale
 
@@ -606,26 +606,23 @@ rg '\.default\(' --glob '*.ts' --glob '*.tsx' sndq-fe/src/ | grep -v node_module
 
 ### ~~RISK 2: `@hookform/resolvers` Compatibility — CRITICAL BLOCKER~~ **RESOLVED**
 
-> **Status**: Confirmed compatible (2026-03-27)
+> **Status**: Resolved via upgrade to v5.2.2 + centralized wrapper (2026-04-08)
 
-**What**: `@hookform/resolvers@4.1.3` was expected to break because older versions accessed Zod's `._def` property and relied on class-checking against `ZodEffects`. Zod v4 moves `._def` to `._zod.def` and removes `ZodEffects`.
+#### Original assessment (2026-03-27, resolvers v4.1.3)
 
-**Resolution**: `@hookform/resolvers@4.1.3` has migrated to **Standard Schema** (`@standard-schema/utils`) instead of internal Zod APIs. Its `package.json` declares:
+`@hookform/resolvers@4.1.3` was confirmed compatible with Zod v4 via Standard Schema (`@standard-schema/utils`). It declared `"peerDependencies": { "zod": "^3.25.76 || ^4.1.8" }` and no longer accessed Zod's internal `._def` property or `ZodEffects` classes.
 
-```json
-"peerDependencies": {
-  "zod": "^3.25.76 || ^4.1.8"
-}
-```
+#### Updated assessment (2026-04-08, resolvers v5.2.2)
 
-This means the resolver works natively with both Zod v3.25+ (via Standard Schema compatibility layer) and Zod v4. The zodResolver smoke test now serves as a **regression guard** rather than a blocker check.
+The Standard Schema approach (resolvers v4.1.3) has been **superseded** by upgrading to `@hookform/resolvers@5.2.2`, which provides **native `zodResolver` support for Zod v4** (added in v5.1.0, June 2025). This is the better long-term path because it gives proper `z.input`/`z.output` type inference rather than the generic Standard Schema adapter.
 
-**Evidence**:
-- `pnpm why zod` shows `@ai-sdk/provider-utils@3.0.17` also uses Zod as peer dep — not a conflict since it only uses `zod.infer` types at compile time
-- `@hookform/resolvers` exports `zodResolver` that calls `@standard-schema/utils` validate function — no `._def` or `ZodEffects` access
-- The `node_modules/.pnpm/@hookform+resolvers@4.1.3_*/node_modules/@hookform/resolvers/zod/dist/zod.d.ts` type definitions reference only Standard Schema interfaces
+**Upgrade required**: Resolvers v5.x requires `react-hook-form@^7.55.0` as a peer dependency. The codebase was upgraded from RHF 7.54.2 to 7.72.1 (latest stable, all regressions from 7.55.0 fixed in 7.59.0, 4 CVEs patched).
 
-**Remaining action**: Keep the zodResolver smoke test in the test suite as a regression guard for future resolver/Zod updates.
+**Type error impact**: Resolvers v5 introduced input/output type inference for `zodResolver`. When Zod schemas use `.default()`, the input type (`z.input`) has optional fields while the output type (`z.output`) has required fields. This caused **168 type errors across 71 files** because `useForm<T>()` expects `Resolver<T, any, T>` but receives `Resolver<z.input, any, z.output>`.
+
+**Resolution**: A centralized wrapper (`src/lib/form/zod-resolver.ts`) re-exports `zodResolver` with the pre-v5 type behavior by casting to `Resolver<z.infer<T>>`. This is a compile-time only change — zero runtime impact. All 155 files importing `zodResolver` switch to the wrapper import path. See [resolver-wrapper-report.md](./resolver-wrapper-report.md) for full analysis.
+
+**Remaining action**: Keep the zodResolver smoke test in the test suite as a regression guard. Gradually remove the wrapper by cleaning up `.default()` in schemas or letting the resolver infer types (see [cleanup path](./resolver-wrapper-report.md#cleanup-path)).
 
 ### RISK 3: `z.nativeEnum()` + `.Enum` / `.Values` — HIGH
 
@@ -1308,7 +1305,9 @@ This is a **compatibility test**, not a behavior test. It does not verify specif
 
 #### Role Update: From Blocker Check to Regression Guard
 
-> **2026-03-27 Discovery**: `@hookform/resolvers@4.1.3` has migrated to **Standard Schema** (`@standard-schema/utils`) and declares `"peerDependencies": { "zod": "^3.25.76 || ^4.1.8" }`. This means it is **natively compatible** with Zod v4.
+> **2026-03-27 Discovery**: `@hookform/resolvers@4.1.3` migrated to Standard Schema — natively compatible with Zod v4.
+>
+> **2026-04-08 Update**: Superseded by upgrade to `@hookform/resolvers@5.2.2` with native Zod v4 `zodResolver` support (added in v5.1.0). Required RHF upgrade from 7.54.2 to 7.72.1. Type errors from input/output inference resolved via centralized wrapper. See [resolver-wrapper-report.md](./resolver-wrapper-report.md).
 
 **Original concern (now resolved):**
 
@@ -1317,12 +1316,12 @@ This is a **compatibility test**, not a behavior test. It does not verify specif
         ↓ internally accesses
     schema._def (Zod 3) → schema._zod.def (Zod 4)           ← NO LONGER TRUE
     instanceof ZodEffects (Zod 3) → eliminated (Zod 4)       ← NO LONGER TRUE
-    ZodType<Output, Def, Input> (Zod 3) → ZodType<Output, Input> (Zod 4)  ← RESOLVED by Standard Schema
+    ZodType<Output, Def, Input> (Zod 3) → ZodType<Output, Input> (Zod 4)  ← RESOLVED (v4.1.3 via Standard Schema, v5.2.2 via native support)
 ```
 
 **Updated role**: The zodResolver smoke test now serves as a **regression guard** that prevents future breakage if:
-- `@hookform/resolvers` ships an update that drops Standard Schema
-- Zod updates its Standard Schema implementation in a breaking way
+- `@hookform/resolvers` ships an update that changes Zod v4 support
+- Zod updates its internal API in a breaking way
 - A package manager deduplication issue causes a version mismatch
 
 The test is no longer a migration blocker — it's a safety net for ongoing maintenance.
@@ -1606,8 +1605,8 @@ Create a comparison table like:
 
 ### Prerequisites (Before Starting)
 
-- [x] Run zodResolver smoke test on throwaway branch with Zod v4 installed (see "zodResolver Smoke Tests" section) — ~~if this fails, migration is BLOCKED~~ **CONFIRMED COMPATIBLE** (`@hookform/resolvers@4.1.3` uses Standard Schema, peer dep `"zod": "^3.25.76 || ^4.1.8"`)
-- [x] Verify `@hookform/resolvers` changelog and GitHub issues for Zod v4 support — **resolved**: Standard Schema migration eliminates `._def` dependency
+- [x] Run zodResolver smoke test on throwaway branch with Zod v4 installed (see "zodResolver Smoke Tests" section) — ~~if this fails, migration is BLOCKED~~ **CONFIRMED COMPATIBLE** (upgraded to `@hookform/resolvers@5.2.2` with native Zod v4 support; type errors resolved via centralized wrapper)
+- [x] Verify `@hookform/resolvers` changelog and GitHub issues for Zod v4 support — **resolved**: v5.2.2 has native zodResolver for Zod v4. See [resolver-wrapper-report.md](./resolver-wrapper-report.md)
 - [ ] Run and save baseline `tsc --diagnostics` and `tsc --generateTrace`
 - [ ] Run and save baseline `next build` timing
 - [ ] Write schema snapshot tests for 13 high-risk files + zodResolver smoke tests (see "Pre-Migration Testing Strategy" section)

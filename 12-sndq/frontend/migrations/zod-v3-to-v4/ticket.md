@@ -3,8 +3,8 @@
 Concise ticket-ready summary distilled from the full [Migration Plan](./README.md) and [Progress Tracker](./progress.md). Designed to be split into sub-tickets.
 
 **Created**: 2026-03-27
-**Updated**: 2026-04-03 (revised approach: just-in-time per-file, V3 form priority)
-**Status**: Paused — `PurchaseInvoiceFormV3` has stiff deadline, resume after V3 shipped
+**Updated**: 2026-04-08 (resolvers v5 upgrade + centralized wrapper)
+**Status**: In progress — prerequisite (RHF + resolvers upgrade) completed, V3 form still has priority
 **Ticket-ready export**: [ticket-export.md](./ticket-export.md) — standalone markdown for copy-paste into Jira/Linear
 **Reference**: [Zod v4 changelog](https://zod.dev/v4/changelog) · [npm versions](https://www.npmjs.com/package/zod?activeTab=versions)
 
@@ -33,7 +33,7 @@ Migrate **gradually** file-by-file (`"zod"` → `"zod/v4"` import), not big-bang
 | # | Task | Status | Notes |
 |---|------|--------|-------|
 | 1 | Catalog breaking changes from Zod v4 changelog | Done | 14 categories — see [Migration Plan §Breaking Changes](./README.md) |
-| 2 | Verify `@hookform/resolvers` compatibility with v4 | **Done** | `@hookform/resolvers@4.1.3` uses Standard Schema (`@standard-schema/utils`), peer dep `"zod": "^3.25.76 \|\| ^4.1.8"` — **native compatible** |
+| 2 | Verify `@hookform/resolvers` compatibility with v4 | **Done** | Upgraded to `@hookform/resolvers@5.2.2` (native Zod v4 zodResolver, requires RHF >=7.55.0). 168 type errors from input/output type inference resolved via centralized wrapper (`src/lib/form/zod-resolver.ts`). See [resolver-wrapper-report.md](./resolver-wrapper-report.md) |
 | 3 | Define test types with rationale | Done | Schema Snapshot + zodResolver Smoke — see [Migration Plan §Testing](./README.md) |
 | 4 | Audit all 100+ forms: list, priority, complexity, route | **Pending** | Identify unused forms, rank by business priority |
 | 5 | Capture baseline metrics | **Pending** | `tsc --diagnostics`, `next build`, bundle size |
@@ -53,7 +53,7 @@ Two test types only — high ROI, low boilerplate:
 ### Why these two
 
 - **Schema Snapshots** directly target the most dangerous risk: `.default()` short-circuit produces different data with no TypeScript or runtime error. A reusable `describeSchema()` factory generates 3-4 tests per schema from fixtures — near-zero boilerplate per file.
-- **zodResolver Smoke** is a regression guard — `@hookform/resolvers@4.1.3` already confirmed compatible via Standard Schema (`peer dep: "zod": "^3.25.76 || ^4.1.8"`). The test prevents regressions if resolvers/Zod updates change Standard Schema behavior.
+- **zodResolver Smoke** is a regression guard — upgraded to `@hookform/resolvers@5.2.2` with native Zod v4 `zodResolver` support (requires RHF >=7.55.0). Type errors from input/output inference resolved via centralized wrapper. The test prevents regressions if resolvers/Zod updates break compatibility.
 
 ### Why NOT other test types
 
@@ -98,7 +98,7 @@ Start with **low-business-priority, easy-to-test forms** to recognize patterns b
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | `.default()` short-circuits silently | Wrong data in forms — no error | Schema snapshot tests |
-| `@hookform/resolvers` incompatible | ~~100% forms break~~ **RESOLVED** | `@hookform/resolvers@4.1.3` uses Standard Schema — native v4 compatible. Smoke test guards against regressions. |
+| `@hookform/resolvers` incompatible | ~~100% forms break~~ **RESOLVED** | Upgraded to `@hookform/resolvers@5.2.2` with native Zod v4 support. Type errors resolved via centralized wrapper. See [resolver-wrapper-report.md](./resolver-wrapper-report.md). |
 | `nativeEnum .Enum/.Values` removed | Runtime crash on accessor | Batch 2 systematic replacement |
 | `z.object()` defaults in optional fields | Unexpected keys in parsed output | Snapshot tests catch new keys |
 | `packages/ui` version mismatch | **None** — ui has no Zod imports | No action needed |

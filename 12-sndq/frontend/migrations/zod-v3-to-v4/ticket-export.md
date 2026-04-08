@@ -27,7 +27,7 @@ The most dangerous Zod v4 breaking change is **`.default()` short-circuiting** â
 | `.transform()` output changes | Computed values differ after migration | Schema snapshot diff |
 | `zodResolver` breaks with v4 | All 100+ forms fail validation at once | Smoke test |
 
-`@hookform/resolvers@4.1.3` is already confirmed compatible (peer dep: `zod: ^3.25.76 || ^4.1.8`, uses Standard Schema). The smoke test is a **regression guard**, not a blocker.
+Upgraded to `@hookform/resolvers@5.2.2` with native Zod v4 `zodResolver` support (requires RHF >=7.55.0). Type errors from input/output inference resolved via centralized wrapper (`src/lib/form/zod-resolver.ts`). The smoke test is a **regression guard**, not a blocker.
 
 ---
 
@@ -119,7 +119,7 @@ export function describeSchema(
 
 ### Context
 
-`@hookform/resolvers@4.1.3` uses `@standard-schema/utils` (not Zod internal APIs). Peer dep: `"zod": "^3.25.76 || ^4.1.8"`. This test is a **regression guard**, not a blocker.
+Upgraded to `@hookform/resolvers@5.2.2` with native Zod v4 `zodResolver` support. Original v4.1.3 used `@standard-schema/utils`; v5.2.2 has direct Zod v4 integration. This test is a **regression guard**, not a blocker.
 
 ```typescript
 // src/__tests__/zod-resolver-compat.test.ts

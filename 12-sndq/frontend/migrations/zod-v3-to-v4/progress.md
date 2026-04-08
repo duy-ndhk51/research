@@ -3,7 +3,7 @@
 Tracks the gradual file-by-file migration from `"zod"` (v3) to `"zod/v4"` imports using Zod 3.25.76's subpath strategy. Each schema file is migrated independently with snapshot tests and manual QA.
 
 **Created**: 2026-03-27
-**Status**: Not started
+**Status**: In progress — prerequisite (RHF + resolvers upgrade) completed
 **Approach**: Gradual migration via `"zod/v4"` subpath (no big-bang upgrade)
 **Related**: [Zod v3 → v4 Migration Plan](./README.md) — full breaking changes catalog, testing strategy, and risk analysis
 **Ticket**: [Zod v4 Migration — Ticket Summary](./ticket.md) — concise version for task tracking
@@ -474,11 +474,15 @@ rg -l 'required_error|invalid_type_error' src/ --glob '*.ts' | sort
 | 2026-04-03 | Merged Step 3 + Batch 1 into just-in-time per-file workflow | Writing all 13 tests upfront requires context-switching across 13 schemas. Just-in-time: read schema → write test → migrate → QA in one focused session per file. Infra (factory + smoke test) still created once upfront. |
 | 2026-04-03 | Migration paused — `PurchaseInvoiceFormV3` has stiff deadline | V3 form takes priority. Zod migration resumes after V3 is shipped. All research & planning is complete — ready to start immediately once unblocked. |
 | 2026-04-03 | Created ticket-export.md — standalone ticket description | Copy-paste ready markdown for Jira/Linear with full context: motivation, approach, test strategy, migration plan, metrics, risks, effort estimates. See [ticket-export.md](./ticket-export.md) |
+| 2026-04-08 | Upgraded `@hookform/resolvers` to v5.2.2 + `react-hook-form` to 7.72.1 | Resolvers v5.1.0+ has native Zod v4 `zodResolver` support (not just Standard Schema). Required RHF >=7.55.0 (peer dep). Upgrade caused 168 type errors from new input/output type inference with `.default()` schemas. Resolved via centralized wrapper — see [resolver-wrapper-report.md](./resolver-wrapper-report.md) |
+| 2026-04-08 | Centralized `zodResolver` wrapper approach adopted | Created `src/lib/form/zod-resolver.ts` that casts resolver to `Resolver<z.infer<T>>`, eliminating input/output type mismatch. 155 file import replacements (mechanical, zero runtime change). Avoids touching 71 schema files without test coverage. See [report](./resolver-wrapper-report.md) |
+| 2026-04-08 | Resolvers v4 Standard Schema approach superseded | Original plan relied on `@hookform/resolvers@4.1.3` using Standard Schema. Upgrading to v5.2.2 gives native `zodResolver` support for Zod v4 with proper type inference — better long-term path. |
 
 ---
 
 ## References
 
+- [Resolver Wrapper Report](./resolver-wrapper-report.md) — **Centralized zodResolver wrapper analysis (benefits, tradeoffs, cleanup path)**
 - [Ticket Export](./ticket-export.md) — **Standalone markdown for copy-paste into ticket system**
 - [Migration Plan (full)](./README.md) — Breaking changes catalog, testing strategy, risk analysis
 - [Step 3 Deep-Dive](./step3-test-setup.md) — Test factory code, zodResolver smoke test, 13-file audit
