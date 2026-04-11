@@ -125,14 +125,14 @@ echo "deprecated APIs: $(rg 'required_error|invalid_type_error|\.Enum\.|\.Values
 | Metric | Value | Date |
 |--------|-------|------|
 | Zod version (lockfile) | 3.25.76 | — |
-| `tsc --noEmit` total time | ___ ms | |
-| `tsc` check time | ___ ms | |
-| `tsc` instantiations | ___ | |
-| `tsc` types | ___ | |
-| `tsc` memory used | ___ MB | |
-| `next build` total time | ___ s | |
-| `.next/static/chunks/` size | ___ MB | |
-| First-load JS (heaviest route) | ___ kB | |
+| `tsc --noEmit` total time | 121.93s (median of 4 runs) | 2026-03-28 |
+| `tsc` check time | 117.08s | 2026-03-28 |
+| `tsc` instantiations | 29,150,241 | 2026-03-28 |
+| `tsc` types | 1,691,552 | 2026-03-28 |
+| `tsc` memory used | 6,776,633 KB (6.46 GB) | 2026-03-28 |
+| `next build` total time | 491s (median of 3 runs) | 2026-03-28 |
+| `.next/static/chunks/` size | _(not recorded)_ | |
+| First-load JS (heaviest route) | 1.57 MB (meeting route) | 2026-03-28 |
 | Files importing `zod` | ~103 | |
 | `nativeEnum` usage count | ~100+ | |
 | Deprecated API usage count | ~244 | |
@@ -322,9 +322,10 @@ rg -l "from 'zod'" src/ --glob '*.ts' --glob '*.tsx' | rg -v "zod/v4" | sort
 
 Track after each batch to show progressive improvement.
 
-| Checkpoint | Files on v4 | Instantiations | Check Time (ms) | Total Time (ms) | Memory (MB) |
+| Checkpoint | Files on v4 | Instantiations | Check Time (s) | Total Time (s) | Memory (KB) |
 |------------|------------|---------------|----------------|----------------|-------------|
-| Baseline | 0/103 | | | | |
+| Baseline | 0/103 | 29,150,241 | 117.08 | 121.93 | 6,776,633 |
+| After Prerequisite | 0/103 | 12,282,340 (-57.9%) | 72.93 (-37.7%) | 79.29 (-35.0%) | 2,949,276 (-56.5%) |
 | Batch 1 complete | 13/103 | | | | |
 | Batch 2 complete | ~43/103 | | | | |
 | Batch 3 complete | ~70/103 | | | | |
@@ -477,6 +478,7 @@ rg -l 'required_error|invalid_type_error' src/ --glob '*.ts' | sort
 | 2026-04-08 | Upgraded `@hookform/resolvers` to v5.2.2 + `react-hook-form` to 7.72.1 | Resolvers v5.1.0+ has native Zod v4 `zodResolver` support (not just Standard Schema). Required RHF >=7.55.0 (peer dep). Upgrade caused 168 type errors from new input/output type inference with `.default()` schemas. Resolved via centralized wrapper — see [resolver-wrapper-report.md](./resolver-wrapper-report.md) |
 | 2026-04-08 | Centralized `zodResolver` wrapper approach adopted | Created `src/lib/form/zod-resolver.ts` that casts resolver to `Resolver<z.infer<T>>`, eliminating input/output type mismatch. 155 file import replacements (mechanical, zero runtime change). Avoids touching 71 schema files without test coverage. See [report](./resolver-wrapper-report.md) |
 | 2026-04-08 | Resolvers v4 Standard Schema approach superseded | Original plan relied on `@hookform/resolvers@4.1.3` using Standard Schema. Upgrading to v5.2.2 gives native `zodResolver` support for Zod v4 with proper type inference — better long-term path. |
+| 2026-04-08 | Prerequisite upgrade yielded major tsc performance improvement | RHF + resolvers v5 + wrapper measured at -57.9% instantiations (29.15M → 12.28M), -37.7% check time (117s → 73s), -56.5% memory (6.46 GB → 2.81 GB). Unexpected side benefit — the old resolvers v4 type system was extremely expensive. See [metrics-record.md](./metrics-record.md#15-after-prerequisite-rhf--resolvers-upgrade) |
 
 ---
 

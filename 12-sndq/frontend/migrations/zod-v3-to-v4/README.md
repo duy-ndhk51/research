@@ -5,8 +5,8 @@
 Zod v4 delivers **14x faster string parsing**, **7x faster array parsing**, and **6.5x faster object parsing** with a smaller bundle via improved tree shaking. The `sndq-fe` codebase has **~103 files** importing Zod across **100+ form schemas**, making this a high-impact but high-effort migration. The biggest risks are silent behavior changes in `.default()`, `@hookform/resolvers` compatibility, and `z.nativeEnum()` removal across ~44 files.
 
 **Created**: 2026-03-27
-**Updated**: 2026-04-08 (resolvers v5 upgrade + centralized wrapper approach)
-**Status**: In progress — prerequisite (RHF + resolvers upgrade) completed
+**Updated**: 2026-04-08 (resolvers v5 upgrade + wrapper; measured -58% tsc instantiations)
+**Status**: In progress — prerequisite completed, measured 58% tsc improvement
 **Estimated effort**: 5–8 days (including pre-migration tests + validation)
 **Testing strategy**: Schema Snapshot Tests (primary) + zodResolver Smoke Tests (secondary) — ~550 lines, 15 files, 3-4 hours
 **Ticket summary**: [Zod v4 Migration — Ticket Summary](./ticket.md) — concise version for task tracking
@@ -563,6 +563,8 @@ In context of sndq-fe: Every form submission, every field validation, every blur
 - **`.extend()` over `.merge()`**: Official docs state this has "better TypeScript performance"
 - **Spread over `.extend()`**: `z.object({ ...A.shape, ...B.shape })` has the best tsc performance
 - With 103 schema files generating hundreds of inferred types, the reduction in type instantiations should measurably improve `tsc --noEmit` time
+
+> **Measured (2026-04-08):** The prerequisite upgrade alone (resolvers v5 + RHF 7.72.1 + zodResolver wrapper) already delivered **-57.9% instantiations** (29.15M → 12.28M), **-37.7% check time** (117s → 73s), and **-56.5% memory** (6.46 GB → 2.81 GB) — before any Zod v4 migration work. The actual Zod v4 migration is expected to improve these further. See [resolver-wrapper-report.md](./resolver-wrapper-report.md#measured-impact) for full analysis.
 
 ### 3. Bundle Size
 

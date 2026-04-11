@@ -169,6 +169,72 @@ Additional constant metrics across all runs:
 
 ---
 
+## 1.5 After Prerequisite: RHF + Resolvers Upgrade
+
+> Captured **after** upgrading `@hookform/resolvers` 4.1.3 -> 5.2.2, `react-hook-form` 7.54.2 -> 7.72.1, and applying the centralized `zodResolver` wrapper (`src/lib/form/zod-resolver.ts`). No Zod v4 migration work has started yet — this is the new effective baseline for batch work.
+
+### Environment
+
+| Field | Value |
+|-------|-------|
+| Date | 2026-04-08 |
+| Machine | macOS darwin 23.5.0 (Apple Silicon, 10 threads) |
+| Node.js version | v22.11.0 |
+| TypeScript version | 5.9.3 |
+| Zod version (lockfile) | 3.25.76 |
+| `@hookform/resolvers` version | ^5.2.2 |
+| `react-hook-form` version | ^7.72.1 |
+| zodResolver wrapper | Applied (`src/lib/form/zod-resolver.ts`) |
+| Branch | `chore/SQ-20642` |
+
+### TypeScript Compiler (3 runs, `--incremental false`)
+
+| Run | Types | Instantiations | Memory (KB) | Check (s) | Total (s) |
+|-----|-------|----------------|-------------|-----------|-----------|
+| 1 | 811,954 | 12,282,340 | 2,768,379 | 74.90 | 81.24 |
+| 2 | 811,954 | 12,282,340 | 2,949,276 | 71.81 | 78.11 |
+| 3 | 811,954 | 12,282,340 | 3,108,553 | 72.93 | 79.29 |
+| **Median** | **811,954** | **12,282,340** | **2,949,276** | **72.93** | **79.29** |
+
+Additional constant metrics across all runs:
+
+| Metric | Value |
+|--------|-------|
+| Files | 7,845 |
+| Lines | 1,093,882 |
+| Identifiers | 1,285,617 |
+| Symbols | 2,252,188 |
+| Parse time range | 5.15–5.25s |
+| Bind time range | 1.11–1.18s |
+
+### Delta vs Baseline
+
+| Metric | Baseline (median) | After Prerequisite (median) | Delta | % Change |
+|--------|--------------------|-----------------------------|-------|----------|
+| Types | 1,691,552 | 811,954 | -879,598 | **-52.0%** |
+| Instantiations | 29,150,241 | 12,282,340 | -16,867,901 | **-57.9%** |
+| Memory (KB) | 6,776,633 | 2,949,276 | -3,827,357 | **-56.5%** |
+| Check time (s) | 117.08 | 72.93 | -44.15 | **-37.7%** |
+| Total time (s) | 121.93 | 79.29 | -42.64 | **-35.0%** |
+
+> The codebase grew (+224 files, +32,901 lines) from ongoing development since the baseline. Despite this growth, all expensive metrics dropped dramatically. The improvements are a combined effect of three changes: RHF upgrade, resolvers v5 upgrade, and the zodResolver wrapper casting away the input/output type distinction. See [resolver-wrapper-report.md](./resolver-wrapper-report.md#measured-impact) for detailed analysis.
+
+### Next.js Build (1 run)
+
+> Command: `time pnpm build 2>&1 | tee build-output.txt` (via Lerna -> `next build`)
+> Only the compile phase was captured before the terminal was overwritten. Wall-clock `time` output and route table were not recorded. A re-run is recommended to capture full build metrics.
+
+| Field | Value |
+|-------|-------|
+| Compile phase | **4.7 min** |
+| Wall-clock time | _(not captured)_ |
+| First Load JS shared by all | _(not captured)_ |
+| Heaviest route first-load JS | _(not captured)_ |
+
+> Baseline compile phase median was 4.2 min (3 runs). The single 4.7 min run falls within the baseline range (3.5–4.9 min), so no meaningful change is observed from this prerequisite upgrade — as expected, since no Zod code was changed.
+
+---
+
 ## 2. Per-Batch Records
 
 ### Batch 1: Transform Files (13 files — CRITICAL risk)
@@ -406,25 +472,28 @@ Additional constant metrics across all runs:
 
 ## 4. Trends & Comparison
 
-### Overall Summary: Baseline vs Final
+### Overall Summary: Baseline vs After Prerequisite vs Final
 
-| Metric | Baseline | Final | Delta | % Change | Verdict |
-|--------|----------|-------|-------|----------|---------|
-| `tsc` Instantiations | 29,150,241 | | | | |
-| `tsc` Check time (s) | 117.08 | | | | |
-| `tsc` Total time (s) | 121.93 | | | | |
-| `tsc` Memory (KB) | 6,776,633 | | | | |
-| `next build` wall-clock (s) | 491 | | | | |
-| Shared JS (all routes) | 232 kB | | | | |
-| Heaviest route first-load JS | 1.57 MB | | | | |
-| Deprecated APIs | ~280+ | 0 | | -100% | |
-| Schema test files | 1 | | | | |
+| Metric | Baseline | After Prerequisite | Final | Prereq Delta | Prereq % |
+|--------|----------|--------------------|-------|--------------|----------|
+| `tsc` Instantiations | 29,150,241 | 12,282,340 | | -16,867,901 | **-57.9%** |
+| `tsc` Check time (s) | 117.08 | 72.93 | | -44.15 | **-37.7%** |
+| `tsc` Total time (s) | 121.93 | 79.29 | | -42.64 | **-35.0%** |
+| `tsc` Memory (KB) | 6,776,633 | 2,949,276 | | -3,827,357 | **-56.5%** |
+| `tsc` Types | 1,691,552 | 811,954 | | -879,598 | **-52.0%** |
+| `next build` wall-clock (s) | 491 | _(not captured)_ | | | |
+| `next build` compile (min) | 4.2 | 4.7 | | +0.5 | +11.9% |
+| Shared JS (all routes) | 232 kB | _(not captured)_ | | | |
+| Heaviest route first-load JS | 1.57 MB | _(not captured)_ | | | |
+| Deprecated APIs | ~280+ | ~280+ | 0 | 0 | 0% |
+| Schema test files | 1 | 1 | | 0 | 0% |
 
 ### TypeScript Compilation Trend (per batch)
 
 | Checkpoint | Date | Files on v4 | Instantiations | Inst. Δ from prev | Check time (s) | Check Δ from prev |
 |------------|------|-------------|----------------|--------------------|----------------|-------------------|
 | Baseline | 2026-03-28 | 0 / 103 | 29,150,241 | — | 117.08 | — |
+| After Prerequisite | 2026-04-08 | 0 / 103 | 12,282,340 | -16,867,901 (-57.9%) | 72.93 | -44.15 (-37.7%) |
 | Batch 1 | | / 103 | | | | |
 | Batch 2 | | / 103 | | | | |
 | Batch 3 | | / 103 | | | | |
@@ -436,6 +505,7 @@ Additional constant metrics across all runs:
 | Checkpoint | Shared JS (all routes) | Heaviest Route First-Load JS | Notes |
 |------------|------------------------|------------------------------|-------|
 | Baseline | 232 kB | 1.57 MB | Single Zod v3 engine |
+| After Prerequisite | _(not captured)_ | _(not captured)_ | No Zod code changed — expect identical |
 | Final | | | Single Zod v4 engine |
 | Delta | | | |
 | % Change | | | |
@@ -472,6 +542,8 @@ Reference to saved measurement output files (from the `measure-zod-migration.sh`
 | Baseline (build run 1) | `sndq/build-output-2.txt` | 2026-03-28 | 7:48.44 wall-clock, 3.5min compile |
 | Baseline (build run 2) | `sndq/build-output-3.txt` | 2026-03-28 | 8:10.83 wall-clock, 4.2min compile |
 | Baseline (build run 3) | `sndq/build-output-4.txt` | 2026-03-28 | 9:28.74 wall-clock, 4.9min compile |
+| After Prerequisite (tsc) | _(terminal output, 3 runs)_ | 2026-04-08 | 12.28M inst, 72.93s check, 79.29s total (median of 3) |
+| After Prerequisite (build) | `sndq-fe/build-output.txt` | 2026-04-08 | 4.7min compile; wall-clock + routes not captured |
 | After Batch 1 | `metrics-after-batch-1-YYYYMMDD-HHMMSS.txt` | | |
 | After Batch 2 | `metrics-after-batch-2-YYYYMMDD-HHMMSS.txt` | | |
 | After Batch 3 | `metrics-after-batch-3-YYYYMMDD-HHMMSS.txt` | | |
