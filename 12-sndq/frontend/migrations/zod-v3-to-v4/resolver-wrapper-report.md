@@ -148,6 +148,7 @@ No other code changes. Same function name, same call signature, same arguments.
 | **Bug fixes** | 18 minor releases of RHF fixes: `reset()` regression (7.59.0), `FormProvider` re-render optimization, `isValid` state improvements, field array fixes. |
 | **Zero runtime change** | The wrapper is compile-time only. Production code runs identically to before. |
 | **No test coverage needed** | Since no runtime logic changes, existing manual QA still validates everything. |
+| **58% fewer tsc instantiations** | Measured: 29.15M → 12.28M instantiations, 117s → 73s check time, 6.46 GB → 2.81 GB memory. The old resolvers v4 type system was extremely expensive. See [Measured Impact](#measured-impact). |
 
 ### Long-term
 
@@ -156,6 +157,47 @@ No other code changes. Same function name, same call signature, same arguments.
 | **Gradual cleanup path** | When touching a form file for other work, optionally remove `.default()` from its schema and switch back to direct `@hookform/resolvers/zod` import. No big-bang refactor. |
 | **New RHF features** | `createFormControl` (external form control), `subscribe` (state subscription without re-render), `FormStateSubscribe` component, form-level `validate` function — all available for new code. |
 | **Proper v5 type system later** | Once schemas are cleaned up, removing the wrapper enables full input/output type safety for schemas with `.transform()`. |
+
+---
+
+## Measured Impact
+
+> Measured on 2026-04-08, branch `chore/SQ-20642`, 3 runs of `tsc --noEmit --diagnostics --incremental false`. Baseline from 2026-03-28, branch `perf/SQ-20365`, median of 4 runs.
+
+### Headline Numbers
+
+| Metric | Baseline (median) | After Upgrade (median) | Delta | % Change |
+|--------|--------------------|-----------------------|-------|----------|
+| **Instantiations** | 29,150,241 | 12,282,340 | -16,867,901 | **-57.9%** |
+| **Types** | 1,691,552 | 811,954 | -879,598 | **-52.0%** |
+| **Memory (KB)** | 6,776,633 (6.46 GB) | 2,949,276 (2.81 GB) | -3,827,357 | **-56.5%** |
+| **Check time (s)** | 117.08 | 72.93 | -44.15 | **-37.7%** |
+| **Total time (s)** | 121.93 | 79.29 | -42.64 | **-35.0%** |
+
+Note: the codebase grew between measurements (+224 files, +32,901 lines from ongoing development). Despite this growth, all expensive metrics dropped dramatically.
+
+### What This Means
+
+- **The TypeScript compiler does ~58% less work.** Instantiations (the number of times TypeScript expands generics) dropped from 29.1M to 12.3M. This is the single most reliable metric since it is deterministic — identical across all 3 runs.
+- **Type-check is 43 seconds faster.** From ~2 minutes down to ~1 minute 19 seconds. This directly improves developer feedback loops on `pnpm type-check` and CI pipelines.
+- **Memory usage cut by more than half.** From 6.46 GB to 2.81 GB. This eliminates the OOM risk that previously required `NODE_OPTIONS="--max-old-space-size=8192"`.
+
+### Why So Large
+
+The improvements are disproportionately large because the old `@hookform/resolvers` v4 type system was extremely expensive. It used deep generic inference across all 155 files importing `zodResolver`, each expanding `Resolver<z.input<T>, any, z.output<T>>` with full Zod schema traversal. The wrapper short-circuits this by casting to the simpler `Resolver<z.infer<T>>`, and resolvers v5 itself has a leaner type architecture for the Zod 3 compatibility path.
+
+### Caveats
+
+1. **Different branches**: baseline was on `perf/SQ-20365` (2026-03-28), current on `chore/SQ-20642` (2026-04-08). Some delta comes from other code changes between branches.
+2. **Combined effect**: the improvement is from three changes together (RHF upgrade, resolvers upgrade, wrapper). Isolating each contribution is not practical.
+3. **Build metrics incomplete**: only the compile phase (4.7 min, within baseline range 3.5–4.9 min) was captured. Wall-clock time and route table were not recorded before the terminal was overwritten.
+4. **Single build run**: baseline used 3 build runs for median; only 1 run was captured here. A re-run is recommended for a proper comparison.
+
+### Bottom Line
+
+This was intended as a compatibility fix (resolve 168 type errors). It turned out to also be the single largest TypeScript compiler improvement opportunity in the codebase — achieved before the actual Zod v4 migration even begins. The batch migration work will start from this much healthier baseline.
+
+See [metrics-record.md](./metrics-record.md#15-after-prerequisite-rhf--resolvers-upgrade) for the full 3-run data tables.
 
 ---
 
