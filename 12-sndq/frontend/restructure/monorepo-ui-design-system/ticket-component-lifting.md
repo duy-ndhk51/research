@@ -35,8 +35,6 @@ Local to Shared is a file move. Shared to Blocks/Primitives requires stripping a
 ## Daily Process
 
 - **During PRs**: If a cross-boundary import is added, mark it with a `// TODO(lift)` comment
-- **Monthly**: Run the detection script to surface candidates
-- **Per sprint**: Pick 2-3 candidates and lift them in focused PRs
 
 ```bash
 # Run from monorepo root (defaults to sndq-fe/src)
