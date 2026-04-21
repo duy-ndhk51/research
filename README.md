@@ -19,6 +19,7 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 | [10](./10-soft-skills/) | **Soft Skills** | Communication, leadership, interviewing, project management |
 | [11](./11-ai-ml/) | **AI/ML** | LLMs, prompt engineering, MLOps, AI tools |
 | [12](./12-sndq/) | **SNDQ** | Company-specific: architecture, modules, codebase deep dives |
+| [13](./13-projects/) | **Projects** | Hands-on project builds, plans, and progress tracking |
 
 ## Topic Index
 
@@ -48,6 +49,7 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 | 21 | [Zod v3 → v4 Migration Plan — sndq-fe](./12-sndq/frontend/zod-v3-to-v4-migration-plan.md) | SNDQ | `sndq`, `zod`, `migration`, `performance` |
 | 22 | [Zod v4 Migration Progress Tracker](./12-sndq/frontend/zod-v4-migration-progress.md) | SNDQ | `sndq`, `zod`, `migration`, `progress`, `metrics` |
 | 23 | [Dashboard UI Blocks & Component Libraries](./12-sndq/frontend/dashboard-ui-blocks-research.md) | SNDQ | `sndq`, `frontend`, `design-system`, `dashboard`, `ui-components` |
+| 24 | [Developer Broadcast](./13-projects/developer-broadcast/README.md) | Projects | `project`, `next.js`, `rss`, `feed-aggregator` |
 <!-- TOPIC-INDEX-END -->
 
 **Playground experiments:**
