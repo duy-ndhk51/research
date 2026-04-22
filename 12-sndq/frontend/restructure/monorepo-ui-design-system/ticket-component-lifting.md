@@ -7,7 +7,7 @@
 
 ## Goal
 
-Establish a repeatable process for gradually promoting components from feature-scoped code into the shared `@sndq/ui` package, without pre-cataloging or big-bang migrations.
+Establish a repeatable process for gradually promoting components from feature-scoped code into the shared `@sndq/ui-v2` package, without pre-cataloging or big-bang migrations.
 
 ## Four-Tier Model
 
@@ -21,8 +21,8 @@ Local → Shared → Blocks → Primitives
 |------|----------|------|
 | **Local** | `modules/{mod}/**/components/` | Used within one module |
 | **Shared** | `sndq-fe/src/components/` | Used by 2+ modules (business logic allowed) |
-| **Blocks** | `@sndq/ui/blocks` | Props-only compositions, zero business logic |
-| **Primitives** | `@sndq/ui/components` | Single-element atoms (Button, Dialog, Table, etc.) |
+| **Blocks** | `@sndq/ui-v2/blocks` | Props-only compositions, zero business logic |
+| **Primitives** | `@sndq/ui-v2/components` | Single-element atoms (Button, Dialog, Table, etc.) |
 
 Local to Shared is a file move. Shared to Blocks/Primitives requires stripping all business dependencies (hooks, translations, services) and converting to a props-only API.
 
@@ -45,5 +45,5 @@ bash detect-cross-imports.sh
 
 - [ ] Detection script (`detect-cross-imports.sh`) committed to the repo
 - [ ] PR review checklist updated with: "No new cross-module component imports without `TODO(lift)` comment"
-- [ ] First wave of lifts completed (top 3-5 most-imported shared components moved to `@sndq/ui/blocks`)
+- [ ] First wave of lifts completed (top 3-5 most-imported shared components moved to `@sndq/ui-v2/blocks`)
 - [ ] Process documented and linked from the monorepo README

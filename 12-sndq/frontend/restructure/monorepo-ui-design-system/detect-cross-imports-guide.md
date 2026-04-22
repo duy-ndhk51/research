@@ -10,7 +10,7 @@
 
 Scans the frontend source tree and produces a report of component import boundaries. It answers three questions:
 
-1. Which shared components (`src/components/`) are most used by modules? (candidates for `@sndq/ui`)
+1. Which shared components (`src/components/`) are most used by modules? (candidates for `@sndq/ui-v2`)
 2. Which modules import components from other modules? (boundary violations that need lifting)
 3. Are there any `TODO(lift)` markers pending action?
 
@@ -42,7 +42,7 @@ Lists every `src/components/` folder that modules import from, ranked by import 
 
 **What it scans**: All `from '@/components/...'` imports inside `src/modules/`.
 
-**How to read it**: High counts mean the component is already widely shared across modules. These are the top candidates for lifting into `@sndq/ui/blocks` or `@sndq/ui/components`.
+**How to read it**: High counts mean the component is already widely shared across modules. These are the top candidates for lifting into `@sndq/ui-v2/blocks` or `@sndq/ui-v2/components`.
 
 ### Section 2: Cross-Module Component Imports
 
@@ -52,7 +52,7 @@ Lists every individual import where module A reaches into module B's `components
 - **File path** (the consuming file)
 - **Import path** (the `@/modules/...` path being imported)
 
-**What it means**: These are boundary violations — a component in one module is being used by another module. The component should either be moved to `src/components/` (Shared tier) or to `@sndq/ui` (Blocks/Primitives tier).
+**What it means**: These are boundary violations — a component in one module is being used by another module. The component should either be moved to `src/components/` (Shared tier) or to `@sndq/ui-v2` (Blocks/Primitives tier).
 
 ### Section 2b: Cross-Module Summary
 

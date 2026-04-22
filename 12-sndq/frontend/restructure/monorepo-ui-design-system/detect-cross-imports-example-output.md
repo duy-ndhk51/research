@@ -88,7 +88,7 @@ High counts = already shared cross-module = lift candidates for blocks/primitive
 
 2. CROSS-MODULE COMPONENT IMPORTS
 Module A importing components from module B — boundary violations.
-These should either be lifted to src/components/ or to @sndq/ui.
+These should either be lifted to src/components/ or to @sndq/ui-v2.
 
   home ← financial
     sndq-fe/src/modules/home/dashboard/CertificateSection.tsx
@@ -167,6 +167,6 @@ Components flagged for lifting during PR review.
 
 ──────────────────────────────────────────────────────────────────────
 
-Done. Run monthly or before sprint planning.
+Done.
 See component-lifting-process.md for the full process guide.
 ```

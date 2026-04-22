@@ -84,7 +84,7 @@ divider
 
 echo -e "${BOLD}2. CROSS-MODULE COMPONENT IMPORTS${RESET}"
 echo -e "${DIM}Module A importing components from module B — boundary violations.${RESET}"
-echo -e "${DIM}These should either be lifted to src/components/ or to @sndq/ui.${RESET}"
+echo -e "${DIM}These should either be lifted to src/components/ or to @sndq/ui-v2.${RESET}"
 echo ""
 
 grep -rn "from '@/modules/[^']*components" "$MODULES_DIR" \

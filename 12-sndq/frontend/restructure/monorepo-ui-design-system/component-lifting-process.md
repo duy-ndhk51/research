@@ -31,8 +31,8 @@ Local → Shared → Blocks → Primitives
 |------|----------|------|
 | **Local** | `modules/{mod}/**/components/` | Used within one module |
 | **Shared** | `sndq-fe/src/components/` | Used by 2+ modules (business logic allowed) |
-| **Blocks** | `@sndq/ui/blocks` | Props-only compositions, zero business logic |
-| **Primitives** | `@sndq/ui/components` | Single-element well-known atoms |
+| **Blocks** | `@sndq/ui-v2/blocks` | Props-only compositions, zero business logic |
+| **Primitives** | `@sndq/ui-v2/components` | Single-element well-known atoms |
 
 ### Promotion triggers
 
@@ -92,19 +92,19 @@ Components imported by multiple modules. Business logic is allowed — they live
 - `contact/` — `ContactHoverCard`, `ContactSelect` — business components with hooks
 - `building/` — `BuildingHoverCard`, `BuildingOwnersHoverCard` — business components with hooks
 
-### Blocks (`@sndq/ui/blocks`)
+### Blocks (`@sndq/ui-v2/blocks`)
 
 Reusable compositions of primitives. Zero business logic — no API calls, no hooks, no translations, no routing. Any app can use them.
 
-**Folder**: `packages/ui/src/blocks/`
+**Folder**: `packages/ui-v2/src/blocks/`
 
 **Examples** (target state): `DetailHeader`, `PageHeader`, `KpiCard`, `ConfirmDialog`, `FormShell`, `CommonTable` (after stripping hooks), `CommonSheet` (after stripping hooks)
 
-### Primitives (`@sndq/ui/components`)
+### Primitives (`@sndq/ui-v2/components`)
 
 Single-element, well-known UI atoms. Found on Radix/shadcn/Material UI. Fully controlled via props.
 
-**Folder**: `packages/ui/src/components/`
+**Folder**: `packages/ui-v2/src/components/`
 
 **Examples**: Button, Input, Dialog, Table, Select, Tabs, Badge, Card, Avatar, Toast, Chart, Checkbox, Switch, Slider, etc.
 
@@ -292,7 +292,7 @@ The initial migration from the current flat structure to the tiered model follow
 
 ### Wave 1: Blocks candidates (already in `src/components/`, used cross-module, no business logic)
 
-Move these from `sndq-fe/src/components/` to `@sndq/ui/blocks` after stripping any remaining business dependencies:
+Move these from `sndq-fe/src/components/` to `@sndq/ui-v2/blocks` after stripping any remaining business dependencies:
 
 | Component | Current path | Import count | Action |
 |-----------|-------------|--------------|--------|
@@ -305,14 +305,14 @@ Move these from `sndq-fe/src/components/` to `@sndq/ui/blocks` after stripping a
 
 ### Wave 2: Primitives (already in `src/components/ui/` and `briicks/`, single-element)
 
-Move these from `sndq-fe/src/components/` to `@sndq/ui/components`:
+Move these from `sndq-fe/src/components/` to `@sndq/ui-v2/components`:
 
 | Component | Current path | Target |
 |-----------|-------------|--------|
-| All shadcn/ui components | `ui/*.tsx` (35 files) | `@sndq/ui/components` |
-| Briicks button, input, select, etc. | `briicks/button/`, `briicks/input/`, etc. | `@sndq/ui/components` (replace shadcn equivalents) |
-| Briicks text (Heading, Caption, Paragraph) | `briicks/text/` | `@sndq/ui/components` |
-| Icon | `icons/` | `@sndq/ui/components` |
+| All shadcn/ui components | `ui/*.tsx` (35 files) | `@sndq/ui-v2/components` |
+| Briicks button, input, select, etc. | `briicks/button/`, `briicks/input/`, etc. | `@sndq/ui-v2/components` (replace shadcn equivalents) |
+| Briicks text (Heading, Caption, Paragraph) | `briicks/text/` | `@sndq/ui-v2/components` |
+| Icon | `icons/` | `@sndq/ui-v2/components` |
 
 ### Wave 3: Cross-module boundary fixes (imports from other modules' `components/`)
 

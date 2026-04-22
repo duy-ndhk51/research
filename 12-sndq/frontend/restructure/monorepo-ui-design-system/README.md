@@ -9,6 +9,8 @@ Full architecture specification for reorganizing the `sndq` monorepo into a hybr
 **Component ticket**: [ticket-component-structure.md](./ticket-component-structure.md) — copy-paste-ready for Linear (component organization)
 **Lifting process**: [component-lifting-process.md](./component-lifting-process.md) — four-tier promotion model, signals, waves, detection script
 **Lifting ticket**: [ticket-component-lifting.md](./ticket-component-lifting.md) — copy-paste-ready for Linear (lifting process)
+**Migration plan**: [migration-plan.md](./migration-plan.md) — five-phase gradual migration, deprecation strategy, API compatibility
+**Migration ticket**: [ticket-migration.md](./ticket-migration.md) — copy-paste-ready for Linear (migration phases)
 **Reference**: [cal.com monorepo](https://github.com/calcomhq/cal.com) — used as architectural reference
 
 ---
@@ -127,6 +129,10 @@ sndq/
 │       └── constants/
 │
 ├── apps/
+│   ├── docs/                     # Standalone docs site — standardized components only
+│   │   ├── package.json
+│   │   ├── tsconfig.json         # extends @sndq/tsconfig/nextjs.json
+│   │   └── src/app/              # Consumes @sndq/ui-v2-docs tabs as-is
 │   └── prototype/                # <-- sndq-ui-v2 (UI prototype/component playground)
 │       ├── package.json          # name: "sndq-ui-v2"
 │       ├── tsconfig.json         # extends @sndq/tsconfig/nextjs.json
@@ -137,16 +143,25 @@ sndq/
 │           ├── app/
 │           │   └── globals.css   # imports @sndq/config/tailwind/* + app theme
 │           ├── lib/
-│           └── patterns/form/    # demo forms (consume @sndq/ui)
+│           └── patterns/form/    # demo forms (consume @sndq/ui-v2)
 │
 ├── packages/
-│   ├── ui/                       # @sndq/ui
+│   ├── ui-v2/                    # @sndq/ui-v2
 │   │   ├── package.json
 │   │   ├── tsconfig.json         # extends @sndq/tsconfig/library.json
 │   │   └── src/
 │   │       ├── components/       # Tier 1: primitives (70 components)
-│   │       ├── patterns/         # Tier 2: compositions (9+ blocks)
+│   │       ├── blocks/           # Tier 2: compositions (9+ blocks)
 │   │       └── index.ts
+│   │
+│   ├── ui-v2-docs/               # @sndq/ui-v2-docs — showcase infrastructure
+│   │   ├── package.json
+│   │   ├── tsconfig.json         # extends @sndq/tsconfig/library.json
+│   │   └── src/
+│   │       ├── layout/           # ShowcaseShell, ComponentCard, SectionGroup
+│   │       ├── tabs/             # OverviewTab, IdentityTab, ComponentsTab, BlocksTab
+│   │       ├── sections/         # Per-component demo sections (graduated)
+│   │       └── search/           # Component search for developers
 │   │
 │   ├── config/                   # @sndq/config
 │   │   ├── package.json
@@ -171,23 +186,25 @@ sndq/
 
 ## 4. Package Details
 
-### 4.1 `@sndq/ui` — component library
+### 4.1 `@sndq/ui-v2` — component library
 
-The design system package with a **three-tier component model**. Only Tier 1 (primitives) and Tier 2 (patterns) live here. Tier 3 (business components) remain in app code.
+The design system package with a **three-tier component model**. Only Tier 1 (primitives) and Tier 2 (blocks) live here. Tier 3 (business components) remain in app code.
+
+> **Why `-v2`?** The old `@sndq/ui` submodule at `sndq-fe/packages/ui/` still resolves via tsconfig paths. Using `-v2` avoids naming conflict during the coexistence period. Can be renamed after cleanup (see [migration-plan.md](./migration-plan.md#8-phase-5-cleanup)).
 
 **`package.json`**:
 
 ```json
 {
-  "name": "@sndq/ui",
+  "name": "@sndq/ui-v2",
   "private": true,
   "version": "0.1.0",
   "sideEffects": false,
   "exports": {
     "./components": "./src/components/index.ts",
     "./components/*": "./src/components/*.tsx",
-    "./patterns": "./src/patterns/index.ts",
-    "./patterns/*": "./src/patterns/*.tsx"
+    "./blocks": "./src/blocks/index.ts",
+    "./blocks/*": "./src/blocks/*.tsx"
   },
   "dependencies": {
     "@sndq/config": "workspace:*"
@@ -211,7 +228,31 @@ The design system package with a **three-tier component model**. Only Tier 1 (pr
 }
 ```
 
-### 4.2 `@sndq/config` — shared tooling and design tokens
+### 4.2 `@sndq/ui-v2-docs` — showcase infrastructure
+
+Reusable documentation components consumed by `apps/docs/` (standardized components only) and `apps/prototype/` (extends with experimental content). Keeps `@sndq/ui-v2` clean — the component library has no documentation infrastructure.
+
+**`package.json`**:
+
+```json
+{
+  "name": "@sndq/ui-v2-docs",
+  "private": true,
+  "version": "0.1.0",
+  "dependencies": {
+    "@sndq/ui-v2": "workspace:*",
+    "@sndq/config": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}
+```
+
+**Structure**: `src/layout/` (ShowcaseShell, ComponentCard, SectionGroup), `src/tabs/` (OverviewTab, IdentityTab, ComponentsTab, BlocksTab), `src/sections/` (per graduated component), `src/search/` (component search).
+
+### 4.3 `@sndq/config` — shared tooling and design tokens
 
 Houses all shared configuration: ESLint rules, Prettier settings, and the full Tailwind/CSS design token system.
 
@@ -256,7 +297,7 @@ Source: extracted from `sndq-ui-v2/src/app/globals.css` lines 17-253.
 
 #### `tailwind/components.css`
 
-UI-V2 component base CSS classes used by `@sndq/ui` components:
+UI-V2 component base CSS classes used by `@sndq/ui-v2` components:
 
 - `.ui-control` — shared base for input/select/textarea
 - `.ui-input-wrap` — icon + trailing action variant
@@ -285,7 +326,7 @@ Tells Tailwind where to scan for class usage across the monorepo:
 ```css
 @source "../../../sndq-fe/src/**/*.{js,ts,jsx,tsx}";
 @source "../../../apps/prototype/src/**/*.{js,ts,jsx,tsx}";
-@source "../../../packages/ui/src/**/*.{js,ts,jsx,tsx}";
+@source "../../../packages/ui-v2/src/**/*.{js,ts,jsx,tsx}";
 ```
 
 #### `eslint.mjs`
@@ -357,7 +398,7 @@ Apps reference via `package.json`:
 { "prettier": "@sndq/config/prettier.json" }
 ```
 
-### 4.3 `@sndq/tsconfig` — shared TypeScript configs
+### 4.4 `@sndq/tsconfig` — shared TypeScript configs
 
 Three base configs that apps and packages extend.
 
@@ -439,7 +480,7 @@ Apps extend and add local paths:
 
 ## 5. Component Classification
 
-### Tier 1 — Primitives (`@sndq/ui/components`)
+### Tier 1 — Primitives (`@sndq/ui-v2/components`)
 
 Well-known UI atoms. Zero business logic, fully controlled via props. 70 components from `sndq-ui-v2/src/components/ui-v2/`:
 
@@ -457,12 +498,12 @@ Well-known UI atoms. Zero business logic, fully controlled via props. 70 compone
 | **Charts** | AreaChart, BarChart, BarList, LineChart, DonutChart, ComboChart, SparkChart, ChartPrimitives |
 | **Composition** | Accordion, Collapsible |
 
-### Tier 2 — Patterns (`@sndq/ui/patterns`)
+### Tier 2 — Blocks (`@sndq/ui-v2/blocks`)
 
 Reusable compositions that combine primitives into opinionated layouts. No business logic — no API calls, no translations, no app context. 9 blocks from `sndq-ui-v2/src/components/ui-v2/blocks/` + FormShell from `sndq-ui-v2/src/patterns/form/`:
 
-| Pattern | Composes |
-|---------|----------|
+| Block | Composes |
+|-------|----------|
 | PageHeader | Title + breadcrumb + action buttons layout |
 | SectionHeader | Heading + description + optional action |
 | SectionBanner | Alert-like banner with icon + CTA |
@@ -487,16 +528,16 @@ Logic-bound, app-specific components. These import from hooks, services, context
 | PopoverMultiSelect | Tied to app filter infrastructure |
 | ActionButton | Uses `useTranslations`, renders app-specific action variants |
 | MultiSelectBar | Tied to CommonTable selection state |
-| All `briicks/` components | Wrapper layer to be replaced by `@sndq/ui` imports |
+| All `briicks/` components | Wrapper layer to be replaced by `@sndq/ui-v2` imports |
 
 ### Decision rule
 
 ```
 Can you find it on Radix/shadcn/Material UI?
-  YES → Tier 1 (primitives) → packages/ui/src/components/
+  YES → Tier 1 (primitives) → packages/ui-v2/src/components/
 
 Does it compose primitives into a layout WITHOUT calling APIs, hooks, or translations?
-  YES → Tier 2 (patterns) → packages/ui/src/patterns/
+  YES → Tier 2 (blocks) → packages/ui-v2/src/blocks/
 
 Does it import from @/hooks, @/services, @/contexts, or use useTranslations()?
   YES → Tier 3 (business) → sndq-fe/src/components/
@@ -504,7 +545,7 @@ Does it import from @/hooks, @/services, @/contexts, or use useTranslations()?
 
 ### Note on `sndq-ui-v2/src/patterns/form/` demo forms
 
-The 6 demo forms (`AddContactForm`, `CreateLeaseForm`, `CreateInvoiceForm`, etc.) are **prototype-only** — they demonstrate how to use `@sndq/ui` components in forms. They stay in `apps/prototype/src/patterns/form/`. Only `FormShell` (the reusable layout wrapper) moves to `@sndq/ui/patterns`.
+The 6 demo forms (`AddContactForm`, `CreateLeaseForm`, `CreateInvoiceForm`, etc.) are **prototype-only** — they demonstrate how to use `@sndq/ui-v2` components in forms. They stay in `apps/prototype/src/patterns/form/`. Only `FormShell` (the reusable layout wrapper) moves to `@sndq/ui-v2/blocks`.
 
 ---
 
@@ -599,7 +640,7 @@ Both `sndq-fe` and `apps/prototype` reduce to:
 }
 ```
 
-All Briicks tokens, semantic tokens, and component CSS classes are gone from here — consumed from `@sndq/config`.
+All Briicks tokens, semantic tokens, and component CSS classes are consumed from `@sndq/config`.
 
 ---
 
@@ -609,18 +650,25 @@ All Briicks tokens, semantic tokens, and component CSS classes are gone from her
 graph TD
     tsconfig["@sndq/tsconfig"]
     config["@sndq/config"]
-    ui["@sndq/ui"]
+    uiv2["@sndq/ui-v2"]
+    docs_pkg["@sndq/ui-v2-docs"]
     web["sndq-fe"]
     prototype["apps/prototype"]
+    docs_app["apps/docs"]
 
-    ui -->|"workspace:*"| config
-    web -->|"workspace:*"| ui
+    uiv2 -->|"workspace:*"| config
+    docs_pkg -->|"workspace:*"| uiv2
+    docs_pkg -->|"workspace:*"| config
+    web -->|"workspace:*"| uiv2
     web -->|"workspace:*"| config
     web -->|"workspace:*"| tsconfig
-    prototype -->|"workspace:*"| ui
+    prototype -->|"workspace:*"| uiv2
+    prototype -->|"workspace:*"| docs_pkg
     prototype -->|"workspace:*"| config
     prototype -->|"workspace:*"| tsconfig
-    ui -->|"workspace:*"| tsconfig
+    docs_app -->|"workspace:*"| docs_pkg
+    docs_app -->|"workspace:*"| tsconfig
+    uiv2 -->|"workspace:*"| tsconfig
 ```
 
 Import flow (one-directional only):
@@ -628,10 +676,10 @@ Import flow (one-directional only):
 ```mermaid
 graph LR
     subgraph tier1 [Tier 1]
-        primitives["@sndq/ui/components"]
+        primitives["@sndq/ui-v2/components"]
     end
     subgraph tier2 [Tier 2]
-        patterns["@sndq/ui/patterns"]
+        blocks["@sndq/ui-v2/blocks"]
     end
     subgraph tier3 [Tier 3]
         business["sndq-fe/src/components"]
@@ -640,11 +688,11 @@ graph LR
         modules["sndq-fe/src/modules"]
     end
 
-    patterns --> primitives
+    blocks --> primitives
     business --> primitives
-    business --> patterns
+    business --> blocks
     modules --> primitives
-    modules --> patterns
+    modules --> blocks
     modules --> business
 ```
 
@@ -656,20 +704,20 @@ graph LR
 
 ```tsx
 // Tier 1: primitives
-import { Button, Input, Dialog, Badge } from '@sndq/ui/components';
+import { Button, Input, Dialog, Badge } from '@sndq/ui-v2/components';
 
-// Tier 2: patterns
-import { PageHeader, ConfirmDialog, KpiCard } from '@sndq/ui/patterns';
+// Tier 2: blocks
+import { PageHeader, ConfirmDialog, KpiCard } from '@sndq/ui-v2/blocks';
 
 // Tier 3: app-internal only
 import { CommonTable } from '@/components/common-table';
 import { ActionButton } from '@/components/action-button';
 ```
 
-### From `@sndq/ui` patterns
+### From `@sndq/ui-v2` blocks
 
 ```tsx
-// patterns only import from components (same package)
+// blocks only import from components (same package)
 import { Button } from '../components/Button';
 import { Dialog } from '../components/Dialog';
 import { Card } from '../components/Card';
@@ -678,13 +726,13 @@ import { Card } from '../components/Card';
 ### Forbidden imports
 
 ```tsx
-// packages/ui MUST NOT import from any app
+// packages/ui-v2 MUST NOT import from any app
 import { anything } from '@/modules/...';        // FORBIDDEN
 import { anything } from 'sndq-fe/...';          // FORBIDDEN
 
-// packages/ui MUST NOT use app-specific context
-import { useTranslations } from 'next-intl';      // FORBIDDEN in packages/ui
-import { useWorkspace } from '@/contexts/...';     // FORBIDDEN in packages/ui
+// packages/ui-v2 MUST NOT use app-specific context
+import { useTranslations } from 'next-intl';      // FORBIDDEN in packages/ui-v2
+import { useWorkspace } from '@/contexts/...';     // FORBIDDEN in packages/ui-v2
 ```
 
 ### Briicks migration path
@@ -697,84 +745,28 @@ import { Button } from '@/components/briicks';
 import { InputV2 } from '@/components/briicks';
 
 // After (sndq-fe)
-import { Button } from '@sndq/ui/components';
-import { Input } from '@sndq/ui/components';
+import { Button } from '@sndq/ui-v2/components';
+import { Input } from '@sndq/ui-v2/components';
 ```
 
-This is a gradual migration — both import paths can coexist during the transition. Briicks wrappers can be updated to re-export from `@sndq/ui` as an intermediate step.
+This is a gradual, module-by-module migration — both import paths coexist during the transition. APIs are **not** drop-in compatible; see [API Compatibility Matrix](./migration-plan.md#10-api-compatibility-matrix) for the full mapping.
 
 ---
 
-## 9. Migration Steps
+## 9. Migration Plan
 
-### Phase 1: Scaffold directories and move prototype app (0.5d)
+The migration follows a **five-phase gradual approach** — each phase is independently mergeable and verifiable. The old `@sndq/ui` submodule stays in place until full cleanup in Phase 5.
 
-1. Create `apps/` and `packages/` directories at monorepo root
-2. Keep `sndq-fe/` at root (avoids conflicts with other developers' local setups)
-3. `git mv sndq-ui-v2 apps/prototype`
-4. Update `pnpm-workspace.yaml` to `['sndq-fe', 'apps/*', 'packages/*']`
-5. Update `lerna.json` packages to `['sndq-fe', 'apps/*', 'packages/*']`
-6. Update root `package.json` scripts
-7. Run `pnpm install` — verify workspace resolution
-8. Verify `pnpm dev` starts both apps
+| Phase | Name | Key scope |
+|-------|------|-----------|
+| **1a** | Structural Foundation | Create `apps/`, `packages/` dirs. Extract `@sndq/tsconfig` + `@sndq/config` (ESLint, Prettier). Wire `sndq-fe`. |
+| **1b** | Tailwind Tokens | Extract Briicks primitive tokens into `@sndq/config/tailwind/tokens.css`. |
+| **2** | Prototype Integration | Move `sndq-ui-v2` to `apps/prototype/`. Add UI-V2 tokens. Create `packages/ui-v2/`, `packages/ui-v2-docs/`, `apps/docs/` skeletons. Deprecate old submodule via ESLint. |
+| **3** | Standardize + Graduate | Extract showcase infrastructure into `@sndq/ui-v2-docs`. Standardize components in batches, graduate to `packages/ui-v2/`, deprecate legacy per-batch. |
+| **4** | Module Migration | Direct per-module migration: change imports + update props. Pilot on small module first. |
+| **5** | Cleanup | Remove `briicks/`, `ui/`, old submodule. Optional rename `@sndq/ui-v2` → `@sndq/ui`. Bundle audit. |
 
-### Phase 2: Extract `@sndq/tsconfig` (0.5d)
-
-1. Create `packages/tsconfig/` with `package.json`, `base.json`, `nextjs.json`, `library.json`
-2. Update `sndq-fe/tsconfig.json` to extend `@sndq/tsconfig/nextjs.json` + local `paths`
-3. Update `apps/prototype/tsconfig.json` to extend `@sndq/tsconfig/nextjs.json` + local `paths`
-4. Add `@sndq/tsconfig` to devDependencies in both apps
-5. Verify `tsc --noEmit` passes in both apps
-
-### Phase 3: Extract `@sndq/config` (0.5d)
-
-1. Create `packages/config/` with `package.json`
-2. Extract `eslint.mjs` from `sndq-fe/eslint.config.mjs`
-3. Extract `prettier.json` from `sndq-fe/.prettierrc.json`
-4. Extract Tailwind tokens, component CSS, and animations from `apps/prototype/src/app/globals.css` into `tailwind/tokens.css`, `tailwind/components.css`, `tailwind/animations.css`
-5. Create `tailwind/shared-sources.css` with `@source` directives
-6. Update `sndq-fe/eslint.config.mjs` to import from `@sndq/config/eslint.mjs`
-7. Create `apps/prototype/eslint.config.mjs` importing from `@sndq/config/eslint.mjs`
-8. Update both apps' `globals.css` to import from `@sndq/config/tailwind/*`
-9. Verify lint and build pass in both apps
-
-### Phase 4: Extract `@sndq/ui` (1d)
-
-1. Create `packages/ui/` with `package.json`, `tsconfig.json`
-2. Move `apps/prototype/src/components/ui-v2/*.tsx` to `packages/ui/src/components/`
-3. Move `apps/prototype/src/components/ui-v2/blocks/*.tsx` to `packages/ui/src/patterns/`
-4. Move `apps/prototype/src/patterns/form/FormShell.tsx` to `packages/ui/src/patterns/`
-5. Create barrel exports (`index.ts`) for components and patterns
-6. Add `@sndq/ui` as dependency in both apps' `package.json` with `workspace:*`
-7. Update all imports in `apps/prototype` from relative paths to `@sndq/ui/components` and `@sndq/ui/patterns`
-8. Verify prototype builds and renders correctly
-
-### Phase 5: Wire `@sndq/ui` into `sndq-fe` (1-2d)
-
-1. Add `@sndq/ui` dependency to `sndq-fe/package.json`
-2. Remove the git submodule (`sndq-fe/packages/ui/`)
-3. Remove `@sndq/ui` path aliases from `sndq-fe/tsconfig.json`
-4. Start migrating `@/components/briicks` imports to `@sndq/ui/components` (can be gradual)
-5. Verify build and type-check pass
-
-### Phase 6: Update CI/CD (0.5d)
-
-1. Update GitHub Actions workflows for new paths (`sndq-ui-v2/` to `apps/prototype/`)
-2. Update Vercel project root directory settings for prototype app
-3. Update `sndq-fe/scripts/ignore_build_step.sh` if it references old paths
-4. Update any deploy scripts referencing `sndq-ui-v2/`
-5. Verify CI pipeline passes end-to-end
-
-### Phase 7: Verify and clean up (0.5d)
-
-1. Run full build from root: `pnpm build`
-2. Run lint from root: `pnpm lint`
-3. Run type-check from root: `pnpm type-check`
-4. Run tests: `pnpm test`
-5. Verify both apps start and render correctly
-6. Update `README.md` at monorepo root
-7. Update `AGENTS.md` / `CLAUDE.md` if they reference old paths
-8. Remove any leftover old config files
+For full details including step-by-step instructions, deprecation strategy, API compatibility matrix, and key decisions log, see **[migration-plan.md](./migration-plan.md)**.
 
 ---
 
