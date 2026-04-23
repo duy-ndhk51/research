@@ -2,50 +2,327 @@
 
 ## TL;DR
 
-Build a news aggregation app in 3 phases. Phase 1 delivers a working MVP feed reader with no auth. Phase 2 adds authentication. Phase 3 adds notifications. This document contains every command, schema, and pattern needed to build each phase.
+Build a news aggregation app incrementally through 6 micro-phases. Each phase produces a usable app. Phase 0 delivers a working feed reader with zero infrastructure (no database, no cron, no API routes). Subsequent phases layer in caching, UI polish, mixed sources, channel preferences, and full persistence — only when justified by real usage pain.
 
-## Tech Stack (Locked In)
+## Strategy: Gradual Complexity
 
-| Technology | Version | Role |
-|-----------|---------|------|
-| Next.js | 16.2.x | Full-stack framework (App Router, Turbopack) |
-| pnpm | latest | Package manager |
-| Tailwind CSS | v4 | Styling (ships with Next.js 16) |
-| shadcn/ui | latest | Design system (accessible, composable) |
-| TanStack Query | v5 | Client-side data fetching, caching, pagination |
-| Prisma | latest | ORM with type-safe queries and migrations |
-| PostgreSQL | 16 | Database (Docker for local dev) |
-| Auth.js | v5 | Authentication (Phase 2) |
-| Resend | latest | Email notifications (Phase 3) |
-| rss-parser | latest | RSS/Atom feed parsing |
-| Vercel | — | Deployment target with built-in cron |
+The original plan required Postgres + Docker + Prisma + API routes + TanStack Query + cron from the very first step. That is the right architecture for a multi-user product, but overkill for a single-user MVP. This revised plan starts with the simplest possible thing that works and adds infrastructure only when the previous phase creates friction.
+
+```mermaid
+flowchart LR
+  P0["Phase 0\nWorking Feed"]
+  P1["Phase 1\nCaching"]
+  P2["Phase 2\nPolished UI"]
+  P3["Phase 3\nMixed Sources"]
+  P4["Phase 4\nPreferences"]
+  P5["Phase 5\nFull Persistence"]
+
+  P0 --> P1 --> P2 --> P3 --> P4 --> P5
+```
+
+## Tech Stack
+
+Introduced incrementally. Only install what you need for the current phase.
+
+| Technology | Phase Introduced | Role |
+|-----------|-----------------|------|
+| Next.js 16.2.x | 0 | Framework (App Router, RSC, Turbopack) |
+| pnpm | 0 | Package manager |
+| Tailwind CSS v4 | 0 | Styling |
+| shadcn/ui | 0 | Design system |
+| rss-parser | 0 | RSS/Atom feed parsing |
+| next-themes | 0 | Dark mode |
+| Prisma + PostgreSQL | 5 | ORM + database (deferred) |
+| TanStack Query v5 | 5 | Client-side caching + infinite scroll (deferred) |
+| Docker | 5 | Local Postgres (deferred) |
+| Auth.js v5 | Future | Authentication (deferred indefinitely) |
+| Resend | Future | Email notifications (deferred indefinitely) |
 
 ---
 
-## Phase 1 — MVP Feed Reader
+## Phase 0 — Working Feed (~2-3h)
 
-### Step 1: Project Scaffolding
+**Goal:** Fetch RSS feeds server-side and display a unified article timeline. No database, no API routes, no client-side fetching.
+
+**What you get:** Open the app, see the latest articles from 11 sources sorted by date.
+
+### Step 0.1: Project Scaffolding
 
 ```bash
 cd /Users/admin/projects/private/developer-broadcast
 
-# Scaffold Next.js 16 with all recommended defaults
 pnpm dlx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --turbopack --use-pnpm
 
-# Initialize shadcn/ui
 pnpm dlx shadcn@latest init
 
-# Add core shadcn components
-pnpm dlx shadcn@latest add button card input badge dialog sheet tabs avatar separator scroll-area toast switch skeleton command dropdown-menu
+pnpm dlx shadcn@latest add button card badge separator skeleton
 
-# Install runtime dependencies
-pnpm add @prisma/client @tanstack/react-query rss-parser
-
-# Install dev dependencies
-pnpm add -D prisma @tanstack/react-query-devtools
+pnpm add rss-parser next-themes
 ```
 
-### Step 2: Docker Postgres Setup
+Only install what Phase 0 needs. No Prisma, no TanStack Query, no Docker.
+
+### Step 0.2: Channel Configuration
+
+Create `src/config/channels.ts` — a typed array of all 11 channels with their RSS feed URLs. This replaces the database seed for now.
+
+```typescript
+export type ChannelType = "RSS" | "API";
+
+export interface Channel {
+  name: string;
+  slug: string;
+  description: string;
+  url: string;
+  feedUrl: string;
+  type: ChannelType;
+  category: string;
+}
+
+export const channels: Channel[] = [
+  {
+    name: "TechCrunch",
+    slug: "techcrunch",
+    description: "Startup and technology news",
+    url: "https://techcrunch.com",
+    feedUrl: "https://techcrunch.com/feed/",
+    type: "RSS",
+    category: "Tech News",
+  },
+  // ... remaining 10 channels
+];
+```
+
+### Step 0.3: RSS Fetcher
+
+Create `src/lib/fetchers/rss-fetcher.ts`:
+- Uses `rss-parser` to fetch and parse any RSS/Atom feed URL
+- Normalizes each item into a common `Article` shape: `{ title, summary, url, author, publishedAt, imageUrl, channelSlug }`
+- Handles missing fields gracefully (summary fallback from content snippet, date parsing with fallback)
+- Returns an empty array on fetch failure (don't let one broken feed break the whole page)
+
+### Step 0.4: Feed Page (RSC)
+
+Create `src/app/feed/page.tsx` as a React Server Component:
+- Imports the channel list from `src/config/channels.ts`
+- Calls the RSS fetcher for each RSS channel using `Promise.allSettled`
+- Merges all articles into a single array, sorts by `publishedAt` descending
+- Renders a list of `article-card` components
+- No client-side JavaScript needed for the feed itself
+
+### Step 0.5: Article Card Component
+
+Create `src/components/feed/article-card.tsx`:
+- Minimal card: article title (external link), channel name, relative time (e.g. "2h ago"), summary (truncated to 2 lines)
+- Uses shadcn `Card` and `Badge` components
+- Server component (no `"use client"`)
+
+### Step 0.6: Root Layout + Dark Mode
+
+Set up `src/app/layout.tsx`:
+- `next-themes` `ThemeProvider` with system default
+- Basic metadata (title, description)
+- Simple header with app name and theme toggle button
+- No sidebar, no mobile nav yet
+
+### Step 0.7: Verification
+
+- Run `pnpm dev`
+- Navigate to `/feed`
+- Confirm articles from multiple RSS sources appear, sorted by date
+- Toggle dark mode
+- Check that a failing feed URL doesn't crash the page
+
+### What Phase 0 does NOT include
+
+- No Hacker News (API source, not RSS — added in Phase 3)
+- No database or caching (every page load re-fetches all feeds)
+- No channels page, no channel detail page
+- No landing page
+- No sidebar, no mobile nav
+- No subscriptions or preferences
+- No API routes
+- No TanStack Query
+
+---
+
+## Phase 1 — Fast Page Loads (~1-2h)
+
+**Goal:** Cache fetched articles so the feed page loads instantly instead of re-fetching 11 RSS feeds on every request.
+
+**Prerequisite:** Phase 0 complete.
+
+### Step 1.1: Add ISR Caching to Feed Page
+
+Use Next.js `revalidate` on the feed page:
+
+```typescript
+export const revalidate = 900; // 15 minutes
+```
+
+This caches the entire rendered page for 15 minutes. After expiry, the next visitor triggers a background re-fetch while the stale page is served instantly.
+
+### Step 1.2: Per-Channel Error Isolation
+
+Wrap each channel fetch in a try/catch so one slow or broken feed doesn't block the entire page revalidation. Log errors to the server console.
+
+### Step 1.3: Verification
+
+- First load: slow (fetching all feeds)
+- Second load within 15 minutes: instant (served from cache)
+- Confirm a broken feed URL doesn't prevent caching
+
+---
+
+## Phase 2 — Polished UI (~3-4h)
+
+**Goal:** Make the app look and feel good enough to use as a daily driver.
+
+**Prerequisite:** Phase 1 complete.
+
+### Step 2.1: Enhanced Article Card
+
+Update `src/components/feed/article-card.tsx`:
+- Channel logo/icon (use favicon from channel URL as fallback)
+- Summary text (truncated)
+- Tag badges (if available from RSS)
+- Open-in-new-tab icon on hover
+
+### Step 2.2: Header Component
+
+Create `src/components/layout/header.tsx`:
+- App name/logo linked to home
+- Navigation links: Feed, Channels
+- Theme toggle button
+- Mobile-responsive (hamburger menu on small screens)
+
+### Step 2.3: Channels Browse Page
+
+Create `src/app/channels/page.tsx`:
+- Import channel list from config
+- Group channels by `category`
+- Render each channel as a card: name, description, category badge
+- Link each card to `/channels/[slug]`
+
+### Step 2.4: Channel Detail Page
+
+Create `src/app/channels/[slug]/page.tsx`:
+- Show channel info header (name, description, URL, category)
+- Fetch and display only that channel's articles (same RSC pattern as feed page)
+- Uses `revalidate` for caching
+
+### Step 2.5: Landing Page
+
+Create `src/app/page.tsx`:
+- Hero section: app name, tagline, CTA button to `/feed`
+- Featured channels grid (pick 4-6 from the config)
+- Link to browse all channels
+
+### Step 2.6: Skeleton Loading States
+
+Add shadcn `Skeleton` components for loading states on the feed and channel pages. Use `loading.tsx` convention in each route folder.
+
+### Step 2.7: Responsive Layout
+
+- Mobile-first design using Tailwind breakpoints
+- Stack layout on mobile, wider content area on desktop
+- No sidebar yet (added in Phase 4 with preferences)
+
+### Step 2.8: Verification
+
+- All pages render correctly on mobile, tablet, desktop
+- Dark mode works on all pages
+- Channel detail shows only that channel's articles
+- Loading skeletons appear during navigation
+
+---
+
+## Phase 3 — Mixed Sources: Hacker News (~2h)
+
+**Goal:** Add non-RSS sources, starting with Hacker News.
+
+**Prerequisite:** Phase 2 complete.
+
+### Step 3.1: Hacker News Fetcher
+
+Create `src/lib/fetchers/hn-fetcher.ts`:
+- Fetch top 30 story IDs from `https://hacker-news.firebaseio.com/v0/topstories.json`
+- Fetch each story detail from `/v0/item/{id}.json` (parallelize with `Promise.all`, batch of 10)
+- Map to the common `Article` shape
+- Handle stories without URLs (self-posts: use HN comment link)
+
+### Step 3.2: Fetch Manager
+
+Create `src/lib/fetchers/fetch-manager.ts`:
+- Reads channel list from config
+- Dispatches to the correct fetcher based on `channel.type` ("RSS" -> rss-fetcher, "API" -> hn-fetcher)
+- Returns merged, deduplicated, sorted article array
+- Replaces the inline fetch-all logic in the feed page
+
+### Step 3.3: Update Feed and Channel Pages
+
+- Feed page and channel detail page now call `fetchManager` instead of directly calling the RSS fetcher
+- Hacker News channel appears in the channels page and has its own detail page
+
+### Step 3.4: Verification
+
+- `/feed` shows articles from both RSS feeds and Hacker News, interleaved by date
+- `/channels/hacker-news` shows only HN stories
+- HN stories without URLs link to the HN comments page
+
+---
+
+## Phase 4 — Channel Preferences (~2h)
+
+**Goal:** Let the user show/hide channels from the feed without code changes.
+
+**Prerequisite:** Phase 3 complete.
+
+### Step 4.1: Channel Preferences Hook
+
+Create `src/hooks/use-channel-preferences.ts`:
+- Stores a `Set<string>` of enabled channel slugs in `localStorage`
+- Default: all channels enabled
+- Provides `toggle(slug)`, `isEnabled(slug)`, `enabledSlugs` methods
+- `"use client"` hook
+
+### Step 4.2: Toggle UI on Channels Page
+
+Add a toggle/switch button on each channel card:
+- Shows enabled/disabled state from `localStorage`
+- Clicking toggles the channel preference
+- Toast feedback on toggle
+
+### Step 4.3: Filtered Feed
+
+Update the feed page to read preferences:
+- The feed page itself stays an RSC (fetches all articles server-side)
+- A client wrapper component filters the rendered articles based on `localStorage` preferences
+- Or: pass enabled slugs as search params to the feed page
+
+### Step 4.4: Sidebar
+
+Create `src/components/layout/sidebar.tsx`:
+- Lists enabled channels with links to their detail pages
+- Shows channel count
+- Desktop only (hidden on mobile, accessible via mobile nav)
+
+### Step 4.5: Verification
+
+- Disabling a channel removes its articles from the feed
+- Preferences persist across page reloads (same browser)
+- Sidebar reflects enabled channels
+- All channels still accessible via the browse page regardless of preferences
+
+---
+
+## Phase 5 — Full Persistence (~4-6h)
+
+**Goal:** Move from config-driven data to a real database. Required when you want article history, full-text search, or to open the app to other users.
+
+**Prerequisite:** Phase 4 complete. Only proceed if you actually need this.
+
+### Step 5.1: Docker Postgres Setup
 
 Create `docker-compose.yml`:
 
@@ -65,264 +342,118 @@ volumes:
   pgdata:
 ```
 
-Create `.env`:
+Create `.env` and `.env.example`.
 
-```
-DATABASE_URL="postgresql://broadcast:broadcast@localhost:5432/developer_broadcast"
-CRON_SECRET="dev-secret-change-in-production"
-```
+### Step 5.2: Prisma Schema
 
-Create `.env.example` (same keys, no values):
+Initialize Prisma and define Channel, Article, Subscription models (see [architecture.md](./architecture.md) for full schema).
 
-```
-DATABASE_URL=
-CRON_SECRET=
-```
+Run initial migration: `pnpm prisma migrate dev --name init`
 
-Start the database:
+Create Prisma client singleton: `src/lib/prisma.ts`
 
-```bash
-docker compose up -d
-```
+### Step 5.3: Seed Script
 
-### Step 3: Prisma Schema
+Create `prisma/seed.ts` — insert the 11 channels from the config into the database.
 
-Initialize Prisma:
+### Step 5.4: Migrate Fetch Manager to Use Database
 
-```bash
-pnpm prisma init --datasource-provider postgresql
-```
+Update `src/lib/fetchers/fetch-manager.ts`:
+- Load channels from database instead of config
+- Upsert articles using `prisma.article.upsert({ where: { url } })`
+- Update `channel.lastFetchedAt` after fetch
 
-Models for Phase 1:
-
-- **Channel** — id (cuid), name, slug (unique), description, url, feedUrl, type (enum: RSS/API/SCRAPE/WEBHOOK), logoUrl, category, metadata (Json), lastFetchedAt, createdAt, updatedAt
-- **Article** — id (cuid), channelId (FK → Channel), title, summary, content, url (unique), imageUrl, author, tags (String[]), publishedAt, createdAt. Compound index on `[channelId, publishedAt DESC]`
-- **Subscription** — id (cuid), visitorId (String), channelId (FK → Channel), notify (Boolean, default true), createdAt. Unique constraint on `[visitorId, channelId]`
-
-The `visitorId` is a random ID generated client-side and stored in `localStorage`. This lets anonymous users subscribe without authentication. In Phase 2, this field migrates to a `userId` foreign key.
-
-Run migrations:
-
-```bash
-pnpm prisma migrate dev --name init
-```
-
-Create `src/lib/prisma.ts` — singleton pattern for the Prisma client:
-
-```typescript
-import { PrismaClient } from "@prisma/client";
-
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
-
-export const prisma = globalForPrisma.prisma || new PrismaClient();
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
-```
-
-### Step 4: Feed Fetcher Infrastructure
-
-Three modules in `src/lib/fetchers/`:
-
-**rss-fetcher.ts**
-- Uses `rss-parser` to fetch and parse any RSS/Atom feed URL
-- Normalizes each item into the Article shape: `{ title, summary, url, author, publishedAt, imageUrl }`
-- Handles missing fields gracefully (summary fallback from content, date parsing)
-
-**hn-fetcher.ts**
-- Fetches top 30 stories from `https://hacker-news.firebaseio.com/v0/topstories.json`
-- Fetches each story detail from `/v0/item/{id}.json`
-- Maps to Article shape (HN stories have `title`, `url`, `by`, `time`)
-- Parallelizes detail fetches with `Promise.all` (batched)
-
-**fetch-manager.ts**
-- Loads all channels from DB
-- For each channel, dispatches to the correct fetcher based on `channel.type`
-- Upserts articles using `prisma.article.upsert({ where: { url }, ... })` to deduplicate
-- Updates `channel.lastFetchedAt` after successful fetch
-- Returns a summary: `{ channelsProcessed, articlesAdded, errors }`
-
-### Step 5: Cron API Route
+### Step 5.5: Cron API Route
 
 Create `src/app/api/cron/fetch-feeds/route.ts`:
+- POST handler protected by `CRON_SECRET`
+- Calls fetch manager
+- Configure in `vercel.json` for production
 
-- POST handler protected by `Authorization: Bearer ${CRON_SECRET}` header check
-- Calls `fetchManager.fetchAll()`
-- Returns JSON summary of what was fetched
-- On Vercel: configure in `vercel.json` to run every 15 minutes
-- Locally: trigger with `curl -X POST -H "Authorization: Bearer dev-secret" http://localhost:3000/api/cron/fetch-feeds`
+### Step 5.6: API Routes
 
-`vercel.json` (for production):
+Create REST endpoints for client-side consumption:
+- `GET /api/channels` — list channels, filter by category
+- `GET /api/articles` — cursor-paginated articles, filter by channel/category
+- `GET/POST/DELETE /api/subscriptions` — manage subscriptions by visitorId
 
-```json
-{
-  "crons": [
-    {
-      "path": "/api/cron/fetch-feeds",
-      "schedule": "*/15 * * * *"
-    }
-  ]
-}
-```
+### Step 5.7: TanStack Query Integration
 
-### Step 6: Pre-Seeded Channels
+Install `@tanstack/react-query` and set up:
+- `QueryProvider` in root layout
+- `useArticles` hook with `useInfiniteQuery` for infinite scroll
+- `useChannels` hook for channel list
+- `useSubscriptions` hook with optimistic mutations
+- `useVisitorId` hook for anonymous identity
 
-Create `prisma/seed.ts` that inserts 11 channels:
+### Step 5.8: Infinite Scroll Feed
 
-| Name | Slug | Category | Type |
-|------|------|----------|------|
-| Hacker News | hacker-news | Aggregator | API |
-| TechCrunch | techcrunch | Tech News | RSS |
-| The Verge | the-verge | Tech News | RSS |
-| GitHub Blog | github-blog | Developer | RSS |
-| AWS What's New | aws-whats-new | Cloud | RSS |
-| Google Blog | google-blog | Big Tech | RSS |
-| Netflix Tech Blog | netflix-tech-blog | Big Tech | RSS |
-| Uber Engineering | uber-engineering | Big Tech | RSS |
-| Engineering at Meta | engineering-at-meta | Big Tech | RSS |
-| Vercel Blog | vercel-blog | Developer | RSS |
-| Next.js Blog | nextjs-blog | Framework | RSS |
+Replace the RSC feed page with a client-side infinite scroll implementation:
+- Intersection observer for "load more"
+- Cursor-based pagination
+- Filter by channel, category, date
 
-Configure seed in `package.json`:
+### Step 5.9: Subscription Management
 
-```json
-{
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  }
-}
-```
+Replace localStorage preferences with server-side subscriptions:
+- `subscribe-button.tsx` with optimistic toggle
+- Sidebar shows subscribed channels from database
+- `useVisitorId` hook generates anonymous ID in localStorage
 
-Run: `pnpm prisma db seed`
+### Step 5.10: Verification
 
-### Step 7: UI Pages and Components
-
-**Layout components** (`src/components/layout/`):
-- `header.tsx` — App name, navigation links (Feed, Channels), theme toggle button, notification bell placeholder
-- `sidebar.tsx` — List of subscribed channels with unsubscribe option, channel count badge
-- `mobile-nav.tsx` — Sheet-based hamburger menu for mobile viewports
-
-**Feed components** (`src/components/feed/`):
-- `article-card.tsx` — Card with: channel logo + name, article title (linked), summary (truncated), published time (relative), tag badges
-- `article-list.tsx` — Infinite scroll container using `useInfiniteQuery`, intersection observer for "load more"
-- `feed-filters.tsx` — Dropdown filters for channel, category, date range
-
-**Channel components** (`src/components/channels/`):
-- `channel-card.tsx` — Card with: logo, name, description, category badge, article count, subscribe button
-- `channel-grid.tsx` — Responsive grid (1 col mobile, 2 col tablet, 3 col desktop)
-- `subscribe-button.tsx` — Toggle button using `visitorId` from localStorage, optimistic update via TanStack Query mutation
-
-**Pages** (`src/app/`):
-- `page.tsx` — Landing: hero section, featured channels grid, CTA to browse all
-- `feed/page.tsx` — Main feed with infinite scroll, sidebar, filters
-- `channels/page.tsx` — Browse all channels grouped by category
-- `channels/[slug]/page.tsx` — Channel detail: header info + paginated article list
-
-**Key UI patterns:**
-- Dark mode via `next-themes` with `ThemeProvider` in root layout
-- Mobile-first responsive design using Tailwind breakpoints
-- Loading states with shadcn Skeleton components
-- Toast notifications for subscribe/unsubscribe feedback
-
-### Step 8: TanStack Query Setup
-
-**Provider** (`src/providers/query-provider.tsx`):
-
-```typescript
-"use client";
-
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { useState } from "react";
-
-export function QueryProvider({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 5 * 60 * 1000,
-            refetchOnWindowFocus: true,
-          },
-        },
-      })
-  );
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
-  );
-}
-```
-
-**Hook patterns:**
-
-```typescript
-// Infinite scroll articles
-export function useArticles(filters: ArticleFilters) {
-  return useInfiniteQuery({
-    queryKey: ["articles", filters],
-    queryFn: ({ pageParam }) =>
-      fetchArticles({ ...filters, cursor: pageParam }),
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
-  });
-}
-
-// Subscribe mutation with optimistic update
-export function useSubscribe() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (channelId: string) => postSubscription(channelId),
-    onMutate: async (channelId) => {
-      await queryClient.cancelQueries({ queryKey: ["subscriptions"] });
-      // optimistic update logic
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
-    },
-  });
-}
-```
+- Seed DB, trigger fetch, browse UI, subscribe, view personalized feed
+- Infinite scroll loads more articles as you scroll
+- Subscribe/unsubscribe is instant (optimistic) and persists
+- Cron fetch adds new articles without duplicates
 
 ---
 
-## Phase 2 — Authentication (Future)
+## Future Phases (Deferred Indefinitely)
 
-1. Install Auth.js v5: `pnpm add next-auth@beta`
-2. Add `User` and `Account` models to Prisma schema (see [architecture.md](./architecture.md))
-3. Configure GitHub + Google OAuth providers in `src/lib/auth.ts`
-4. Create `src/app/api/auth/[...nextauth]/route.ts`
-5. Migrate `Subscription.visitorId` to `Subscription.userId` (FK to User)
-6. Add login/logout UI to header
-7. Create `src/app/(dashboard)/settings/page.tsx` for user preferences
-8. Add `UserPreference` model for email digest, push notifications, quiet hours
+### Authentication (Original Phase 2)
 
-## Phase 3 — Notifications (Future)
+Only needed when opening the app to other users.
 
-1. Add `Notification` model to Prisma schema
-2. Create notification on new articles for subscribed users (in fetch-manager)
-3. Build notification bell component with unread count badge
-4. Create `src/app/(dashboard)/notifications/page.tsx` — notification center
-5. Integrate Web Push API with service worker for browser push
-6. Add Resend integration for email digest (daily/weekly)
-7. Build preferences UI for quiet hours, frequency, per-channel notify toggle
+1. Install Auth.js v5
+2. Add User and Account models
+3. GitHub + Google OAuth
+4. Migrate visitorId subscriptions to userId
+5. Settings page
+
+### Notifications (Original Phase 3)
+
+Only needed when you want proactive alerts.
+
+1. Notification model
+2. In-app bell, notification center
+3. Web Push + service worker
+4. Resend email digest
+5. Quiet hours, frequency settings
 
 ---
 
-## File-by-File Creation Order
+## File Creation Order by Phase
 
-| # | Files | Description |
-|---|-------|-------------|
-| 1 | `docker-compose.yml`, `.env`, `.env.example` | Database and environment |
-| 2 | `prisma/schema.prisma`, `src/lib/prisma.ts`, `prisma/seed.ts` | Data layer |
-| 3 | `src/providers/query-provider.tsx`, `src/providers/theme-provider.tsx` | Client providers |
-| 4 | `src/app/layout.tsx` | Root layout with providers |
-| 5 | `src/components/layout/header.tsx`, `sidebar.tsx`, `mobile-nav.tsx` | Shell components |
-| 6 | `src/lib/fetchers/rss-fetcher.ts`, `hn-fetcher.ts`, `fetch-manager.ts` | Feed ingestion |
-| 7 | `src/app/api/channels/route.ts`, `articles/route.ts`, `subscriptions/route.ts`, `cron/fetch-feeds/route.ts` | API routes |
-| 8 | `src/hooks/use-visitor-id.ts`, `use-articles.ts`, `use-channels.ts`, `use-subscriptions.ts` | Query hooks |
-| 9 | `src/components/feed/article-card.tsx`, `article-list.tsx`, `feed-filters.tsx` | Feed UI |
-| 10 | `src/components/channels/channel-card.tsx`, `channel-grid.tsx`, `subscribe-button.tsx` | Channel UI |
-| 11 | `src/app/page.tsx`, `feed/page.tsx`, `channels/page.tsx`, `channels/[slug]/page.tsx` | Pages |
-| 12 | Seed DB, trigger fetch, verify flow | End-to-end validation |
+| Phase | Files | Description |
+|-------|-------|-------------|
+| 0 | `src/config/channels.ts` | Hardcoded channel list |
+| 0 | `src/lib/fetchers/rss-fetcher.ts` | RSS parser and normalizer |
+| 0 | `src/components/feed/article-card.tsx` | Minimal article card |
+| 0 | `src/app/feed/page.tsx` | Feed page (RSC) |
+| 0 | `src/app/layout.tsx` | Root layout + theme toggle |
+| 1 | (edit `feed/page.tsx`) | Add `revalidate = 900` |
+| 2 | `src/components/layout/header.tsx` | Navigation header |
+| 2 | `src/app/channels/page.tsx` | Channels browse page |
+| 2 | `src/app/channels/[slug]/page.tsx` | Channel detail page |
+| 2 | `src/app/page.tsx` | Landing page |
+| 3 | `src/lib/fetchers/hn-fetcher.ts` | Hacker News API fetcher |
+| 3 | `src/lib/fetchers/fetch-manager.ts` | Source dispatcher |
+| 4 | `src/hooks/use-channel-preferences.ts` | localStorage preferences |
+| 4 | `src/components/layout/sidebar.tsx` | Channel sidebar |
+| 5 | `docker-compose.yml`, `.env` | Database infrastructure |
+| 5 | `prisma/schema.prisma`, `prisma/seed.ts` | Schema + seed |
+| 5 | `src/lib/prisma.ts` | Prisma client singleton |
+| 5 | `src/app/api/**` | All API routes |
+| 5 | `src/providers/query-provider.tsx` | TanStack Query setup |
+| 5 | `src/hooks/use-*.ts` | All TanStack Query hooks |

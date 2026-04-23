@@ -183,3 +183,48 @@ Use TanStack Query v5.
 - More boilerplate for simple cases (SWR's API is more minimal)
 
 **Note:** SWR would also work fine. TanStack Query was chosen specifically for its infinite query support and mutation/optimistic update capabilities, which are core to the feed and subscription UX.
+
+---
+
+## ADR-007: Gradual Micro-Phase Approach (Defer Database and Client-Side Fetching)
+
+**Status:** Accepted
+**Date:** 2026-04-23
+
+### Context
+
+The original implementation plan required Postgres + Docker + Prisma + API routes + TanStack Query + cron as the very first steps (Phase 1, items 1.1–1.45). This is the right architecture for a multi-user product, but the app currently has a single user. The overhead of maintaining database infrastructure, writing API routes, and setting up client-side data fetching is not justified until either the app is shared with others or article history/search is needed.
+
+### Decision
+
+Restructure the build plan into 6 micro-phases (Phase 0–5), each producing a usable app. Defer database, API routes, and TanStack Query to Phase 5. Start with zero infrastructure: React Server Components fetch RSS feeds directly, Next.js ISR handles caching, and localStorage stores channel preferences.
+
+### Consequences
+
+**Positive:**
+- Phase 0 is achievable in a single session (~2-3 hours) and delivers core value (unified feed)
+- No Docker, no database migrations, no seed scripts needed to get started
+- Each phase is independently useful — you can stop at any phase and have a working app
+- Infrastructure decisions can be deferred until real usage reveals what's actually needed
+- Reduces risk of over-engineering before product-market fit (even for a personal tool)
+
+**Negative:**
+- No article history — articles disappear from the feed as they fall off the RSS feed (typically 10-30 most recent per source)
+- No full-text search until database is added
+- No cross-device subscription sync (localStorage only)
+- ISR caching means the first load after 15 minutes is slower while re-fetching
+- Some work in Phase 0-4 gets rewritten in Phase 5 (e.g., feed page moves from RSC to TanStack Query infinite scroll)
+
+**What gets deferred:**
+- PostgreSQL + Docker → Phase 5
+- Prisma ORM → Phase 5
+- API routes → Phase 5
+- TanStack Query → Phase 5
+- Cron-based feed fetching → Phase 5
+- visitorId subscriptions → Phase 5 (replaced by localStorage preferences in Phase 4)
+- Authentication → Indefinitely (original Phase 2)
+- Notifications → Indefinitely (original Phase 3)
+
+**ADR-002 amendment:** The decision to use PostgreSQL (ADR-002) remains valid as the target architecture. This ADR does not change the database choice — it only defers when the database is introduced. SQLite was reconsidered for the intermediate phases but deemed unnecessary since ISR caching provides sufficient performance for a single user.
+
+**ADR-006 amendment:** The decision to use TanStack Query (ADR-006) also remains valid for Phase 5. In Phases 0-4, React Server Components handle all data fetching without any client-side JavaScript, making TanStack Query unnecessary until infinite scroll and optimistic mutations are needed.

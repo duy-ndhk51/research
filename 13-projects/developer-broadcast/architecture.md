@@ -2,9 +2,49 @@
 
 ## TL;DR
 
-A Next.js 16 full-stack app that aggregates RSS feeds and API sources into a unified article feed. PostgreSQL stores channels, articles, and subscriptions. A cron job fetches new content on a schedule. TanStack Query handles client-side caching and pagination.
+A Next.js 16 full-stack app that aggregates RSS feeds and API sources into a unified article feed. Built incrementally: starts as a zero-infrastructure RSS reader (Phase 0-4), then optionally adds PostgreSQL, API routes, and TanStack Query (Phase 5) when persistence is needed.
 
-## High-Level Architecture
+## Architecture Evolution
+
+The app architecture evolves across micro-phases. Phase 0-4 uses a simple SSR-only approach. Phase 5 adds the full data pipeline.
+
+### Phase 0-4 Architecture (Current Target)
+
+No database, no API routes, no client-side data fetching. React Server Components fetch RSS feeds directly and render the page server-side. Next.js ISR handles caching.
+
+```mermaid
+flowchart TB
+  subgraph browser [Browser]
+    UI["Next.js App Router + shadcn/ui"]
+    LS["localStorage (channel preferences)"]
+  end
+
+  subgraph server [Next.js Server]
+    RSC["React Server Components"]
+    ISR["ISR Cache (revalidate: 900)"]
+    RSC --> ISR
+  end
+
+  subgraph fetchers [Feed Fetchers]
+    RSS["RSS Parser"]
+    HN["HN API Fetcher"]
+    FM["Fetch Manager (dispatch by type)"]
+    FM --> RSS
+    FM --> HN
+  end
+
+  subgraph config [Config]
+    CH["channels.ts (hardcoded list)"]
+  end
+
+  RSC --> FM
+  FM --> CH
+  UI --> RSC
+```
+
+### Phase 5 Architecture (Full Persistence)
+
+Adds PostgreSQL, Prisma, API routes, cron-based fetching, and TanStack Query for infinite scroll and optimistic mutations.
 
 ```mermaid
 flowchart TB
@@ -65,7 +105,64 @@ sequenceDiagram
   Route-->>Cron: 200 OK (summary)
 ```
 
-## Database Schema (Prisma)
+## Phase 0-4 Data Flow
+
+In the early phases, there is no database. Data flows directly from external feeds through the fetch manager to the rendered page.
+
+```mermaid
+sequenceDiagram
+  participant Browser
+  participant RSC as React Server Component
+  participant Cache as ISR Cache
+  participant FM as FetchManager
+  participant Feed as RSS/API Source
+
+  Browser->>RSC: GET /feed
+  RSC->>Cache: Check cache (15 min TTL)
+  alt Cache hit
+    Cache-->>RSC: Cached HTML
+  else Cache miss
+    RSC->>FM: fetchAll(channels)
+    loop Each channel
+      FM->>Feed: Fetch feed URL
+      Feed-->>FM: Raw feed data
+    end
+    FM-->>RSC: Article[] (merged, sorted)
+    RSC->>Cache: Store rendered HTML
+  end
+  RSC-->>Browser: Rendered page
+```
+
+## Phase 5 Feed Ingestion Data Flow
+
+Once the database is introduced, a cron job handles feed fetching separately from page rendering.
+
+```mermaid
+sequenceDiagram
+  participant Cron as Vercel Cron / curl
+  participant Route as /api/cron/fetch-feeds
+  participant Manager as FetchManager
+  participant Fetcher as RSS/API Fetcher
+  participant DB as PostgreSQL
+
+  Cron->>Route: POST (with CRON_SECRET)
+  Route->>Manager: fetchAll()
+  Manager->>DB: Get all channels
+  DB-->>Manager: Channel[]
+
+  loop Each channel
+    Manager->>Fetcher: fetch(channel)
+    Fetcher-->>Manager: Article[]
+    Manager->>DB: Upsert articles (dedupe by URL)
+    Manager->>DB: Update channel.lastFetchedAt
+  end
+
+  Route-->>Cron: 200 OK (summary)
+```
+
+## Database Schema (Prisma — Phase 5)
+
+> Not used in Phases 0-4. The schema below is the target for Phase 5 when persistence is introduced.
 
 ```prisma
 generator client {
@@ -131,7 +228,7 @@ model Subscription {
 }
 ```
 
-### Phase 2 additions (not yet implemented)
+### Future additions (Authentication + Notifications)
 
 ```prisma
 model User {
@@ -192,67 +289,78 @@ model Notification {
 
 ## Project Directory Structure
 
+The structure evolves across phases. Below shows the Phase 0-4 structure (left) and the additions in Phase 5 (right).
+
+### Phase 0-4 Structure (No Database)
+
 ```
 developer-broadcast/
-├── docker-compose.yml
-├── .env / .env.example
 ├── next.config.ts
-├── tailwind.config.ts
 ├── tsconfig.json
 ├── package.json
-├── prisma/
-│   ├── schema.prisma
-│   └── seed.ts
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx                    # Root layout, providers
-│   │   ├── page.tsx                      # Landing page / hero + featured channels
+│   │   ├── layout.tsx                    # Root layout, ThemeProvider
+│   │   ├── page.tsx                      # Landing page (Phase 2)
 │   │   ├── feed/
-│   │   │   └── page.tsx                  # Main feed: aggregated articles
-│   │   ├── channels/
-│   │   │   ├── page.tsx                  # Browse all channels by category
-│   │   │   └── [slug]/
-│   │   │       └── page.tsx              # Channel detail + article list
-│   │   └── api/
-│   │       ├── channels/
-│   │       │   └── route.ts              # GET channels
-│   │       ├── articles/
-│   │       │   └── route.ts              # GET articles (paginated)
-│   │       ├── subscriptions/
-│   │       │   └── route.ts              # GET/POST/DELETE subscriptions
-│   │       └── cron/
-│   │           └── fetch-feeds/
-│   │               └── route.ts          # POST trigger feed fetch
+│   │   │   ├── page.tsx                  # Main feed (RSC, ISR cached)
+│   │   │   └── loading.tsx              # Skeleton (Phase 2)
+│   │   └── channels/
+│   │       ├── page.tsx                  # Browse channels (Phase 2)
+│   │       └── [slug]/
+│   │           └── page.tsx              # Channel detail (Phase 2)
 │   ├── components/
 │   │   ├── ui/                           # shadcn/ui generated components
 │   │   ├── layout/
-│   │   │   ├── header.tsx                # Nav, theme toggle, notification placeholder
-│   │   │   ├── sidebar.tsx               # Subscribed channels list
-│   │   │   └── mobile-nav.tsx            # Responsive mobile navigation
+│   │   │   ├── header.tsx                # Nav, theme toggle (Phase 2)
+│   │   │   └── sidebar.tsx               # Active channels list (Phase 4)
 │   │   ├── feed/
-│   │   │   ├── article-card.tsx          # Title, summary, source, time, tags
-│   │   │   ├── article-list.tsx          # Infinite scroll list
-│   │   │   └── feed-filters.tsx          # Filter by channel, category, date
+│   │   │   └── article-card.tsx          # Article card
 │   │   └── channels/
-│   │       ├── channel-card.tsx          # Channel preview with subscribe button
-│   │       ├── channel-grid.tsx          # Grid layout of channel cards
-│   │       └── subscribe-button.tsx      # Toggle subscribe/unsubscribe
+│   │       └── channel-card.tsx          # Channel preview (Phase 2)
+│   ├── config/
+│   │   └── channels.ts                   # Hardcoded channel list
 │   ├── hooks/
-│   │   ├── use-visitor-id.ts             # Anonymous visitorId from localStorage
-│   │   ├── use-articles.ts              # TanStack Query: paginated articles
-│   │   ├── use-channels.ts             # TanStack Query: channel list
-│   │   └── use-subscriptions.ts         # TanStack Query: manage subscriptions
+│   │   └── use-channel-preferences.ts    # localStorage toggle (Phase 4)
 │   ├── lib/
-│   │   ├── prisma.ts                     # Prisma client singleton
+│   │   ├── types.ts                      # Shared types (Article, Channel)
 │   │   ├── utils.ts                      # cn(), formatDate, etc.
 │   │   └── fetchers/
 │   │       ├── rss-fetcher.ts            # Generic RSS/Atom parser
-│   │       ├── hn-fetcher.ts             # Hacker News Firebase API
-│   │       └── fetch-manager.ts          # Orchestrator: dispatch + upsert
+│   │       ├── hn-fetcher.ts             # Hacker News API (Phase 3)
+│   │       └── fetch-manager.ts          # Dispatcher (Phase 3)
 │   └── providers/
-│       ├── query-provider.tsx            # TanStack QueryClientProvider
 │       └── theme-provider.tsx            # next-themes provider
 └── public/
+```
+
+### Phase 5 Additions (Database + Full Stack)
+
+```
+developer-broadcast/
+├── docker-compose.yml                     # PostgreSQL 16
+├── .env / .env.example                    # DATABASE_URL, CRON_SECRET
+├── prisma/
+│   ├── schema.prisma                      # Channel, Article, Subscription
+│   └── seed.ts                            # Seed 11 channels
+├── src/
+│   ├── app/
+│   │   └── api/
+│   │       ├── channels/route.ts          # GET channels
+│   │       ├── articles/route.ts          # GET articles (paginated)
+│   │       ├── subscriptions/route.ts     # GET/POST/DELETE subscriptions
+│   │       └── cron/fetch-feeds/route.ts  # POST trigger feed fetch
+│   ├── hooks/
+│   │   ├── use-visitor-id.ts              # Anonymous ID from localStorage
+│   │   ├── use-articles.ts               # TanStack Query: infinite scroll
+│   │   ├── use-channels.ts              # TanStack Query: channel list
+│   │   └── use-subscriptions.ts          # TanStack Query: mutations
+│   ├── lib/
+│   │   └── prisma.ts                      # Prisma client singleton
+│   └── providers/
+│       └── query-provider.tsx             # TanStack QueryClientProvider
+├── vercel.json                            # Cron config
+└── ...
 ```
 
 ## Pre-Seeded Channels
