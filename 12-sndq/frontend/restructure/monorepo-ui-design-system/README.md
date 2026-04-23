@@ -241,12 +241,12 @@ Houses all shared configuration: ESLint rules, Prettier settings, and the full T
     "./tailwind/shared-sources.css": "./tailwind/shared-sources.css"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.0.0",
-    "eslint-config-next": "^15.0.0",
-    "eslint-config-prettier": "^10.0.0",
-    "eslint-plugin-prettier": "^5.0.0",
-    "prettier": "^3.0.0",
-    "prettier-plugin-tailwindcss": "^0.6.0"
+    "@eslint/eslintrc": "^3",
+    "eslint-config-next": "15.5.4",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-prettier": "^5.2.3",
+    "prettier": "^3.5.3",
+    "prettier-plugin-tailwindcss": "^0.6.11"
   }
 }
 ```

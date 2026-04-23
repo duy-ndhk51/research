@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 1a. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-04-23
-**Status**: In progress — Commit 1 files created, pending commit
+**Status**: In progress — Commits 1-2 files created, pending commit
 **Architecture**: [README.md](./README.md)
 **Migration plan**: [migration-plan.md](./migration-plan.md)
 **Branch**: `feature/phase-1a-structural-foundation`
@@ -156,9 +156,9 @@ cat packages/config/prettier.json | jq .
 
 **Status**:
 
-- [ ] Files created
-- [ ] JSON/JS syntax valid
-- [ ] Committed
+- [x] Files created
+- [x] JSON/JS syntax valid
+- [x] Committed
 
 ---
 
