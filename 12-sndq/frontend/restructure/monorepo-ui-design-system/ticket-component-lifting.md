@@ -26,15 +26,17 @@ Local → Shared → Blocks → Primitives
 
 Local to Shared is a file move. Shared to Blocks/Primitives requires stripping all business dependencies (hooks, translations, services) and converting to a props-only API.
 
-## Three Signals to Lift
+## Four Signals to Lift
 
 1. **Cross-boundary import exists** — module A already imports from module B's `components/` folder
 2. **Copy-paste detected** — reviewer spots duplicated component logic during PR review
 3. **Developer requests it** — "I need this component from another module" during a PR
+4. **Periodic team review** — during sprint planning, the team collectively identifies component patterns that have been repeated and agrees to promote them
 
-## Daily Process
+## Ongoing Process
 
 - **During PRs**: If a cross-boundary import is added, mark it with a `// TODO(lift)` comment
+- **During sprints**: Team reviews repeated component patterns and collectively decides which to promote to Blocks/Primitives
 
 ```bash
 # Run from monorepo root (defaults to sndq-fe/src)

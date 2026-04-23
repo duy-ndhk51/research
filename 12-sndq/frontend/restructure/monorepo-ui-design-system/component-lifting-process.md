@@ -196,7 +196,7 @@ function ContactCard({ contactId }: { contactId: string }) {
 
 ## 4. Signals for Lifting
 
-Three signals indicate a component should be promoted to a higher tier.
+Four signals indicate a component should be promoted to a higher tier.
 
 ### Signal 1: Cross-boundary import already exists (highest confidence)
 
@@ -221,6 +221,14 @@ A developer copies a component from one module to another instead of importing i
 "I need `DashboardSectionLayout` in my module" — the developer reaches for a component that lives in another scope.
 
 **Action**: Decide in the PR: lift now (if straightforward) or mark with `TODO(lift)` for the next sprint.
+
+### Signal 4: Periodic team review (collective decision)
+
+During periodic review sessions (e.g. sprint planning or a dedicated monthly slot), the team reviews newly emerging component patterns. When the team collectively agrees that a component has been repeated across multiple places, it becomes a candidate for promotion to Blocks or Primitives — even if none of the other three signals were formally triggered.
+
+This is the **proactive** counterpart to the three reactive signals above. The team steps back, looks at the broader picture, and decides together which patterns have matured enough to warrant lifting.
+
+**Action**: During the periodic review, identify recurring patterns and decide as a team which components to promote. Add them to the next sprint's lift backlog.
 
 ---
 
@@ -253,7 +261,7 @@ Add to the PR review checklist:
 ```
 Daily:    PR adds cross-module import? → add TODO(lift) comment
 Monthly:  Run detect-cross-imports.sh → review candidates in 15 min standup
-Sprint:   Pick 2-3 candidates → lift in focused PRs
+Sprint:   Team reviews repeated patterns → collectively decide promotions → lift in focused PRs
 ```
 
 ---
