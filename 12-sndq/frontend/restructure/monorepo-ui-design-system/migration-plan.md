@@ -6,6 +6,7 @@ Gradual, five-phase migration from legacy component libraries (`briicks/`, `ui/`
 **Status**: Planning
 **Architecture**: [README.md](./README.md)
 **Ticket**: [ticket-migration.md](./ticket-migration.md)
+**Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md) — step-by-step commits, risk checklists, verification commands
 
 ---
 
@@ -129,9 +130,9 @@ all apps + packages ────▶ @sndq/config + @sndq/tsconfig
 1. Create `apps/` and `packages/` directories at monorepo root
 2. Create `packages/tsconfig/` (`@sndq/tsconfig`):
    - `package.json`
-   - `base.json` — shared compiler options (target ES2017, strict, bundler module resolution)
-   - `nextjs.json` — extends base, adds DOM lib, JSX preserve, Next plugin
-   - `library.json` — extends base, adds react-jsx, declaration
+   - `base.json` — common compiler options extracted from `sndq-fe/tsconfig.json` (minus `paths` and Next.js-specific options)
+   - `nextjs.json` — extends base, adds Next.js-specific options (`noEmit`, `incremental`, `plugins`, `include`)
+   - `library.json` deferred to Phase 2 (no library package exists yet)
 3. Create `packages/config/` (`@sndq/config`) with ESLint + Prettier **only**:
    - `package.json`
    - `eslint.mjs` — `createEslintConfig(dirname)` function extracted from `sndq-fe/eslint.config.mjs`

@@ -11,6 +11,7 @@ Full architecture specification for reorganizing the `sndq` monorepo into a hybr
 **Lifting ticket**: [ticket-component-lifting.md](./ticket-component-lifting.md) — copy-paste-ready for Linear (lifting process)
 **Migration plan**: [migration-plan.md](./migration-plan.md) — five-phase gradual migration, deprecation strategy, API compatibility
 **Migration ticket**: [ticket-migration.md](./ticket-migration.md) — copy-paste-ready for Linear (migration phases)
+**Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md) — step-by-step commits, risk checklists, verification commands
 **Reference**: [cal.com monorepo](https://github.com/calcomhq/cal.com) — used as architectural reference
 
 ---
@@ -367,7 +368,7 @@ Apps reference via `package.json`:
 
 ### 4.3 `@sndq/tsconfig` — shared TypeScript configs
 
-Three base configs that apps and packages extend.
+Two configs extracted from `sndq-fe/tsconfig.json`. A `library.json` will be added in Phase 2 when `packages/ui-v2/` is created.
 
 **`package.json`**:
 
@@ -376,24 +377,29 @@ Three base configs that apps and packages extend.
   "name": "@sndq/tsconfig",
   "private": true,
   "version": "0.0.0",
-  "files": ["base.json", "nextjs.json", "library.json"]
+  "files": ["base.json", "nextjs.json"]
 }
 ```
 
 #### `base.json`
+
+Common compiler options extracted from `sndq-fe/tsconfig.json` (everything except `paths` and the 3 Next.js-specific options).
 
 ```json
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "isolatedModules": true,
-    "resolveJsonModule": true,
+    "module": "esnext",
     "moduleResolution": "bundler",
-    "module": "esnext"
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve"
   },
   "exclude": ["node_modules"]
 }
@@ -401,15 +407,14 @@ Three base configs that apps and packages extend.
 
 #### `nextjs.json`
 
+Extends `base.json`, adds only Next.js-specific options (`noEmit`, `incremental`, `plugins`) and `include`. Combined result is an exact match of `sndq-fe/tsconfig.json` compilerOptions (minus `paths`).
+
 ```json
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./base.json",
   "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
     "noEmit": true,
-    "jsx": "preserve",
     "incremental": true,
     "plugins": [{ "name": "next" }]
   },
@@ -417,20 +422,9 @@ Three base configs that apps and packages extend.
 }
 ```
 
-#### `library.json`
+#### `library.json` (Phase 2)
 
-```json
-{
-  "$schema": "https://json.schemastore.org/tsconfig",
-  "extends": "./base.json",
-  "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "jsx": "react-jsx",
-    "declaration": true
-  },
-  "exclude": ["dist", "node_modules"]
-}
-```
+Will be added when `packages/ui-v2/` is created. Will extend `base.json` with `react-jsx`, `declaration`, and library-specific excludes.
 
 Apps extend and add local paths:
 
@@ -438,8 +432,13 @@ Apps extend and add local paths:
 {
   "extends": "@sndq/tsconfig/nextjs.json",
   "compilerOptions": {
-    "paths": { "@/*": ["./src/*"] }
-  }
+    "paths": {
+      "@/*": ["./src/*"],
+      "@sndq/ui": ["./packages/ui/src"],
+      "@sndq/ui/*": ["./packages/ui/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "packages", "agent-workspace"]
 }
 ```
 
