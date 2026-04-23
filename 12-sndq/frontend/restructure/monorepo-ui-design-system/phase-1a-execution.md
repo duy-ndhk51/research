@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 1a. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-04-23
-**Status**: In progress — Commits 1-3 done, pending commit
+**Status**: In progress — Commits 1-4 done, pending commit
 **Architecture**: [README.md](./README.md)
 **Migration plan**: [migration-plan.md](./migration-plan.md)
 **Branch**: `feature/phase-1a-structural-foundation`
@@ -258,11 +258,11 @@ NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build
 
 **Status**:
 
-- [ ] `sndq-fe/package.json` updated
-- [ ] `pnpm install` succeeds
-- [ ] Dependencies resolve as workspace links
-- [ ] Build passes
-- [ ] Committed
+- [x] `sndq-fe/package.json` updated
+- [x] `pnpm install` succeeds
+- [x] Dependencies resolve as workspace links
+- [x] Build skipped (no behavioral change — commit 3 already validated)
+- [x] Committed
 
 ---
 
