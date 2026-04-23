@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 1a. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-04-23
-**Status**: In progress — Commits 1-2 files created, pending commit
+**Status**: In progress — Commits 1-3 done, pending commit
 **Architecture**: [README.md](./README.md)
 **Migration plan**: [migration-plan.md](./migration-plan.md)
 **Branch**: `feature/phase-1a-structural-foundation`
@@ -44,7 +44,7 @@ Step-by-step execution guide for Phase 1a. Each commit is independently verifiab
 Run these from the monorepo root and save the output. You will diff against these after each risky commit.
 
 ```bash
-pnpm --filter sndq-fe run build 2>&1 | tee /tmp/phase1a-build-before.txt
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build 2>&1 | tee /tmp/phase1a-build-before.txt
 pnpm --filter sndq-fe run lint 2>&1 | tee /tmp/phase1a-lint-before.txt
 pnpm --filter sndq-fe run type-check 2>&1 | tee /tmp/phase1a-typecheck-before.txt
 ```
@@ -212,19 +212,19 @@ pnpm ls @sndq/config
 # Verify postinstall ran successfully (check for errors in install output)
 
 # Verify sndq-fe still builds (quick sanity check)
-pnpm --filter sndq-fe run build
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build
 ```
 
 **Commit message**: `chore: add apps and packages to pnpm workspace and lerna`
 
 **Status**:
 
-- [ ] `pnpm-workspace.yaml` updated
-- [ ] `lerna.json` updated
-- [ ] `pnpm install` succeeds
-- [ ] `@sndq/tsconfig` and `@sndq/config` resolve as local packages
-- [ ] `sndq-fe` build still passes
-- [ ] Committed
+- [x] `pnpm-workspace.yaml` updated
+- [x] `lerna.json` updated
+- [x] `pnpm install` succeeds
+- [x] `@sndq/tsconfig` and `@sndq/config` resolve as local packages
+- [x] `sndq-fe` build still passes
+- [x] Committed
 
 ---
 
@@ -251,7 +251,7 @@ pnpm --filter sndq-fe ls @sndq/tsconfig
 pnpm --filter sndq-fe ls @sndq/config
 
 # Full build — must match baseline
-pnpm --filter sndq-fe run build
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build
 ```
 
 **Commit message**: `chore: add @sndq/tsconfig and @sndq/config as sndq-fe devDependencies`
@@ -364,7 +364,7 @@ pnpm --filter sndq-fe run type-check 2>&1 | tee /tmp/phase1a-typecheck-after.txt
 diff /tmp/phase1a-typecheck-before.txt /tmp/phase1a-typecheck-after.txt
 
 # Build must still pass
-pnpm --filter sndq-fe run build
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build
 ```
 
 **If it fails**: The most likely cause is `include`/`exclude` mismatch. Compare the effective tsconfig:
@@ -633,7 +633,7 @@ After all 8 commits, run the full suite from the monorepo root:
 
 ```bash
 pnpm install
-pnpm build
+NODE_OPTIONS='--max-old-space-size=8192' pnpm build
 pnpm lint
 pnpm type-check
 ```
@@ -641,7 +641,7 @@ pnpm type-check
 Compare against baselines:
 
 ```bash
-pnpm --filter sndq-fe run build 2>&1 | tee /tmp/phase1a-build-final.txt
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build 2>&1 | tee /tmp/phase1a-build-final.txt
 pnpm --filter sndq-fe run lint 2>&1 | tee /tmp/phase1a-lint-final.txt
 pnpm --filter sndq-fe run type-check 2>&1 | tee /tmp/phase1a-typecheck-final.txt
 

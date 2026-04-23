@@ -155,7 +155,7 @@ all apps + packages ────▶ @sndq/config + @sndq/tsconfig
 
 ```bash
 pnpm install
-pnpm build       # sndq-fe builds successfully
+NODE_OPTIONS='--max-old-space-size=8192' pnpm build       # sndq-fe builds successfully
 pnpm lint        # ESLint passes with shared config
 pnpm type-check  # tsc --noEmit passes with shared tsconfig
 ```
@@ -274,7 +274,7 @@ pnpm type-check  # tsc --noEmit passes with shared tsconfig
 
 ```bash
 pnpm install
-pnpm build           # both apps build
+NODE_OPTIONS='--max-old-space-size=8192' pnpm build           # both apps build
 pnpm lint            # prototype now has ESLint
 pnpm type-check      # both apps pass tsc
 # Open both apps — visual comparison against before
@@ -433,7 +433,7 @@ import { Dialog, DialogContent } from '@sndq/ui-v2/components';
 
 ```bash
 pnpm install
-pnpm build
+NODE_OPTIONS='--max-old-space-size=8192' pnpm build
 pnpm lint
 pnpm type-check
 pnpm test
