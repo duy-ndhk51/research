@@ -50,8 +50,6 @@ Replace three legacy UI component sources in `sndq-fe` with a single, standardiz
 | `@sndq/ui` submodule deprecated early (Phase 2) | Exception — prevents new imports without needing per-component replacement |
 | Tokens extracted in two passes | Phase 1b: Briicks only (sndq-fe's subset). Phase 2: full UI-V2 semantic tokens (when prototype joins) |
 | Components stay in `apps/prototype/` until standardized | Prevents polluting the formal package with prototype code |
-| Separate docs package (`@sndq/ui-v2-docs`) | Keeps `@sndq/ui-v2` clean; enables standalone docs app and prototype extension |
-| Standalone docs app (`apps/docs/`) | Developer-facing reference for standardized components; prototype extends it with experimental content |
 | Pilot migration on small module first | `financial` has 44 cross-module exports — too risky for first test |
 
 ---
@@ -87,19 +85,11 @@ sndq/
 │   └── src/app/globals.css          # Imports from @sndq/config/tailwind/* + app theme only
 ├── apps/
 │   ├── docs/                        # Standalone docs site — standardized components only
-│   │   └── src/app/                 # Consumes @sndq/ui-v2-docs tabs as-is
 │   └── prototype/                   # Experimental playground (moved from sndq-ui-v2)
-│       └── src/app/                 # Extends @sndq/ui-v2-docs tabs + adds prototype content
 ├── packages/
 │   ├── ui-v2/                       # @sndq/ui-v2 — standardized components
 │   │   ├── src/components/          # Primitives
 │   │   └── src/blocks/              # Compositions
-│   ├── ui-v2-docs/                  # @sndq/ui-v2-docs — showcase infrastructure + sections
-│   │   └── src/
-│   │       ├── layout/              # ShowcaseShell, ComponentCard, SectionGroup, navigation
-│   │       ├── tabs/                # OverviewTab, IdentityTab, ComponentsTab, BlocksTab
-│   │       ├── sections/            # ButtonSection, InputSection... (per graduated component)
-│   │       └── search/              # Component search for developers
 │   ├── config/                      # @sndq/config — ESLint, Prettier, Tailwind tokens
 │   │   ├── eslint.mjs
 │   │   ├── prettier.json
@@ -114,10 +104,9 @@ sndq/
 
 ```
 sndq-fe ────────────────▶ @sndq/ui-v2
-apps/prototype ─────────▶ @sndq/ui-v2 + @sndq/ui-v2-docs
-apps/docs ──────────────▶ @sndq/ui-v2-docs
+apps/prototype ─────────▶ @sndq/ui-v2
+apps/docs ──────────────▶ @sndq/ui-v2
 
-@sndq/ui-v2-docs ───────▶ @sndq/ui-v2
 @sndq/ui-v2 ────────────▶ @sndq/config
 all apps + packages ────▶ @sndq/config + @sndq/tsconfig
 ```
@@ -256,16 +245,12 @@ pnpm type-check  # tsc --noEmit passes with shared tsconfig
     - `package.json` with name `@sndq/ui-v2`, `workspace:*` dependency on `@sndq/config`
     - `tsconfig.json` extending `@sndq/tsconfig/library.json`
     - Empty `src/components/index.ts` and `src/blocks/index.ts`
-12. Create `packages/ui-v2-docs/` (`@sndq/ui-v2-docs`) as **empty skeleton**:
-    - `package.json` with name `@sndq/ui-v2-docs`, `workspace:*` dependency on `@sndq/ui-v2` and `@sndq/config`
-    - `tsconfig.json` extending `@sndq/tsconfig/library.json`
-    - Empty `src/layout/index.ts`, `src/tabs/index.ts`, `src/sections/index.ts`
-13. Create `apps/docs/` as **minimal Next.js app**:
-    - `package.json` depending on `@sndq/ui-v2-docs` (`workspace:*`)
+12. Create `apps/docs/` as **minimal Next.js app**:
+    - `package.json` depending on `@sndq/ui-v2` (`workspace:*`)
     - Placeholder `src/app/page.tsx` ("Component Docs — coming soon")
     - `tsconfig.json` extending `@sndq/tsconfig/nextjs.json`
-14. Wire `@sndq/ui-v2` and `@sndq/ui-v2-docs` as `workspace:*` dependencies in both apps
-15. **Deprecate old submodule** — add ESLint `no-restricted-imports` rule to `sndq-fe/eslint.config.mjs`:
+13. Wire `@sndq/ui-v2` as `workspace:*` dependency in all apps
+14. **Deprecate old submodule** — add ESLint `no-restricted-imports` rule to `sndq-fe/eslint.config.mjs`:
 
 ```javascript
 'no-restricted-imports': ['warn', {
@@ -282,7 +267,7 @@ pnpm type-check  # tsc --noEmit passes with shared tsconfig
 - `sndq-fe/src/components/briicks/` — no deprecation yet (no replacement available)
 - `sndq-fe/src/components/ui/` — no deprecation yet
 - Components remain in `apps/prototype/src/components/ui-v2/` — they are prototypes, not graduated
-- `packages/ui-v2-docs/` and `apps/docs/` are empty skeletons — content arrives in Phase 3
+- `apps/docs/` is a placeholder — content arrives as components graduate in Phase 3
 
 ### Verification
 
@@ -302,21 +287,7 @@ pnpm type-check      # both apps pass tsc
 
 ### Package state
 
-`packages/ui-v2/` and `packages/ui-v2-docs/` already exist from Phase 2 as empty skeletons, wired as `workspace:*` in both apps. Ready to receive graduated components and their documentation.
-
-### Phase 3 setup — extract showcase infrastructure
-
-Before the first batch, extract the shared showcase infrastructure from `apps/prototype/` into the docs package:
-
-1. Move layout components to `packages/ui-v2-docs/src/layout/`:
-   - `ShowcaseShell`, `ComponentCard`, `SectionGroup`, `DropdownTab`, `TabButton`
-2. Move tab shell components to `packages/ui-v2-docs/src/tabs/`:
-   - `OverviewTab`, `IdentityTab`, `ComponentsTab`, `BlocksTab` (initially with empty section lists, extensible via props)
-3. Move navigation config to `packages/ui-v2-docs/src/config.ts`
-4. Move search component to `packages/ui-v2-docs/src/search/`
-5. Update `apps/prototype/` to import from `@sndq/ui-v2-docs` instead of local paths
-6. Wire `apps/docs/` to render tabs from `@sndq/ui-v2-docs` (replace "coming soon" placeholder)
-7. Verify both `apps/docs/` and `apps/prototype/` build and render correctly
+`packages/ui-v2/` already exists from Phase 2 as an empty skeleton, wired as `workspace:*` in all apps. Ready to receive graduated components.
 
 ### Per-batch workflow
 
@@ -331,18 +302,13 @@ Before the first batch, extract the shared showcase infrastructure from `apps/pr
    - Move component files from apps/prototype/src/components/ui-v2/ to packages/ui-v2/src/components/
    - Move block files to packages/ui-v2/src/blocks/
    - Add to barrel exports (src/components/index.ts or src/blocks/index.ts)
-   - Update imports in apps/prototype/ to use @sndq/ui-v2/components
+   - Update imports in apps/prototype/ and apps/docs/ to use @sndq/ui-v2/components
 
-3. Graduate docs section to packages/ui-v2-docs/
-   - Move demo section from apps/prototype/ to packages/ui-v2-docs/src/sections/
-   - Add section to nav config in packages/ui-v2-docs/src/config.ts
-   - apps/docs/ picks it up automatically via tab props
-
-4. Deprecate legacy counterparts
+3. Deprecate legacy counterparts
    - Add JSDoc @deprecated to the specific briicks/ and ui/ exports that now have a replacement
    - Message: "Use {ComponentName} from @sndq/ui-v2/components instead."
 
-5. Verify
+4. Verify
    - pnpm build && pnpm type-check
    - Run component tests
    - Visual check in prototype app and docs app
@@ -350,11 +316,11 @@ Before the first batch, extract the shared showcase infrastructure from `apps/pr
 
 ### Batch priority
 
-| Batch | Components | Legacy counterparts to deprecate | Docs section |
-|-------|-----------|----------------------------------|-------------|
-| **1** | Button, Input, Badge, Select, Dialog, Sheet | `briicks/button`, `briicks/input`, `briicks/badge`, `briicks/select`, `ui/dialog`, `ui/sheet` | `ButtonSection`, `InputSection`, `BadgeSection`, `SelectSection`, `DialogSection`, `SheetSection` |
-| **2** | Card, Tabs, Tooltip, EmptyState, Skeleton | `briicks/empty-state`, `ui/card`, `ui/tabs`, `ui/tooltip`, `ui/skeleton` | `CardSection`, `TabsSection`, `TooltipSection`, `EmptyStateSection`, `SkeletonSection` |
-| **3** | Remaining components | Remaining counterparts | Remaining sections |
+| Batch | Components | Legacy counterparts to deprecate |
+|-------|-----------|----------------------------------|
+| **1** | Button, Input, Badge, Select, Dialog, Sheet | `briicks/button`, `briicks/input`, `briicks/badge`, `briicks/select`, `ui/dialog`, `ui/sheet` |
+| **2** | Card, Tabs, Tooltip, EmptyState, Skeleton | `briicks/empty-state`, `ui/card`, `ui/tabs`, `ui/tooltip`, `ui/skeleton` |
+| **3** | Remaining components | Remaining counterparts |
 
 ### Deprecation example (after Batch 1)
 
@@ -596,13 +562,9 @@ Phase 1b extracts only Briicks primitive tokens (~140 lines) that `sndq-fe` curr
 
 Moving unstandardized prototypes into `packages/ui-v2/` would signal "these are ready to use" when they're not. Developers might import them, build features, then face breaking changes during standardization. Keeping them in the prototype app until they pass quality gates prevents this.
 
-### Why a separate docs package (`@sndq/ui-v2-docs`)
+### Why no shared docs package
 
-Co-locating showcase infrastructure (layout shells, tab components, demo sections, search) inside `@sndq/ui-v2` would force `sndq-fe` to install documentation code it never uses. A separate package keeps the component library clean — `sndq-fe` depends only on `@sndq/ui-v2`, while `apps/docs/` and `apps/prototype/` depend on `@sndq/ui-v2-docs`.
-
-### Why `apps/docs/` is separate from `apps/prototype/`
-
-The docs app renders only standardized, graduated components — it's the developer reference. The prototype app extends the docs package with experimental content (unstandardized components, design explorations). Separating them means developers can trust that everything in `apps/docs/` is production-ready, while `apps/prototype/` is clearly for experimentation.
+Both `apps/docs/` and `apps/prototype/` import `@sndq/ui-v2` directly and manage their own showcase UI locally. A shared docs package added indirection without enough benefit — each app has different presentation needs and can evolve independently.
 
 ---
 

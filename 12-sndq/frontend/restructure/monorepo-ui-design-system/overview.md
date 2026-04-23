@@ -13,7 +13,6 @@ sndq/
 │
 ├── packages/
 │   ├── ui-v2/            # Shared UI component library (@sndq/ui-v2)
-│   ├── ui-v2-docs/       # Showcase infrastructure + demo sections (@sndq/ui-v2-docs)
 │   ├── config/           # Shared configs: ESLint, Prettier, Tailwind tokens
 │   └── tsconfig/         # Shared TypeScript base configs
 │
@@ -31,19 +30,15 @@ Main production frontend application (kept at root to avoid conflicts with other
 
 ### apps/docs
 
-Standalone documentation site for standardized components. Consumes `@sndq/ui-v2-docs` tabs as-is.
+Standalone documentation site for standardized components. Imports `@sndq/ui-v2` directly, manages its own showcase UI.
 
 ### apps/prototype
 
-Experimental playground for testing and previewing UI components. Extends `@sndq/ui-v2-docs` with prototype content.
+Experimental playground for testing and previewing UI components. Imports `@sndq/ui-v2` directly, manages its own showcase UI.
 
 ### packages/ui-v2
 
 Reusable components (primitives) and blocks (compositions). Zero business logic.
-
-### packages/ui-v2-docs
-
-Showcase infrastructure (layout shells, tab components, demo sections, search) consumed by both `apps/docs/` and `apps/prototype/`.
 
 ### packages/config
 
@@ -66,10 +61,9 @@ Reusable TypeScript presets for:
 
 ```
 sndq-fe ────────────────▶ @sndq/ui-v2
-apps/prototype ─────────▶ @sndq/ui-v2 + @sndq/ui-v2-docs
-apps/docs ──────────────▶ @sndq/ui-v2-docs
+apps/prototype ─────────▶ @sndq/ui-v2
+apps/docs ──────────────▶ @sndq/ui-v2
 
-@sndq/ui-v2-docs ───────▶ @sndq/ui-v2
 @sndq/ui-v2 ────────────▶ @sndq/config
 all apps + packages ────▶ @sndq/config + @sndq/tsconfig
 ```

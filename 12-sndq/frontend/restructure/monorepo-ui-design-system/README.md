@@ -132,7 +132,7 @@ sndq/
 │   ├── docs/                     # Standalone docs site — standardized components only
 │   │   ├── package.json
 │   │   ├── tsconfig.json         # extends @sndq/tsconfig/nextjs.json
-│   │   └── src/app/              # Consumes @sndq/ui-v2-docs tabs as-is
+│   │   └── src/app/              # Imports @sndq/ui-v2, manages its own showcase UI
 │   └── prototype/                # <-- sndq-ui-v2 (UI prototype/component playground)
 │       ├── package.json          # name: "sndq-ui-v2"
 │       ├── tsconfig.json         # extends @sndq/tsconfig/nextjs.json
@@ -153,15 +153,6 @@ sndq/
 │   │       ├── components/       # Tier 1: primitives (70 components)
 │   │       ├── blocks/           # Tier 2: compositions (9+ blocks)
 │   │       └── index.ts
-│   │
-│   ├── ui-v2-docs/               # @sndq/ui-v2-docs — showcase infrastructure
-│   │   ├── package.json
-│   │   ├── tsconfig.json         # extends @sndq/tsconfig/library.json
-│   │   └── src/
-│   │       ├── layout/           # ShowcaseShell, ComponentCard, SectionGroup
-│   │       ├── tabs/             # OverviewTab, IdentityTab, ComponentsTab, BlocksTab
-│   │       ├── sections/         # Per-component demo sections (graduated)
-│   │       └── search/           # Component search for developers
 │   │
 │   ├── config/                   # @sndq/config
 │   │   ├── package.json
@@ -228,31 +219,7 @@ The design system package with a **three-tier component model**. Only Tier 1 (pr
 }
 ```
 
-### 4.2 `@sndq/ui-v2-docs` — showcase infrastructure
-
-Reusable documentation components consumed by `apps/docs/` (standardized components only) and `apps/prototype/` (extends with experimental content). Keeps `@sndq/ui-v2` clean — the component library has no documentation infrastructure.
-
-**`package.json`**:
-
-```json
-{
-  "name": "@sndq/ui-v2-docs",
-  "private": true,
-  "version": "0.1.0",
-  "dependencies": {
-    "@sndq/ui-v2": "workspace:*",
-    "@sndq/config": "workspace:*"
-  },
-  "peerDependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  }
-}
-```
-
-**Structure**: `src/layout/` (ShowcaseShell, ComponentCard, SectionGroup), `src/tabs/` (OverviewTab, IdentityTab, ComponentsTab, BlocksTab), `src/sections/` (per graduated component), `src/search/` (component search).
-
-### 4.3 `@sndq/config` — shared tooling and design tokens
+### 4.2 `@sndq/config` — shared tooling and design tokens
 
 Houses all shared configuration: ESLint rules, Prettier settings, and the full Tailwind/CSS design token system.
 
@@ -398,7 +365,7 @@ Apps reference via `package.json`:
 { "prettier": "@sndq/config/prettier.json" }
 ```
 
-### 4.4 `@sndq/tsconfig` — shared TypeScript configs
+### 4.3 `@sndq/tsconfig` — shared TypeScript configs
 
 Three base configs that apps and packages extend.
 
@@ -651,22 +618,18 @@ graph TD
     tsconfig["@sndq/tsconfig"]
     config["@sndq/config"]
     uiv2["@sndq/ui-v2"]
-    docs_pkg["@sndq/ui-v2-docs"]
     web["sndq-fe"]
     prototype["apps/prototype"]
     docs_app["apps/docs"]
 
     uiv2 -->|"workspace:*"| config
-    docs_pkg -->|"workspace:*"| uiv2
-    docs_pkg -->|"workspace:*"| config
     web -->|"workspace:*"| uiv2
     web -->|"workspace:*"| config
     web -->|"workspace:*"| tsconfig
     prototype -->|"workspace:*"| uiv2
-    prototype -->|"workspace:*"| docs_pkg
     prototype -->|"workspace:*"| config
     prototype -->|"workspace:*"| tsconfig
-    docs_app -->|"workspace:*"| docs_pkg
+    docs_app -->|"workspace:*"| uiv2
     docs_app -->|"workspace:*"| tsconfig
     uiv2 -->|"workspace:*"| tsconfig
 ```
@@ -761,8 +724,8 @@ The migration follows a **five-phase gradual approach** — each phase is indepe
 |-------|------|-----------|
 | **1a** | Structural Foundation | Create `apps/`, `packages/` dirs. Extract `@sndq/tsconfig` + `@sndq/config` (ESLint, Prettier). Wire `sndq-fe`. |
 | **1b** | Tailwind Tokens | Extract Briicks primitive tokens into `@sndq/config/tailwind/tokens.css`. |
-| **2** | Prototype Integration | Move `sndq-ui-v2` to `apps/prototype/`. Add UI-V2 tokens. Create `packages/ui-v2/`, `packages/ui-v2-docs/`, `apps/docs/` skeletons. Deprecate old submodule via ESLint. |
-| **3** | Standardize + Graduate | Extract showcase infrastructure into `@sndq/ui-v2-docs`. Standardize components in batches, graduate to `packages/ui-v2/`, deprecate legacy per-batch. |
+| **2** | Prototype Integration | Move `sndq-ui-v2` to `apps/prototype/`. Add UI-V2 tokens. Create `packages/ui-v2/` and `apps/docs/` skeletons. Deprecate old submodule via ESLint. |
+| **3** | Standardize + Graduate | Standardize components in batches, graduate to `packages/ui-v2/`, deprecate legacy per-batch. |
 | **4** | Module Migration | Direct per-module migration: change imports + update props. Pilot on small module first. |
 | **5** | Cleanup | Remove `briicks/`, `ui/`, old submodule. Optional rename `@sndq/ui-v2` → `@sndq/ui`. Bundle audit. |
 

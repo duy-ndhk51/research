@@ -35,7 +35,6 @@ Reorganize into a hybrid `sndq-fe` + `apps/` + `packages/` monorepo structure:
 ### New packages
 
 - **`@sndq/ui-v2`** — three-tier component library (primitives + blocks), zero business logic
-- **`@sndq/ui-v2-docs`** — showcase infrastructure + demo sections (consumed by `apps/docs/` and `apps/prototype/`)
 - **`@sndq/config`** — shared ESLint, Prettier, Tailwind design tokens (Briicks colors, semantic tokens, component CSS)
 - **`@sndq/tsconfig`** — shared TypeScript config bases (base, nextjs, library)
 
@@ -73,7 +72,7 @@ Five-phase gradual approach — see **[migration-plan.md](./migration-plan.md)**
 |-------|------|-----------|
 | **1a** | Structural Foundation | Create dirs, extract `@sndq/tsconfig` + `@sndq/config` (ESLint, Prettier) |
 | **1b** | Tailwind Tokens | Extract Briicks primitives into `@sndq/config/tailwind/` |
-| **2** | Prototype Integration | Move `sndq-ui-v2`, add UI-V2 tokens, create `packages/ui-v2/` + `packages/ui-v2-docs/` + `apps/docs/` skeletons, deprecate old submodule |
+| **2** | Prototype Integration | Move `sndq-ui-v2`, add UI-V2 tokens, create `packages/ui-v2/` + `apps/docs/` skeletons, deprecate old submodule |
 | **3** | Standardize + Graduate | Batch standardization, graduate to `packages/ui-v2/`, deprecate legacy per-batch |
 | **4** | Module Migration | Direct per-module migration of imports |
 | **5** | Cleanup | Remove legacy, optional rename `@sndq/ui-v2` → `@sndq/ui` |
