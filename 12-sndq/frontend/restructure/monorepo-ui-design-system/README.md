@@ -12,6 +12,7 @@ Full architecture specification for reorganizing the `sndq` monorepo into a hybr
 **Migration plan**: [migration-plan.md](./migration-plan.md) — five-phase gradual migration, deprecation strategy, API compatibility
 **Migration ticket**: [ticket-migration.md](./ticket-migration.md) — copy-paste-ready for Linear (migration phases)
 **Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md) — step-by-step commits, risk checklists, verification commands
+**Phase 1b execution**: [phase-1b-execution.md](./phase-1b-execution.md) — Briicks token extraction commits, radius conflict resolution, verification commands
 **Reference**: [cal.com monorepo](https://github.com/calcomhq/cal.com) — used as architectural reference
 
 ---

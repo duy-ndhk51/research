@@ -7,6 +7,7 @@ Gradual, five-phase migration from legacy component libraries (`briicks/`, `ui/`
 **Architecture**: [README.md](./README.md)
 **Ticket**: [ticket-migration.md](./ticket-migration.md)
 **Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md) — step-by-step commits, risk checklists, verification commands
+**Phase 1b execution**: [phase-1b-execution.md](./phase-1b-execution.md) — Briicks token extraction commits, radius conflict resolution, verification commands
 
 ---
 
