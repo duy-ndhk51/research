@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 1a. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-04-23
-**Status**: In progress — Commits 1-6 done, PR 1 checkpoint skipped
+**Status**: In progress — Commits 1-7 done, PR 1 checkpoint skipped
 **Architecture**: [README.md](./README.md)
 **Migration plan**: [migration-plan.md](./migration-plan.md)
 **Branch**: `feature/phase-1a-structural-foundation`
@@ -582,11 +582,11 @@ pnpm --filter sndq-fe run lint
 
 **Status**:
 
-- [ ] `.prettierrc.json` deleted
-- [ ] `package.json` has `"prettier"` field
-- [ ] Prettier check passes (plugin found)
-- [ ] Lint still passes
-- [ ] Committed
+- [x] `.prettierrc.json` deleted
+- [x] `package.json` has `"prettier"` field
+- [x] Prettier check passes (plugin found)
+- [x] Lint still passes
+- [x] Committed
 
 ---
 
