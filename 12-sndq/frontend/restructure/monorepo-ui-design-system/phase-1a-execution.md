@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 1a. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-04-23
-**Status**: In progress — Commits 1-7 done, PR 1 checkpoint skipped
+**Status**: Complete — All 8 commits done, PR 1 checkpoint skipped
 **Architecture**: [README.md](./README.md)
 **Migration plan**: [migration-plan.md](./migration-plan.md)
 **Branch**: `feature/phase-1a-structural-foundation`
@@ -626,10 +626,10 @@ pnpm type-check
 
 **Status**:
 
-- [ ] Root `package.json` updated
-- [ ] `pnpm lint` from root works
-- [ ] `pnpm type-check` from root works
-- [ ] Committed
+- [x] Root `package.json` updated
+- [x] `pnpm lint` from root works (Lerna delegates to sndq-fe only)
+- [x] `pnpm type-check` from root works (Lerna delegates to sndq-fe only)
+- [x] Committed
 
 ---
 
