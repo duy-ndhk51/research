@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 1a. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-04-23
-**Status**: In progress — Commits 1-5 done, PR 1 checkpoint skipped
+**Status**: In progress — Commits 1-6 done, PR 1 checkpoint skipped
 **Architecture**: [README.md](./README.md)
 **Migration plan**: [migration-plan.md](./migration-plan.md)
 **Branch**: `feature/phase-1a-structural-foundation`
@@ -540,8 +540,8 @@ If plugins aren't found from the shared config, you may need to add them as `pee
 
 **Status**:
 
-- [ ] `eslint.config.mjs` updated
-- [ ] Lint output matches baseline
+- [x] `eslint.config.mjs` updated
+- [x] Lint passes (clean, zero errors)
 - [ ] Committed
 
 ---
