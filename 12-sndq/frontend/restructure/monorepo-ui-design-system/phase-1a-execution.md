@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 1a. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-04-23
-**Status**: In progress — Commits 1-4 done, pending commit
+**Status**: In progress — Commits 1-5 done, PR 1 checkpoint skipped
 **Architecture**: [README.md](./README.md)
 **Migration plan**: [migration-plan.md](./migration-plan.md)
 **Branch**: `feature/phase-1a-structural-foundation`
@@ -72,8 +72,8 @@ Pure additions. Zero changes to existing behavior. Safe to merge independently.
 **Files to create**:
 
 - `packages/tsconfig/package.json`
-- `packages/tsconfig/base.json` — common compiler options extracted from `sndq-fe/tsconfig.json`
-- `packages/tsconfig/nextjs.json` — extends base, adds only Next.js-specific options
+- `packages/tsconfig/base.json` — common compiler options extracted from `sndq-fe/tsconfig.json` (compilerOptions only, no `include`/`exclude`)
+- `packages/tsconfig/nextjs.json` — extends base, adds only Next.js-specific compilerOptions (no `include`/`exclude` — consumers must define locally due to path resolution rules)
 
 Also create the empty `apps/` directory (with a `.gitkeep`).
 
@@ -280,9 +280,7 @@ git push -u origin feature/phase-1a-structural-foundation
 
 **Status**:
 
-- [ ] PR created
-- [ ] Vercel preview build passes
-- [ ] Ready to proceed to PR 2
+- [x] Skipped — local `pnpm install` + `pnpm build` validated the same chain as CI (`vercel.json` buildCommand). No behavioral change in PR 1.
 
 ---
 
@@ -340,20 +338,23 @@ Config switches that change resolution sources. Each commit is individually reve
       "@sndq/ui/*": ["./packages/ui/src/*"]
     }
   },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules", "packages", "agent-workspace"]
 }
 ```
 
-**What changes**: The `extends` inherits all compilerOptions and `include` from the shared config. Local `paths` and `exclude` override as needed.
+**What changes**: The `extends` inherits all compilerOptions from the shared config. Local `paths`, `include`, and `exclude` override as needed.
 
-**Why this is safe**: `nextjs.json` is a direct extraction of `sndq-fe/tsconfig.json` compilerOptions (minus `paths`). It does not extend `base.json` — it's self-contained. You can diff the two files side by side to verify they are identical.
+> **Lesson learned**: `include`/`exclude` inherited via `extends` resolve relative to the config file that *defines* them, not the file that extends. So `include` and `exclude` must stay local — otherwise TypeScript looks for source files inside `packages/tsconfig/` instead of `sndq-fe/`. Because of this, `include` was removed from `nextjs.json` and `exclude` was removed from `base.json` — they were dead code that would never be used by any consumer. The shared configs now contain `compilerOptions` only.
+
+**Why this is safe**: `nextjs.json` extends `base.json` and together they contain the exact same compilerOptions as the current `sndq-fe/tsconfig.json` (minus `paths`). You can verify by running `npx tsc --showConfig` before and after.
 
 **Risks**:
 
 | Risk | Severity | What to check |
 |------|----------|---------------|
 | `extends` + local `paths` collision | MEDIUM | TypeScript resolves `paths` relative to the tsconfig file that defines them. Since `paths` stays in the local file, base URL remains `sndq-fe/`. Verify `@/*` and `@sndq/ui/*` still resolve correctly. |
-| `include`/`exclude` override | MEDIUM | The shared `nextjs.json` defines `include`. The local file does NOT redefine `include`, so it inherits from the shared config. Verify the inherited `include` matches the current one exactly: `["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"]`. The local `exclude` overrides — this is correct because we need to also exclude `packages` and `agent-workspace`. |
+| `include`/`exclude` path resolution | MEDIUM | **Hit this risk**: inherited `include` paths resolve relative to the config that defines them (`packages/tsconfig/`), not the extending file (`sndq-fe/`). Fix: keep `include` in the local tsconfig. Same applies to `exclude`. |
 | IDE cache | LOW | After this change, restart the TypeScript server in your IDE. |
 
 **Verification**:
@@ -379,9 +380,9 @@ Check that `include` and `exclude` arrays match what was there before.
 
 **Status**:
 
-- [ ] `tsconfig.json` updated
-- [ ] `type-check` output matches baseline
-- [ ] Build passes
+- [x] `tsconfig.json` updated (with local `include` — see lesson learned above)
+- [x] `type-check` passes (clean, zero errors)
+- [x] Build passes
 - [ ] Committed
 
 ---

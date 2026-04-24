@@ -400,14 +400,15 @@ Common compiler options extracted from `sndq-fe/tsconfig.json` (everything excep
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve"
-  },
-  "exclude": ["node_modules"]
+  }
 }
 ```
 
+> **No `include`/`exclude` here.** TypeScript resolves inherited `include`/`exclude` paths relative to the config that defines them, not the consumer. Every app must define its own `include` and `exclude` locally.
+
 #### `nextjs.json`
 
-Extends `base.json`, adds only Next.js-specific options (`noEmit`, `incremental`, `plugins`) and `include`. Combined result is an exact match of `sndq-fe/tsconfig.json` compilerOptions (minus `paths`).
+Extends `base.json`, adds only Next.js-specific options (`noEmit`, `incremental`, `plugins`). Combined result is an exact match of `sndq-fe/tsconfig.json` compilerOptions (minus `paths`).
 
 ```json
 {
@@ -417,8 +418,7 @@ Extends `base.json`, adds only Next.js-specific options (`noEmit`, `incremental`
     "noEmit": true,
     "incremental": true,
     "plugins": [{ "name": "next" }]
-  },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"]
+  }
 }
 ```
 
@@ -426,7 +426,7 @@ Extends `base.json`, adds only Next.js-specific options (`noEmit`, `incremental`
 
 Will be added when `packages/ui-v2/` is created. Will extend `base.json` with `react-jsx`, `declaration`, and library-specific excludes.
 
-Apps extend and add local paths:
+Apps extend and add local paths, `include`, and `exclude`:
 
 ```json
 {
@@ -438,6 +438,7 @@ Apps extend and add local paths:
       "@sndq/ui/*": ["./packages/ui/src/*"]
     }
   },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules", "packages", "agent-workspace"]
 }
 ```
