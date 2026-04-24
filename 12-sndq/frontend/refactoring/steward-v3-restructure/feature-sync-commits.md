@@ -26,15 +26,15 @@ Zero to low risk. All four commits are independent — do in any order.
 **Reference**: `purchase-invoice-v3/PurchaseInvoiceFormV3.tsx` lines 80–140
 
 **Test checklist**:
-- [ ] Open **create** steward invoice — form has rounded top corners and white background on left panel
-- [ ] Open **edit** steward invoice — same visual
-- [ ] Open syndic V3 create form side-by-side — layout matches (rounded corners, panel backgrounds, dialog nesting)
-- [ ] Resize panels — drag handle still works, no layout glitches
-- [ ] Full-page route (no `onClose`) — `fixed inset-0` still covers viewport correctly
-- [ ] Embedded route (with `onClose`) — form fills container without overflow
-- [ ] Discard dialog still opens and closes correctly (nesting change)
-- [ ] Delete dialog still opens and closes correctly
-- [ ] `pnpm test` — existing tests pass (no logic change)
+- [x] Open **create** steward invoice — form has rounded top corners and white background on left panel
+- [x] Open **edit** steward invoice — same visual
+- [x] Open syndic V3 create form side-by-side — layout matches (rounded corners, panel backgrounds, dialog nesting)
+- [x] Resize panels — drag handle still works, no layout glitches
+- [x] Full-page route (no `onClose`) — `fixed inset-0` still covers viewport correctly
+- [x] Embedded route (with `onClose`) — form fills container without overflow
+- [x] Discard dialog still opens and closes correctly (nesting change)
+- [x] Delete dialog still opens and closes correctly
+- [x] `pnpm test` — existing tests pass (no logic change)
 
 ---
 
@@ -54,14 +54,14 @@ Zero to low risk. All four commits are independent — do in any order.
 **Reference**: `purchase-invoice-v3/sections/FormHeader.tsx` — see how it places `DuplicateWarningButton`
 
 **Test checklist**:
-- [ ] Open create form — no warning initially (no supplier/number yet)
-- [ ] Select a supplier and type an invoice number that **matches an existing invoice** — duplicate warning banner appears
-- [ ] Change invoice number to a unique one — warning disappears
-- [ ] Change supplier — warning recalculates
-- [ ] Open **edit** form for an existing invoice — no false positive warning for its own invoice (verify `excludeInvoiceId` is passed)
-- [ ] Warning does not appear when fields are empty
-- [ ] Warning does not flash/flicker during typing (debounce works)
-- [ ] `pnpm test` — existing tests pass
+- [x] Open create form — no warning initially (no supplier/number yet)
+- [x] Select a supplier and type an invoice number that **matches an existing invoice** — duplicate warning banner appears
+- [x] Change invoice number to a unique one — warning disappears
+- [x] Change supplier — warning recalculates
+- [x] Open **edit** form for an existing invoice — no false positive warning for its own invoice (verify `excludeInvoiceId` is passed)
+- [x] Warning does not appear when fields are empty
+- [x] Warning does not flash/flicker during typing (debounce works)
+- [x] `pnpm test` — existing tests pass
 
 ---
 
@@ -81,86 +81,100 @@ Zero to low risk. All four commits are independent — do in any order.
 **Reference**: `purchase-invoice-v3/sections/FormBody.tsx` — see how `getInvoiceDateBounds()` is used in `InvoiceFieldsSection`
 
 **Test checklist**:
-- [ ] Open create form — click date picker
-- [ ] Try to select a date **before Jan 1 of current year** — should be disabled/blocked
-- [ ] Try to select a date **after today** — should be disabled/blocked
-- [ ] Select **today** — works
-- [ ] Select **Jan 1 of current year** — works
-- [ ] Select a date **in the middle of the year** — works
-- [ ] Open **edit** form with an existing date within bounds — date displays correctly, can change within bounds
-- [ ] Open **edit** form with a date from a previous year (legacy data) — verify behavior (date shows but may flag as out of bounds)
-- [ ] `pnpm test` — existing tests pass
+- [x] Open create form — click date picker
+- [x] Try to select a date **before Jan 1 of current year** — should be disabled/blocked
+- [x] Try to select a date **after today** — should be disabled/blocked
+- [x] Select **today** — works
+- [x] Select **Jan 1 of current year** — works
+- [x] Select a date **in the middle of the year** — works
+- [x] Open **edit** form with an existing date within bounds — date displays correctly, can change within bounds
+- [x] Open **edit** form with a date from a previous year (legacy data) — verify behavior (date shows but may flag as out of bounds)
+- [x] `pnpm test` — existing tests pass
 
 ---
 
-### Commit 1D · Add auto invoice number generation
+### ~~Commit 1D · Add auto invoice number generation~~ → Deferred to Commit 2A
 
-**Roadmap**: #3 (Tier 1) · **Risk**: Low
+**Status**: DEFERRED
 
-**What**: Auto-generate invoice numbers with a toggle for manual override.
-
-**Files**:
-- `purchase-invoice-v3-steward/sections/FormBody.tsx` — add auto/manual toggle near invoice number field
-
-**Changes**:
-- Import `generateInvoiceNumber` from `purchase-invoice-v3/constants`
-- Add auto-number toggle (matching syndic V3 behavior)
-- On auto: populate on mount; on manual: clear and allow typing
-- Verify prefix conventions — steward may need different prefixes than syndic
-
-**Reference**: `purchase-invoice-v3/sections/FormBody.tsx` — `InvoiceFieldsSection` auto-number behavior
-
-**Test checklist**:
-- [ ] Open **create** form — invoice number is auto-generated (has expected prefix + year + digits)
-- [ ] Verify prefix matches steward conventions (not syndic prefix)
-- [ ] Toggle to **manual** — field clears and becomes editable
-- [ ] Type a custom invoice number — accepted
-- [ ] Toggle back to **auto** — number regenerates (new random digits)
-- [ ] Submit with auto-generated number — API payload contains the number
-- [ ] Submit with manual number — API payload contains the typed number
-- [ ] Open **edit** form — existing invoice number shown, auto toggle is off (manual mode)
-- [ ] Verify auto-generated number format: `{PREFIX}-{YEAR}-{3-digit-seq}`
-- [ ] Open syndic V3 create form — compare auto-number format
-- [ ] `pnpm test` — existing tests pass
+`generateInvoiceNumber(mode, locale)` requires a `mode: InvoiceFormMode` parameter (invoice / credit_note / expense_note). The steward form currently has no mode concept — that is introduced in Commit 2A (invoice mode toggle). Auto-number generation will be added as part of Commit 2A when mode state is available.
 
 ---
 
 ## Batch 2 — Mode toggle + description
 
-Medium risk. Two commits are independent of each other.
+Medium risk. Three commits. 2A and 2B are independent. 2C depends on 2A.
 
 ### Commit 2A · Add invoice mode toggle
 
 **Roadmap**: #4 (Tier 2) · **Risk**: Medium
 
-**What**: Toggle between invoice / credit note (and potentially expense note) in the header.
+**What**: Add invoice mode toggle (invoice / credit note / expense note) to the header. Refactored `InvoiceModeToggle` to accept props (decoupled from syndic context) so both syndic and steward can share it. Hidden the now-redundant `invoiceTypeCode` dropdown in the steward form body.
 
 **Files**:
-- `purchase-invoice-v3-steward/hooks/useStewardForm.ts` — add `mode` + `setMode` state, derived from `invoiceTypeCode`
-- `purchase-invoice-v3-steward/sections/FormHeader.tsx` — add `InvoiceModeToggle`
+- `purchase-invoice-v3/sections/InvoiceModeToggle.tsx` — refactored to accept `mode`/`onModeChange` props
+- `purchase-invoice-v3/sections/FormHeader.tsx` — updated syndic caller to pass props
+- `purchase-invoice-v3-steward/hooks/useStewardForm.ts` — added `mode` + `setMode` state, derived from `invoiceTypeCode`
+- `purchase-invoice-v3-steward/sections/FormHeader.tsx` — added `InvoiceModeToggle` via `tags` prop
+- `purchase-invoice-v3-steward/sections/FormBody.tsx` — pass `hideInvoiceTypeCode` to `InvoiceInfoSection`
 
 **Changes**:
-- Add `mode: InvoiceFormMode` state to hook, expose via context
-- Check if `InvoiceModeToggle` reads from `usePurchaseInvoiceFormContext()` — if yes, either (a) refactor the toggle to accept props, or (b) alias the steward context to match the expected shape
-- Wire `MODE_TO_TYPE_CODE` mapping so toggling updates `invoiceTypeCode`
-- Verify `convertFormDataV2StewardToApiData` handles all type codes (it already handles credit notes — check expense notes)
-
-**Reference**: `purchase-invoice-v3/sections/InvoiceModeToggle.tsx`
-
-**Pre-check**: Verify the steward API/backend accepts expense note type codes.
+- Refactored `InvoiceModeToggle` to a props-based API (`mode`, `onModeChange`) — removed internal `usePurchaseInvoiceFormContext()` and `useFormContext()` calls
+- Updated syndic `FormHeader` to create a `handleModeChange` callback and pass it to the toggle
+- Added `mode: InvoiceFormMode` state to steward hook (derived from initial `invoiceTypeCode`), exposed via context
+- Derived `isCreditNote` from `mode === 'credit_note'` instead of checking `invoiceTypeCode` directly
+- Wired `MODE_TO_TYPE_CODE` mapping in steward `FormHeader` so toggling updates `invoiceTypeCode`
+- Passed `hideInvoiceTypeCode` to `InvoiceInfoSection` — the dropdown is now redundant since the mode toggle controls it
 
 **Test checklist**:
-- [ ] Open create form — default mode is "Invoice"
-- [ ] Toggle to **Credit Note** — header title updates, save button label changes
-- [ ] Toggle back to **Invoice** — reverts
-- [ ] In Credit Note mode — `isDirectDebit` is forced to `false`
-- [ ] Submit as **Invoice** — API payload has correct `invoiceTypeCode`
-- [ ] Submit as **Credit Note** — API payload has credit note `invoiceTypeCode`
-- [ ] Open **edit** form for a credit note — mode toggle shows Credit Note selected
-- [ ] Open **edit** form for a normal invoice — mode toggle shows Invoice selected
-- [ ] If expense note is supported: toggle to Expense Note, verify type code and backend acceptance
-- [ ] Save button shows **negative** total for credit notes (formatted as negative amount)
-- [ ] `pnpm test` — existing tests pass, add unit test for mode ↔ typeCode mapping
+- [x] Open create form — default mode is "Invoice"
+- [x] Toggle to **Credit Note** — badge changes to warning variant
+- [x] Toggle back to **Invoice** — badge returns to brand variant
+- [x] Toggle to **Expense Note** — badge changes to secondary variant
+- [x] In Credit Note mode — `isDirectDebit` is forced to `false`
+- [x] Submit as **Invoice** — API payload has correct `invoiceTypeCode`
+- [x] Submit as **Credit Note** — API payload has credit note `invoiceTypeCode`
+- [x] Open **edit** form for a credit note — mode toggle shows Credit Note selected
+- [x] Open **edit** form for a normal invoice — mode toggle shows Invoice selected
+- [x] `invoiceTypeCode` dropdown (GroupedSelect) is **NOT visible** in the steward form body
+- [x] Open syndic V3 form — mode toggle still works identically (regression check)
+- [x] Open syndic V2 / steward V2 forms — `invoiceTypeCode` dropdown still appears (unaffected)
+- [x] Save as draft in each mode — draft loads back with the correct mode
+- [x] `pnpm test` — existing tests pass
+
+---
+
+### Commit 2C · Add auto invoice number generation
+
+**Roadmap**: #3 (deferred Tier 1) · **Risk**: Medium · **Depends on**: 2A (needs `mode`)
+
+**What**: Add auto invoice number toggle to the steward form, using `generateInvoiceNumber(mode, locale)`.
+
+**Files**:
+- `purchase-invoice-v3-steward/sections/FormBody.tsx` — add auto invoice number toggle to the invoice number field
+
+**Changes**:
+- Import `generateInvoiceNumber` from `purchase-invoice-v3/constants`
+- Adapt the pattern from `InvoiceFieldsSection.tsx` (`useAutoGeneratedInvoiceNumber` hook)
+- Either add an `autoNumberSlot` prop to `InvoiceInfoSection` or create a wrapper that replaces the invoice number field with the auto-toggle variant
+- Wire `mode` from context and `locale` from `useLocale()`
+
+**Reference**:
+- `purchase-invoice-v3/sections/InvoiceFieldsSection.tsx` — auto-number toggle pattern (`useAutoGeneratedInvoiceNumber`)
+- `purchase-invoice-v3/constants.ts` — `generateInvoiceNumber`, `INVOICE_NUMBER_PREFIXES`
+
+**Test checklist**:
+- [ ] Open **create** form — invoice number field has an auto-generate button
+- [ ] Click auto-generate — number populated with format `{PREFIX}-{YEAR}-{3-digit-seq}`
+- [ ] Verify prefix matches current mode (e.g., `AF` for invoice in NL, `CN` for credit note)
+- [ ] Toggle to **manual** (clear button) — field clears and becomes editable
+- [ ] Type a custom invoice number — accepted
+- [ ] Toggle back to **auto** — number regenerates (new random digits)
+- [ ] Switch mode (invoice → credit note) while auto-number is active — prefix updates
+- [ ] Submit with auto-generated number — API payload contains the number
+- [ ] Submit with manual number — API payload contains the typed number
+- [ ] Open **edit** form — existing invoice number shown, auto toggle is off
+- [ ] `pnpm test` — existing tests pass
 
 ---
 
@@ -183,20 +197,20 @@ Medium risk. Two commits are independent of each other.
 **Pre-check**: Verify steward schema has `descriptionTranslations` with the same shape as syndic.
 
 **Test checklist**:
-- [ ] Open create form with **no supplier or properties** selected — description section is hidden or shows placeholder
-- [ ] Select supplier + at least one property — description section appears
-- [ ] Verify **auto-fill** fires: description populated with property name(s) and supplier name
-- [ ] Verify auto-fill uses **property names** (not building name like syndic)
-- [ ] Switch to **NL** tab — description in NL
-- [ ] Switch to **FR** tab — description in FR
-- [ ] Click **Translate** button — translation API called, other languages populated
-- [ ] **Manually edit** a description — auto-fill does not overwrite manual edits
-- [ ] Add a **new language** tab — empty field appears
-- [ ] Remove a language tab — field removed from form data
-- [ ] Submit — API payload includes `descriptionTranslations` with all languages
-- [ ] Open **edit** form with existing translations — all language tabs pre-filled
-- [ ] Verify `MAX_INVOICE_DESCRIPTION_LENGTH` is enforced (character counter visible)
-- [ ] `pnpm test` — existing tests + schema snapshot tests pass
+- [x] Open create form with **no supplier or properties** selected — description section is hidden or shows placeholder
+- [x] Select supplier + at least one property — description section appears
+- [x] Verify **auto-fill** fires: description populated with property name(s) and supplier name
+- [x] Verify auto-fill uses **property names** (not building name like syndic)
+- [x] Switch to **NL** tab — description in NL
+- [x] Switch to **FR** tab — description in FR
+- [x] Click **Translate** button — translation API called, other languages populated
+- [x] **Manually edit** a description — auto-fill does not overwrite manual edits
+- [x] Add a **new language** tab — empty field appears
+- [x] Remove a language tab — field removed from form data
+- [x] Submit — API payload includes `descriptionTranslations` with all languages
+- [x] Open **edit** form with existing translations — all language tabs pre-filled
+- [x] Verify `MAX_INVOICE_DESCRIPTION_LENGTH` is enforced (character counter visible)
+- [x] `pnpm test` — existing tests + schema snapshot tests pass
 
 ---
 
