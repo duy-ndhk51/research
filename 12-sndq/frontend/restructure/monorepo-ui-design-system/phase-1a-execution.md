@@ -696,6 +696,11 @@ Send to the team before merging PR 2:
 
 After Phase 1a is merged to dev, proceed to **Phase 1b: Tailwind Token Infrastructure** — extract Briicks primitive tokens into `@sndq/config/tailwind/tokens.css`. See [migration-plan.md section 4](./migration-plan.md#4-phase-1b-tailwind-token-infrastructure).
 
+### Lessons to carry forward
+
+- **`include`/`exclude` in shared tsconfigs are dead code.** TypeScript resolves inherited `include`/`exclude` relative to the config that defines them, not the consumer. Every app must define its own locally. Do not add `include`/`exclude` to shared tsconfig files.
+- **`.mjs` exports need `.d.mts` type declarations.** Any shared package exporting `.mjs` files must ship a paired `.d.mts` and use conditional `exports` with `"types"` in `package.json`. Without this, consumers get `TS7016` IDE errors. Apply this pattern when creating `packages/ui-v2/` or any future package with `.mjs` exports.
+
 ---
 
 ## Execution Log

@@ -179,6 +179,10 @@ sndq/
 
 ## 4. Package Details
 
+> **Convention: Type declarations for `.mjs` exports**
+>
+> Any shared package that exports `.mjs` files must ship a corresponding `.d.mts` type declaration alongside it, and use conditional `exports` in `package.json` with a `"types"` condition. Without this, consumers will see `TS7016: Could not find a declaration file` in their IDE. This was encountered during Phase 1a with `@sndq/config/eslint.mjs` — see `packages/config/eslint.d.mts` and `packages/config/package.json` exports for the pattern. Apply the same when creating `packages/ui-v2/` or any future shared package with `.mjs` exports.
+
 ### 4.1 `@sndq/ui-v2` — component library
 
 The design system package with a **three-tier component model**. Only Tier 1 (primitives) and Tier 2 (blocks) live here. Tier 3 (business components) remain in app code.
