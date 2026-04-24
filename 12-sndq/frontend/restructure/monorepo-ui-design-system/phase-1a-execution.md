@@ -110,6 +110,7 @@ cat packages/tsconfig/nextjs.json | jq .
 
 - `packages/config/package.json`
 - `packages/config/eslint.mjs`
+- `packages/config/eslint.d.mts` — type declarations for `eslint.mjs` (so consumers get proper types and IDE autocomplete)
 - `packages/config/prettier.json`
 
 **Content reference**: [README.md section 4.2](./README.md) — `@sndq/config` package.json (Phase 1a subset: only `eslint.mjs` and `prettier.json` exports), eslint.mjs, prettier.json.
@@ -122,7 +123,10 @@ cat packages/tsconfig/nextjs.json | jq .
   "private": true,
   "version": "0.0.0",
   "exports": {
-    "./eslint.mjs": "./eslint.mjs",
+    "./eslint.mjs": {
+      "types": "./eslint.d.mts",
+      "default": "./eslint.mjs"
+    },
     "./prettier.json": "./prettier.json"
   },
   "devDependencies": {
@@ -542,7 +546,8 @@ If plugins aren't found from the shared config, you may need to add them as `pee
 
 - [x] `eslint.config.mjs` updated
 - [x] Lint passes (clean, zero errors)
-- [ ] Committed
+- [x] Added `packages/config/eslint.d.mts` type declarations + updated `package.json` exports with `types` condition (fixes TS7016 for all consumers)
+- [x] Committed
 
 ---
 

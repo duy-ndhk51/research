@@ -158,6 +158,7 @@ sndq/
 │   ├── config/                   # @sndq/config
 │   │   ├── package.json
 │   │   ├── eslint.mjs            # shared ESLint flat config
+│   │   ├── eslint.d.mts          # type declarations for eslint.mjs
 │   │   ├── prettier.json         # shared Prettier config
 │   │   └── tailwind/
 │   │       ├── tokens.css        # Briicks primitives + UI-V2 semantic tokens
@@ -233,7 +234,10 @@ Houses all shared configuration: ESLint rules, Prettier settings, and the full T
   "version": "0.0.0",
   "sideEffects": ["./tailwind/*.css"],
   "exports": {
-    "./eslint.mjs": "./eslint.mjs",
+    "./eslint.mjs": {
+      "types": "./eslint.d.mts",
+      "default": "./eslint.mjs"
+    },
     "./prettier.json": "./prettier.json",
     "./tailwind/tokens.css": "./tailwind/tokens.css",
     "./tailwind/components.css": "./tailwind/components.css",
