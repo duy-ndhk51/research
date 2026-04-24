@@ -514,7 +514,7 @@ export default [
 
 | Risk | Severity | What to check |
 |------|----------|---------------|
-| Peer dependency resolution | HIGH | `createEslintConfig` calls `FlatCompat` which resolves `next/core-web-vitals`, `next/typescript`, `plugin:prettier/recommended`. These plugins must be findable. Since `@sndq/config` lists them in `devDependencies` AND `sndq-fe` also has them, pnpm should resolve. But watch the install output. |
+| Peer dependency resolution | HIGH | `createEslintConfig` calls `FlatCompat` which resolves `next/core-web-vitals`, `next/typescript`, `plugin:prettier/recommended`. These plugins must be findable. `@sndq/config` declares them as `peerDependencies` (relaxed ranges), and each consumer app (e.g. `sndq-fe`) owns the exact pinned versions in its own `devDependencies`. pnpm resolves a single copy from the consumer. Watch the install output for "unmet peer" warnings. |
 | `FlatCompat` baseDirectory | HIGH | The function receives `dirname` as an argument and passes it as `baseDirectory` to `FlatCompat`. This means plugin resolution happens relative to the **caller** (`sndq-fe/`), not the package (`packages/config/`). This is the correct behavior — the caller's `node_modules` is where the plugins live. |
 | Rule duplication | MEDIUM | The shared config includes `@typescript-eslint/*` and `prettier/*` rules. The local config adds `no-restricted-imports`. ESLint merges flat config arrays — later entries override earlier ones for the same rule. Since `no-restricted-imports` is only in the local config, there is no conflict. Verify that `@typescript-eslint/*` rules are not accidentally overridden. |
 
@@ -538,7 +538,7 @@ ls node_modules/eslint-config-next
 ls node_modules/eslint-plugin-prettier
 ```
 
-If plugins aren't found from the shared config, you may need to add them as `peerDependencies` in `@sndq/config/package.json` instead of (or in addition to) `devDependencies`.
+**Done**: ESLint/Prettier tools are now declared as `peerDependencies` in `@sndq/config/package.json` (not `devDependencies`). Each consumer app provides the actual packages. If plugins aren't found, verify the consumer has them in its `devDependencies` and run `pnpm install`.
 
 **Commit message**: `refactor: use shared eslint config from @sndq/config in sndq-fe`
 
@@ -700,6 +700,7 @@ After Phase 1a is merged to dev, proceed to **Phase 1b: Tailwind Token Infrastru
 
 - **`include`/`exclude` in shared tsconfigs are dead code.** TypeScript resolves inherited `include`/`exclude` relative to the config that defines them, not the consumer. Every app must define its own locally. Do not add `include`/`exclude` to shared tsconfig files.
 - **`.mjs` exports need `.d.mts` type declarations.** Any shared package exporting `.mjs` files must ship a paired `.d.mts` and use conditional `exports` with `"types"` in `package.json`. Without this, consumers get `TS7016` IDE errors. Apply this pattern when creating `packages/ui-v2/` or any future package with `.mjs` exports.
+- **Shared config packages use `peerDependencies`, not `devDependencies`.** `@sndq/config` declares ESLint/Prettier tools as `peerDependencies` with relaxed semver ranges (e.g. `"^3"`, `">=15"`). Each consumer app (e.g. `sndq-fe`) owns the exact pinned versions in its own `devDependencies`. This avoids duplicate installations, surfaces version mismatches at `pnpm install` time via "unmet peer" warnings, and is safe if the package is ever published. When upgrading a tool in a consumer to a new major version: (1) update the consumer's `devDependencies`, (2) run `pnpm install` — if pnpm warns about an unmet peer, bump the range in `@sndq/config/package.json`, (3) run `pnpm lint` to verify the shared config still works.
 
 ---
 

@@ -248,16 +248,28 @@ Houses all shared configuration: ESLint rules, Prettier settings, and the full T
     "./tailwind/animations.css": "./tailwind/animations.css",
     "./tailwind/shared-sources.css": "./tailwind/shared-sources.css"
   },
-  "devDependencies": {
+  "peerDependencies": {
     "@eslint/eslintrc": "^3",
-    "eslint-config-next": "15.5.4",
-    "eslint-config-prettier": "^10.1.1",
-    "eslint-plugin-prettier": "^5.2.3",
-    "prettier": "^3.5.3",
-    "prettier-plugin-tailwindcss": "^0.6.11"
+    "eslint-config-next": ">=15",
+    "eslint-config-prettier": "^10",
+    "eslint-plugin-prettier": "^5",
+    "prettier": "^3",
+    "prettier-plugin-tailwindcss": "^0.6"
   }
 }
 ```
+
+> **Convention: `peerDependencies` for shared config packages**
+>
+> `@sndq/config` declares ESLint/Prettier tools as `peerDependencies` with relaxed semver ranges — it does **not** install its own copies. Each consumer app (e.g. `sndq-fe`) owns the exact pinned versions in its own `devDependencies`.
+>
+> **Why**: Avoids duplicate installations, surfaces version mismatches at `pnpm install` time (pnpm prints "unmet peer" warnings), and is safe if the package is ever published (`peerDependencies` are not bundled).
+>
+> **Upgrading a tool in a consumer app**:
+> 1. Upgrade the package in the consumer's `devDependencies` (e.g. `eslint-plugin-prettier@6`).
+> 2. Run `pnpm install` — if pnpm warns about an unmet peer, update the range in `@sndq/config/package.json` (e.g. `"^5"` → `"^5 || ^6"` or `"^6"`).
+> 3. Run `pnpm lint` to verify `@sndq/config/eslint.mjs` still works with the new version.
+> 4. If lint fails, update the shared config code to match the new tool's API.
 
 #### `tailwind/tokens.css`
 
