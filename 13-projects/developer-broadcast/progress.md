@@ -1,6 +1,6 @@
 # Developer Broadcast — Progress Tracker
 
-Track implementation progress by checking off each step as it's completed. Each micro-phase produces a usable app.
+Track implementation progress by checking off each step as it's completed. Each micro-phase produces a usable app. Each commit is tested before moving on.
 
 ---
 
@@ -8,32 +8,99 @@ Track implementation progress by checking off each step as it's completed. Each 
 
 > **Goal:** Fetch RSS feeds server-side and display a unified article timeline. No database, no API routes, no client-side fetching.
 
-### Scaffolding
+### Commit 1 — `chore: scaffold next.js 16 project`
 
-- [ ] **0.1** Scaffold Next.js 16 project (`create-next-app`, pnpm)
-- [ ] **0.2** Initialize shadcn/ui and add Phase 0 components (`button`, `card`, `badge`, `separator`, `skeleton`)
-- [ ] **0.3** Install Phase 0 deps (`rss-parser`, `next-themes`)
+- [ ] Run `create-next-app` with TypeScript, Tailwind, ESLint, App Router, src dir, Turbopack, pnpm
+- [ ] Clean up default boilerplate files (remove default page content)
 
-### Data Layer (Config-Based)
+**Test checklist:**
+- [ ] `pnpm dev` starts without errors
+- [ ] `http://localhost:3000` loads the default Next.js page
+- [ ] `pnpm build` passes
 
-- [ ] **0.4** Create `src/config/channels.ts` with typed channel array (11 RSS channels)
+---
 
-### Feed Fetching
+### Commit 2 — `chore: init shadcn/ui and install deps`
 
-- [ ] **0.5** Build RSS fetcher (`src/lib/fetchers/rss-fetcher.ts`)
-- [ ] **0.6** Define common `Article` type (`src/lib/types.ts`)
+- [ ] Initialize shadcn/ui (`shadcn init`)
+- [ ] Add core components: `button`, `card`, `badge`, `separator`, `skeleton`
+- [ ] Install runtime deps: `rss-parser`, `next-themes`
 
-### UI
+**Test checklist:**
+- [ ] `pnpm build` passes
+- [ ] `src/components/ui/` contains the added component files
+- [ ] No new lint or type errors
 
-- [ ] **0.7** Build article card (`src/components/feed/article-card.tsx`)
-- [ ] **0.8** Set up root layout with `ThemeProvider` (`src/app/layout.tsx`)
-- [ ] **0.9** Build feed page as RSC — fetch all, merge, sort, render (`src/app/feed/page.tsx`)
+---
 
-### Verification
+### Commit 3 — `feat: add shared types and channel config`
 
-- [ ] **0.10** `pnpm dev` — feed page shows articles from multiple RSS sources
-- [ ] **0.11** Dark mode toggle works
-- [ ] **0.12** A broken feed URL does not crash the page
+- [ ] Create `src/lib/types.ts` with `Article` and `Channel` interfaces
+- [ ] Create `src/config/channels.ts` with typed array of 11 RSS channels (exclude HN for now)
+
+**Test checklist:**
+- [ ] `pnpm build` passes with no type errors
+- [ ] Channel config exports correct number of entries (11)
+- [ ] Each channel has all required fields (name, slug, feedUrl, type, category)
+
+---
+
+### Commit 4 — `feat: add rss fetcher`
+
+- [ ] Create `src/lib/fetchers/rss-fetcher.ts`
+- [ ] Accepts a feed URL, returns normalized `Article[]`
+- [ ] Handles missing fields gracefully (summary fallback, date parsing)
+- [ ] Returns empty array on fetch failure (no throw)
+
+**Test checklist:**
+- [ ] `pnpm build` passes
+- [ ] Temporarily import and call in a test page/script — confirm articles returned from a known feed URL (e.g. `https://nextjs.org/feed.xml`)
+- [ ] Pass a broken URL — confirm empty array returned, no crash
+
+---
+
+### Commit 5 — `feat: add article card component`
+
+- [ ] Create `src/components/feed/article-card.tsx`
+- [ ] Renders: article title (external link), channel name, relative time, summary (truncated)
+- [ ] Uses shadcn `Card` and `Badge`
+- [ ] Server component (no `"use client"`)
+
+**Test checklist:**
+- [ ] `pnpm build` passes
+- [ ] No lint or type errors on the new file
+
+---
+
+### Commit 6 — `feat: add root layout with dark mode`
+
+- [ ] Create `src/providers/theme-provider.tsx` wrapping `next-themes`
+- [ ] Update `src/app/layout.tsx` with ThemeProvider, metadata (title, description)
+- [ ] Add simple header with app name and theme toggle button
+
+**Test checklist:**
+- [ ] `pnpm dev` — page loads with "Developer Broadcast" header
+- [ ] Theme toggle switches between light and dark mode
+- [ ] Refresh page — theme preference persists
+- [ ] No layout shift or flash of wrong theme on load
+
+---
+
+### Commit 7 — `feat: add feed page with rss aggregation`
+
+- [ ] Create `src/app/feed/page.tsx` as React Server Component
+- [ ] Import channel list from config, call RSS fetcher for each using `Promise.allSettled`
+- [ ] Merge all articles, sort by `publishedAt` descending
+- [ ] Render list of `article-card` components
+
+**Test checklist:**
+- [ ] `pnpm dev` → navigate to `/feed`
+- [ ] Articles from multiple RSS sources appear, sorted by date
+- [ ] Each card shows: title (clickable external link), channel name, relative time
+- [ ] Temporarily add a broken feed URL to config — page still loads with articles from other sources
+- [ ] Dark mode works on the feed page
+
+> **Phase 0 complete.** Tag: `phase-0-done`
 
 ---
 
