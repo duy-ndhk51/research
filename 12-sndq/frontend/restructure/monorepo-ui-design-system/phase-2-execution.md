@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 2. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-04-27
-**Status**: In progress — Commit 1 done, 9 remaining
+**Status**: In progress — Commits 1-2 done, 8 remaining
 **Architecture**: [README.md](./README.md)
 **Migration plan**: [migration-plan.md](./migration-plan.md)
 **Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md)
@@ -238,15 +238,17 @@ NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/prototype run build
 
 **Commit message**: `refactor: wire apps/prototype to shared tsconfig, eslint, and prettier`
 
-**Status**:
+**Status**: DONE
 
-- [ ] `tsconfig.json` updated
-- [ ] `eslint.config.mjs` created
-- [ ] `package.json` updated (prettier + devDependencies)
-- [ ] Type-check passes
-- [ ] Lint passes
-- [ ] Build passes
-- [ ] Committed
+- [x] `tsconfig.json` updated (extends `@sndq/tsconfig/nextjs.json`)
+- [x] `eslint.config.mjs` created (imports `createEslintConfig` from `@sndq/config`)
+- [x] `package.json` updated — `prettier` field, `type-check` script, `@sndq/config` + `@sndq/tsconfig` + all ESLint/Prettier peer deps added to `devDependencies`
+- [x] `pnpm install` succeeds (no new unmet peer warnings from `@sndq/config`)
+- [x] Type-check runs — **80+ pre-existing errors** (CategoryColor mismatches, missing default export, unknown types in showcase blocks). Not caused by config change; prototype never had a `type-check` script before.
+- [x] Lint runs — **7 pre-existing errors** (6 missing display names, 1 hooks rule violation). Not caused by config change; prototype never had an ESLint config before.
+- [x] sndq-fe build unaffected
+
+> **Deviations from plan**: (1) Added `type-check` script to prototype (plan didn't include it but needed for verification). (2) Added all ESLint/Prettier peer deps to prototype's `devDependencies` (matching sndq-fe's pinned versions) — plan only mentioned `@sndq/config` + `@sndq/tsconfig` but the peer deps are required for the shared ESLint config to work.
 
 ---
 
@@ -893,7 +895,7 @@ Record notes, issues, and deviations here as you go.
 | Date | Commit | Notes |
 |------|--------|-------|
 | 2026-04-27 | 1 | Done. Renamed to `@sndq/prototype`. Pre-existing type error in `(showcase)/page.tsx` (missing default export) — not caused by move. No CI changes needed. |
-| | 2 | |
+| 2026-04-27 | 2 | Done. Added `type-check` script + all ESLint/Prettier peer deps to prototype `devDependencies`. Pre-existing: 80+ type errors, 7 lint errors (prototype had no quality tooling before). |
 | | 3 | |
 | | 4 | |
 | | 5 | |
