@@ -3,11 +3,13 @@
 Step-by-step execution guide for Phase 1b. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-04-24
-**Status**: Pending — 2 commits in 1 PR
+**Status**: Folded into Phase 2 — Commit 1 done (tokens.css created), Commit 2 will execute as part of Phase 2
 **Architecture**: [README.md](./README.md)
 **Migration plan**: [migration-plan.md](./migration-plan.md)
 **Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md)
 **Branch**: `feature/phase-1b-tailwind-tokens`
+
+> **Consolidation note**: Phase 1b was not included in the Phase 1 PR. Rather than creating a separate small PR for just the Briicks token swap, it has been folded into Phase 2 (step 3) where all CSS/token extraction happens together — primitives, semantic tokens, component CSS, and animations. Commit 1 (`tokens.css` + `package.json` exports) is already done and sits harmlessly in the repo. Commit 2 (the `globals.css` swap) will execute as part of Phase 2.
 
 ---
 
@@ -270,10 +272,10 @@ NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build
 
 **Status**:
 
-- [ ] `packages/config/tailwind/tokens.css` created
-- [ ] `packages/config/package.json` exports + sideEffects updated
-- [ ] Existing build still passes
-- [ ] Committed
+- [x] `packages/config/tailwind/tokens.css` created
+- [x] `packages/config/package.json` exports + sideEffects updated
+- [x] Existing build still passes
+- [x] Committed
 
 ---
 

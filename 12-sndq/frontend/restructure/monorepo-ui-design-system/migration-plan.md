@@ -7,7 +7,7 @@ Gradual, five-phase migration from legacy component libraries (`briicks/`, `ui/`
 **Architecture**: [README.md](./README.md)
 **Ticket**: [ticket-migration.md](./ticket-migration.md)
 **Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md) — step-by-step commits, risk checklists, verification commands
-**Phase 1b execution**: [phase-1b-execution.md](./phase-1b-execution.md) — Briicks token extraction commits, radius conflict resolution, verification commands
+**Phase 1b execution**: [phase-1b-execution.md](./phase-1b-execution.md) — Briicks token extraction (folded into Phase 2)
 
 ---
 
@@ -16,7 +16,7 @@ Gradual, five-phase migration from legacy component libraries (`briicks/`, `ui/`
 1. [Overview](#1-overview)
 2. [Current vs Target](#2-current-vs-target)
 3. [Phase 1a: Structural Foundation](#3-phase-1a-structural-foundation)
-4. [Phase 1b: Tailwind Token Infrastructure](#4-phase-1b-tailwind-token-infrastructure)
+4. [Phase 1b: Tailwind Token Infrastructure (folded into Phase 2)](#4-phase-1b-tailwind-token-infrastructure-folded-into-phase-2)
 5. [Phase 2: Prototype Integration + Deprecate Old Submodule](#5-phase-2-prototype-integration--deprecate-old-submodule)
 6. [Phase 3: Standardize + Graduate to Package](#6-phase-3-standardize--graduate-to-package)
 7. [Phase 4: Module-by-Module Migration](#7-phase-4-module-by-module-migration)
@@ -163,7 +163,9 @@ pnpm type-check  # tsc --noEmit passes with shared tsconfig
 
 ---
 
-## 4. Phase 1b: Tailwind Token Infrastructure
+## 4. Phase 1b: Tailwind Token Infrastructure (folded into Phase 2)
+
+> **Note**: Phase 1b was not included in the Phase 1 PR. It has been folded into Phase 2 as its first step, so all CSS/token extraction happens together when `sndq-ui-v2` joins the workspace. Commit 1 (create `tokens.css` + update `package.json` exports) is already done as a harmless pure addition. Commit 2 (swap in `sndq-fe/globals.css`) will execute as part of Phase 2. See [phase-1b-execution.md](./phase-1b-execution.md) for details.
 
 **Goal**: Extract Briicks primitive tokens into `@sndq/config/tailwind/`, establishing the CSS package infrastructure for Phase 2.
 
@@ -205,14 +207,17 @@ pnpm type-check  # tsc --noEmit passes with shared tsconfig
 
 ### Prerequisites
 
-- Phase 1a and 1b are merged to dev
+- Phase 1a is merged to dev
 - `sndq-ui-v2` custom branch is rebased onto the restructured dev
 
 ### Steps
 
 1. `git mv sndq-ui-v2 apps/prototype`
 2. Update `apps/prototype/package.json` name (keep `sndq-ui-v2` or rename)
-3. Add UI-V2 semantic tokens to `packages/config/tailwind/tokens.css`:
+3. **Extract Briicks primitive tokens into `sndq-fe`** (from Phase 1b — `tokens.css` already created in Phase 1a branch):
+   - Update `sndq-fe/src/app/globals.css`: add `@import '@sndq/config/tailwind/tokens.css';`, remove the duplicated Briicks color/type/spacing/radius block (~100 lines), remove dead shadcn radius lines (52-54)
+   - See [phase-1b-execution.md](./phase-1b-execution.md) Commit 2 for full details and risks
+4. Add UI-V2 semantic tokens to `packages/config/tailwind/tokens.css`:
    - Action tokens (`--ui-action`, `--ui-action-hover`, `--ui-action-fg`, etc.)
    - Surface tokens (`--ui-surface`, `--ui-surface-subtle`, `--ui-surface-muted`)
    - Text tokens (`--ui-text`, `--ui-text-secondary`, `--ui-text-tertiary`, etc.)
@@ -223,36 +228,36 @@ pnpm type-check  # tsc --noEmit passes with shared tsconfig
    - Radius (`--ui-r-xs` through `--ui-r-full`)
    - Shadow (`--ui-shadow-xs`, `--ui-shadow-sm`, `--ui-shadow-md`, insets)
    - Source: `sndq-ui-v2/src/app/globals.css` lines 164-269
-4. Create `packages/config/tailwind/components.css` with UI-V2 component CSS:
+5. Create `packages/config/tailwind/components.css` with UI-V2 component CSS:
    - `.ui-control`, `.ui-input-wrap`, `.ui-btn` + all variants/sizes
    - `.ui-menu`, `.ui-item`, `.ui-menu-label`, `.ui-separator`
    - `.ui-label`, `.ui-helper`, `.ui-error-msg`
    - `.ui-badge`, `.ui-card`, `.font-heading`
    - Source: `sndq-ui-v2/src/app/globals.css` lines 546-975
-5. Create `packages/config/tailwind/animations.css` with shared keyframes:
+6. Create `packages/config/tailwind/animations.css` with shared keyframes:
    - `ui-hide`, `ui-slideDownAndFade`, `ui-slideUpAndFade`, `ui-slideLeftAndFade`, `ui-slideRightAndFade`
    - `ui-dialogOverlayShow`, `ui-dialogContentShow`
    - `ui-accordionOpen`, `ui-accordionClose`
    - `ui-drawerSlideIn`, `ui-drawerSlideOut`
    - `collapsible-down`, `collapsible-up`, `ai-progress`
    - Source: `sndq-ui-v2/src/app/globals.css` lines 271-441
-6. Update `packages/config/package.json` exports to include all three tailwind files
-7. Update `apps/prototype/src/app/globals.css`:
+7. Update `packages/config/package.json` exports to include all three tailwind files
+8. Update `apps/prototype/src/app/globals.css`:
    - Replace the ~700 lines of tokens/components/animations with imports from `@sndq/config/tailwind/*`
    - Keep app-specific `:root`/`.dark` shadcn vars, `@layer base`
-8. Add ESLint config to prototype: create `apps/prototype/eslint.config.mjs` importing from `@sndq/config/eslint.mjs`
-9. Add Prettier config to prototype via `package.json`: `"prettier": "@sndq/config/prettier.json"`
-10. Update `apps/prototype/tsconfig.json` to extend `@sndq/tsconfig/nextjs.json`
-11. Create `packages/ui-v2/` (`@sndq/ui-v2`) as **empty skeleton**:
+9. Add ESLint config to prototype: create `apps/prototype/eslint.config.mjs` importing from `@sndq/config/eslint.mjs`
+10. Add Prettier config to prototype via `package.json`: `"prettier": "@sndq/config/prettier.json"`
+11. Update `apps/prototype/tsconfig.json` to extend `@sndq/tsconfig/nextjs.json`
+12. Create `packages/ui-v2/` (`@sndq/ui-v2`) as **empty skeleton**:
     - `package.json` with name `@sndq/ui-v2`, `workspace:*` dependency on `@sndq/config`
     - `tsconfig.json` extending `@sndq/tsconfig/library.json`
     - Empty `src/components/index.ts` and `src/blocks/index.ts`
-12. Create `apps/docs/` as **minimal Next.js app**:
+13. Create `apps/docs/` as **minimal Next.js app**:
     - `package.json` depending on `@sndq/ui-v2` (`workspace:*`)
     - Placeholder `src/app/page.tsx` ("Component Docs — coming soon")
     - `tsconfig.json` extending `@sndq/tsconfig/nextjs.json`
-13. Wire `@sndq/ui-v2` as `workspace:*` dependency in all apps
-14. **Deprecate old submodule** — add ESLint `no-restricted-imports` rule to `sndq-fe/eslint.config.mjs`:
+14. Wire `@sndq/ui-v2` as `workspace:*` dependency in all apps
+15. **Deprecate old submodule** — add ESLint `no-restricted-imports` rule to `sndq-fe/eslint.config.mjs`:
 
 ```javascript
 'no-restricted-imports': ['warn', {
