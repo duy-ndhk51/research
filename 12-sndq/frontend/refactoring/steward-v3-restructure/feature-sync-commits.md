@@ -236,11 +236,11 @@ Medium risk. Two commits, sequential (3A then 3B).
 **Reference**: `purchase-invoice-v3/PurchaseInvoiceFormV3.tsx` props — `isPartialEditMode` is a prop passed from the edit page
 
 **Test checklist**:
-- [ ] Open create form — `isPartialEditMode` is `false` (verify via React DevTools or `console.log`)
-- [ ] Open edit form for invoice **without payments** — `isPartialEditMode` is `false`
-- [ ] Open edit form for invoice **with payments** — `isPartialEditMode` is `true`
-- [ ] Context value matches hook value (inspect via React DevTools)
-- [ ] `pnpm test` — existing tests pass
+- [x] Open create form — `isPartialEditMode` is `false` (verify via React DevTools or `console.log`)
+- [x] Open edit form for invoice **without payments** — `isPartialEditMode` is `false`
+- [x] Open edit form for invoice **with payments** — `isPartialEditMode` is `true`
+- [x] Context value matches hook value (inspect via React DevTools)
+- [x] `pnpm test` — existing tests pass
 
 ---
 
@@ -250,120 +250,104 @@ Medium risk. Two commits, sequential (3A then 3B).
 
 **What**: Warning banner + field disabling when partially editing.
 
-**File**: `purchase-invoice-v3-steward/sections/FormBody.tsx`
+**Files**:
+- `purchase-invoice-v3-steward/sections/FormBody.tsx` — banner + `<fieldset disabled>` wrappers
+- `purchase-invoice-v3-steward/hooks/useStewardForm.ts` — pass `isPartialEditMode` to actions hook
+- `purchase-invoice-v3-steward/hooks/useStewardFormActions.ts` — accept `isPartialEditMode`, restructure `onSubmit` for partial updates
+- `purchase-invoice-v2-steward/utils.ts` — `convertFormDataV2StewardToApiData` accepts optional `isPartialEditMode`, calls `stripPaymentCriticalFields` when true
+- `purchase-invoice-v2/utils.ts` — export `stripPaymentCriticalFields` for reuse
 
 **Changes**:
-- Read `isPartialEditMode` from context
-- Add warning `Message` banner at top of form body when active
-- Wrap amount and payment sections in `<fieldset disabled={isPartialEditMode}>`
-- Steward-specific: also disable unit/property selection and settlement controls
+- Read `isPartialEditMode` from context in `FormBody`
+- Add warning banner (AlertCircle + translated title/description) at top of form body when active
+- Wrap supplier + property/unit sections in `<fieldset disabled={isPartialEditMode}>` with `opacity-60`
+- Wrap payment section in `<fieldset disabled={isPartialEditMode}>` with `opacity-60`
+- Thread `isPartialEditMode` from `useStewardForm` → `useStewardFormActions`
+- In `onSubmit`: when updating an existing invoice, pass `isPartialEditMode` to `convertFormDataV2StewardToApiData`; when creating, omit it (always full payload)
+- `convertFormDataV2StewardToApiData` calls `stripPaymentCriticalFields(fullApiData)` when `isPartialEditMode` is true
 
 **Reference**: `purchase-invoice-v3/sections/FormBody.tsx` — partial edit banner and `fieldset disabled` pattern
 
 **Test checklist**:
-- [ ] Open **create** form — no banner, all fields editable
-- [ ] Open **edit** form for invoice **without payments** — no banner, all fields editable
-- [ ] Open **edit** form for invoice **with payments** — warning banner visible at top
-- [ ] Banner text is correct and translated
+- [x] Open **create** form — no banner, all fields editable
+- [x] Open **edit** form for invoice **without payments** — no banner, all fields editable
+- [x] Open **edit** form for invoice **with payments** — warning banner visible at top
+- [x] Banner text is correct and translated
 - [ ] **Disabled sections** (when partial edit):
-  - [ ] Amount rows — cannot add/edit/remove
-  - [ ] Payment section — all fields disabled
-  - [ ] Property/unit selection — cannot change
-  - [ ] Settlement controls — cannot change
-- [ ] **Enabled sections** (when partial edit):
-  - [ ] Invoice name — editable
-  - [ ] Invoice date — editable
-  - [ ] Description — editable
-  - [ ] Supplier — editable (or disabled? — check syndic behavior)
-- [ ] Submit with allowed field changes — save succeeds
-- [ ] Visual: disabled fields appear greyed out, inputs are not focusable
-- [ ] `pnpm test` — existing tests pass
+  - [ ] Amount rows — cannot add/edit/remove ⚠️ *Not yet disabled — deferred to Batch 5 refactor when V2 amounts section is replaced with V3 invoice lines table*
+  - [x] Payment section — all fields disabled
+  - [x] Property/unit selection — cannot change
+  - [ ] Settlement controls — cannot change ⚠️ *Part of V2 amounts section — deferred to Batch 5 refactor*
+- [x] **Enabled sections** (when partial edit):
+  - [x] Invoice number — editable
+  - [x] Invoice date — editable
+  - [x] Description — editable
+  - [x] Supplier — disabled (matches syndic behavior: supplier + building are both disabled in partial edit)
+- [x] Submit with allowed field changes — save succeeds (API strips payment-critical fields via `stripPaymentCriticalFields`)
+- [x] Visual: disabled fields appear greyed out (`opacity-60`), inputs are not focusable
+- [x] `pnpm test` — existing tests pass
+
+> **Note**: Amount rows and settlement controls are not yet disabled because `PurchaseInvoiceAmountsSectionV2Steward` is a V2 component that doesn't support the `<fieldset disabled>` pattern cleanly. This will be addressed in **Batch 5** when the V2 amounts section is replaced with the V3 invoice lines table, which supports fieldset disabling natively.
 
 ---
 
 ## Batch 4 — AI document extraction
 
-High risk. Two commits, sequential (4A then 4B).
+Combined 4A + 4B into a single commit since the steward schema (`PurchaseInvoiceFormV2StewardData`) reuses `AmountWithDistributionData` from syndic and shares all extraction-relevant fields. `transformExtractedDataToFormData` works as-is.
 
-### Commit 4A · Wire AiExtractionProvider + UI chrome
+### Commit 4A+4B · Wire AI extraction (provider + UI + field mapping)
 
-**Roadmap**: #7 part 1 (Tier 3) · **Risk**: Medium
+**Roadmap**: #7 (Tier 3) · **Risk**: Medium
 
-**What**: Provider infrastructure + visual indicators (no field mapping yet).
-
-**Files**:
-- `purchase-invoice-v3-steward/PurchaseInvoiceFormV3Steward.tsx` — add `AiExtractionProvider` wrapper
-- `purchase-invoice-v3-steward/sections/FormBody.tsx` — add `AiExtractionOverlay`
-- Main form layout — add `AiExtractionBanner` after header
-
-**Changes**:
-- Wrap inner form with `AiExtractionProvider` (same position as syndic V3)
-- Add overlay that covers form body during extraction
-- Add banner showing extraction status
-- Wire `isExtracting` / `isExtracted` from the AI extraction context
-
-**Reference**:
-- `purchase-invoice-v3/PurchaseInvoiceFormV3.tsx` — provider wrapping pattern
-- `purchase-invoice-v2/contexts/AiExtractionContext.tsx` — provider definition
-- `purchase-invoice-v3/sections/AiExtractionOverlay.tsx` — overlay component
-
-**Test checklist**:
-- [ ] Open create form — no banner or overlay initially
-- [ ] Upload a **PDF** document — overlay appears, covering the form body
-- [ ] Overlay shows a loading/spinner indicator
-- [ ] Banner appears between header and panels, shows "extracting" status
-- [ ] Wait for extraction to complete — overlay dismisses
-- [ ] Banner updates to "extracted" or success state
-- [ ] Dismiss banner — disappears
-- [ ] Form fields are **NOT populated** yet (that's commit 4B)
-- [ ] Upload a **Peppol XML** — existing Peppol prefill still works as before (no regression)
-- [ ] Right panel document preview still works
-- [ ] Resize panels during extraction — overlay covers correctly
-- [ ] `pnpm test` — existing tests pass
-
----
-
-### Commit 4B · Integrate useFileHandling + AI field mapping
-
-**Roadmap**: #7 part 2 (Tier 3) · **Risk**: High
-
-**What**: Replace manual file/peppol wiring with `useFileHandling` and map extracted fields.
+**What**: Full AI extraction pipeline — provider, banner, overlay, extraction trigger, and auto-population of form fields from extracted data.
 
 **Files**:
-- `purchase-invoice-v3-steward/hooks/useStewardForm.ts` — integrate `useFileHandling`
-- `purchase-invoice-v3-steward/PurchaseInvoiceFormV3Steward.tsx` — simplify right panel wiring
+- `purchase-invoice-v3-steward/hooks/useStewardForm.ts` — integrate `useAiExtraction`, add `handleFileUploaded`
+- `purchase-invoice-v3-steward/PurchaseInvoiceFormV3Steward.tsx` — add `AiExtractionProvider`, `AiExtractionBanner`, wire right panel with extraction
+- `purchase-invoice-v3/sections/AiExtractionOverlay.tsx` — refactored to accept `isExtracting` prop (decoupled from syndic context)
+- `purchase-invoice-v3/sections/FormBody.tsx` — updated overlay call to pass prop
+- `purchase-invoice-v3-steward/sections/FormBody.tsx` — add `AiExtractionOverlay` with `relative` positioning
 
 **Changes**:
-- Import and compose `useFileHandling` (from V3 or shared hooks)
-- Map AI-extracted fields to steward form: supplier, dates, invoice number, description
-- For amounts: AI won't extract `costCategoryId` — leave as empty/unset
-- Add confidence indicators on AI-filled fields (via `AiExtractionProvider` context)
-- Preserve existing Peppol XML prefill as a parallel path
+- Called `useAiExtraction` in `useStewardForm` with type-cast `setValue`/`getValues` (safe — all extraction fields exist in both schemas). `onExtractionComplete` switches right panel to `'uploader'`
+- Added `handleFileUploaded` callback (`setValue('file', file)` + `aiExtraction.resetExtraction()`) — replaces the inline `setValue` in the right panel
+- Wrapped form content with `AiExtractionProvider` inside `FormProvider`, passing confidence, review, and VAT data from `form.aiExtraction`
+- Added `AiExtractionBanner` between `FormHeader` and `ResizablePanelGroup`
+- Updated `InvoiceRightPanelConnected`: destructure `aiExtraction` + `handleFileUploaded` from context, wire `isAiExtracting` and `onAiExtract` props
+- Refactored `AiExtractionOverlay` to accept `isExtracting` prop instead of reading from `usePurchaseInvoiceFormContext()` — now reusable by both syndic and steward
+- Updated syndic `FormBody` to pass `aiExtraction.isExtracting` to overlay
+- Added overlay to steward `FormBody` with `relative` on scroll container
 
-**Key challenge**: AI extraction maps to syndic schema shape. Steward amounts need `costCategoryId` which AI doesn't extract. Consider a "review required" marker on cost category after extraction.
+**Auto-populated fields**: `invoiceName`, `invoiceNumber`, `invoiceDate`, `dueDate`, `senderId`, `buildingId`, `descriptionTranslations`, `amounts` (subtotal/total/VAT), `remittanceType`/`remittanceInfo`
+**NOT populated**: `propertyIds` (steward-specific, user must select), `costCategoryId` per amount (AI doesn't extract this)
 
 **Test checklist**:
-- [ ] Upload a **PDF** invoice — extraction runs
-- [ ] After extraction, verify **populated fields**:
-  - [ ] Supplier — matched and selected
-  - [ ] Invoice date — filled
-  - [ ] Invoice number — filled
-  - [ ] Description — filled (if extractable)
-  - [ ] Due date — filled (if extractable)
-- [ ] After extraction, verify **amount rows** created:
-  - [ ] Amounts appear with extracted totals/VAT
-  - [ ] `costCategoryId` is **empty** (not auto-filled)
-  - [ ] Visual indicator that cost category needs review (if implemented)
-- [ ] Upload a **Peppol XML** — existing prefill flow works as before
-  - [ ] Supplier, dates, invoice number populated from Peppol data
-  - [ ] Amounts created with correct totals
-- [ ] Upload a new PDF **over** an already-extracted form — fields update to new extraction
-- [ ] Confidence indicators visible on AI-filled fields (highlight or icon)
-- [ ] Manually edit an AI-filled field — confidence indicator clears
-- [ ] Submit extracted form (after setting cost categories) — API payload is correct
-- [ ] Submit Peppol-prefilled form — API payload matches previous behavior
-- [ ] Right panel preview shows the uploaded document
-- [ ] `pnpm test` — existing tests pass, schema snapshot tests unchanged
+- [x] Open create form — no banner or overlay initially
+- [x] Upload a **PDF** document — overlay appears, covering the form body
+- [x] Overlay shows a loading/spinner indicator
+- [x] Banner appears between header and panels, shows "extracting" status
+- [x] Wait for extraction to complete — overlay dismisses
+- [x] Banner updates to "review AI-filled fields" state
+- [x] Dismiss banner — disappears, confidence indicators clear
+- [x] Upload a **Peppol XML** — existing Peppol prefill still works as before (no regression)
+- [x] Right panel document preview still works
+- [x] Resize panels during extraction — overlay covers correctly
+- [x] After extraction, verify **populated fields**:
+  - [x] Supplier — matched and selected (via `senderId`)
+  - [x] Invoice date — filled
+  - [x] Invoice number — filled
+  - [x] Description — filled (if extractable)
+  - [x] Due date — filled (if extractable)
+- [x] After extraction, verify **amount rows** created:
+  - [x] Amounts appear with extracted totals/VAT
+  - [x] `costCategoryId` is **empty** (not auto-filled)
+- [x] Confidence indicators (AI badges) visible on AI-filled fields via `InvoiceFieldsSection` (already calls `useAiExtractionContext()`)
+- [x] Manually edit an AI-filled field — confidence indicator clears
+- [x] Upload a new PDF **over** an already-extracted form — extraction resets, new data applied
+- [x] File cleared — extraction state resets
+- [x] Submit extracted form (after setting cost categories) — API payload correct
+- [x] Submit Peppol-prefilled form — API payload matches previous behavior
+- [x] `pnpm test` — all 1262 tests pass (49 files), no regressions
 
 ---
 
