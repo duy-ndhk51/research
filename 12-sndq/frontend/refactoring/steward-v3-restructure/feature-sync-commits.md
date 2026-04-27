@@ -164,17 +164,17 @@ Medium risk. Three commits. 2A and 2B are independent. 2C depends on 2A.
 - `purchase-invoice-v3/constants.ts` — `generateInvoiceNumber`, `INVOICE_NUMBER_PREFIXES`
 
 **Test checklist**:
-- [ ] Open **create** form — invoice number field has an auto-generate button
-- [ ] Click auto-generate — number populated with format `{PREFIX}-{YEAR}-{3-digit-seq}`
-- [ ] Verify prefix matches current mode (e.g., `AF` for invoice in NL, `CN` for credit note)
-- [ ] Toggle to **manual** (clear button) — field clears and becomes editable
-- [ ] Type a custom invoice number — accepted
-- [ ] Toggle back to **auto** — number regenerates (new random digits)
-- [ ] Switch mode (invoice → credit note) while auto-number is active — prefix updates
-- [ ] Submit with auto-generated number — API payload contains the number
-- [ ] Submit with manual number — API payload contains the typed number
-- [ ] Open **edit** form — existing invoice number shown, auto toggle is off
-- [ ] `pnpm test` — existing tests pass
+- [x] Open **create** form — invoice number field has an auto-generate button
+- [x] Click auto-generate — number populated with format `{PREFIX}-{YEAR}-{3-digit-seq}`
+- [x] Verify prefix matches current mode (e.g., `AF` for invoice in NL, `CN` for credit note)
+- [x] Toggle to **manual** (clear button) — field clears and becomes editable
+- [x] Type a custom invoice number — accepted
+- [x] Toggle back to **auto** — number regenerates (new random digits)
+- [x] Switch mode (invoice → credit note) while auto-number is active — prefix updates
+- [x] Submit with auto-generated number — API payload contains the number
+- [x] Submit with manual number — API payload contains the typed number
+- [x] Open **edit** form — existing invoice number shown, auto toggle is off
+- [x] `pnpm test` — existing tests pass
 
 ---
 
