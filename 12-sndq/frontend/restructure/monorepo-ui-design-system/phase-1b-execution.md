@@ -444,7 +444,7 @@ Send to the team before merging:
 
 ## 6. What's Next
 
-After Phase 1b is merged to dev, proceed to **Phase 2: Prototype Integration + Deprecate Old Submodule** — bring `sndq-ui-v2` into the monorepo, complete design token extraction (semantic tokens, component CSS, animations), scaffold `@sndq/ui-v2` package. See [migration-plan.md section 5](./migration-plan.md#5-phase-2-prototype-integration--deprecate-old-submodule).
+After Phase 1b is merged to dev, proceed to **Phase 2: Prototype Integration + Deprecate Old Submodule** — `sndq-ui-v2` has been moved to `apps/prototype/` (renamed `@sndq/prototype`). Complete the design token extraction (semantic tokens, component CSS, animations), scaffold `@sndq/ui-v2` package. See [phase-2-execution.md](./phase-2-execution.md).
 
 ### Lessons to carry forward (from Phase 1a)
 

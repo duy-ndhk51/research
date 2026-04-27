@@ -214,7 +214,7 @@ pnpm type-check  # tsc --noEmit passes with shared tsconfig
 ### Steps
 
 1. `git mv sndq-ui-v2 apps/prototype`
-2. Update `apps/prototype/package.json` name (keep `sndq-ui-v2` or rename)
+2. Update `apps/prototype/package.json` name to `@sndq/prototype`
 3. **Extract Briicks primitive tokens into `sndq-fe`** (from Phase 1b — `tokens.css` already created in Phase 1a branch):
    - Update `sndq-fe/src/app/globals.css`: add `@import '@sndq/config/tailwind/tokens.css';`, remove the duplicated Briicks color/type/spacing/radius block (~100 lines), remove dead shadcn radius lines (52-54)
    - See [phase-1b-execution.md](./phase-1b-execution.md) Commit 2 for full details and risks
@@ -228,20 +228,20 @@ pnpm type-check  # tsc --noEmit passes with shared tsconfig
    - Control sizing (`--ui-h-sm`, `--ui-h`, `--ui-h-lg`)
    - Radius (`--ui-r-xs` through `--ui-r-full`)
    - Shadow (`--ui-shadow-xs`, `--ui-shadow-sm`, `--ui-shadow-md`, insets)
-   - Source: `sndq-ui-v2/src/app/globals.css` lines 164-269
+   - Source: `apps/prototype/src/app/globals.css` lines 164-269
 5. Create `packages/config/tailwind/components.css` with UI-V2 component CSS:
    - `.ui-control`, `.ui-input-wrap`, `.ui-btn` + all variants/sizes
    - `.ui-menu`, `.ui-item`, `.ui-menu-label`, `.ui-separator`
    - `.ui-label`, `.ui-helper`, `.ui-error-msg`
    - `.ui-badge`, `.ui-card`, `.font-heading`
-   - Source: `sndq-ui-v2/src/app/globals.css` lines 546-975
+   - Source: `apps/prototype/src/app/globals.css` lines 546-975
 6. Create `packages/config/tailwind/animations.css` with shared keyframes:
    - `ui-hide`, `ui-slideDownAndFade`, `ui-slideUpAndFade`, `ui-slideLeftAndFade`, `ui-slideRightAndFade`
    - `ui-dialogOverlayShow`, `ui-dialogContentShow`
    - `ui-accordionOpen`, `ui-accordionClose`
    - `ui-drawerSlideIn`, `ui-drawerSlideOut`
    - `collapsible-down`, `collapsible-up`, `ai-progress`
-   - Source: `sndq-ui-v2/src/app/globals.css` lines 271-441
+   - Source: `apps/prototype/src/app/globals.css` lines 271-441
 7. Update `packages/config/package.json` exports to include all three tailwind files
 8. Update `apps/prototype/src/app/globals.css`:
    - Replace the ~700 lines of tokens/components/animations with imports from `@sndq/config/tailwind/*`

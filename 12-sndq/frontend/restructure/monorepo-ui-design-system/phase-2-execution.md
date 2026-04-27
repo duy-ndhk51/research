@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 2. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-04-27
-**Status**: Pending — 10 commits across 3 PRs
+**Status**: In progress — Commit 1 done, 9 remaining
 **Architecture**: [README.md](./README.md)
 **Migration plan**: [migration-plan.md](./migration-plan.md)
 **Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md)
@@ -59,12 +59,12 @@ NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build 2>&1 | 
 pnpm --filter sndq-fe run lint 2>&1 | tee /tmp/phase2-fe-lint-before.txt
 pnpm --filter sndq-fe run type-check 2>&1 | tee /tmp/phase2-fe-typecheck-before.txt
 
-# sndq-ui-v2 baselines (before move)
-NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-ui-v2 run build 2>&1 | tee /tmp/phase2-uiv2-build-before.txt
-pnpm --filter sndq-ui-v2 run lint 2>&1 | tee /tmp/phase2-uiv2-lint-before.txt
+# prototype baselines (use @sndq/prototype after Commit 1 rename)
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/prototype run build 2>&1 | tee /tmp/phase2-uiv2-build-before.txt
+pnpm --filter @sndq/prototype run lint 2>&1 | tee /tmp/phase2-uiv2-lint-before.txt
 ```
 
-Also capture visual baselines: open both `sndq-fe` (port 3000) and `sndq-ui-v2` (port 3001) locally and screenshot key pages.
+Also capture visual baselines: open both `sndq-fe` (port 3000) and `@sndq/prototype` (port 3001) locally and screenshot key pages.
 
 ### Create branch
 
@@ -94,7 +94,7 @@ git mv sndq-ui-v2 apps/prototype
 
 **Files to edit**:
 
-- `apps/prototype/package.json` — update `"name"` from `"sndq-ui-v2"` to `"sndq-ui-v2"` (keep the name for now, or rename to `"@sndq/prototype"` — decide before executing)
+- `apps/prototype/package.json` — rename `"name"` from `"sndq-ui-v2"` to `"@sndq/prototype"` (decided: align with monorepo `@sndq/` convention)
 - `pnpm-workspace.yaml` — remove the explicit `'sndq-ui-v2'` entry (now covered by `'apps/*'` glob)
 - `lerna.json` — verify `apps/*` already covers it (it does from Phase 1a)
 
@@ -124,10 +124,10 @@ onlyBuiltDependencies:
 pnpm install
 
 # Verify workspace recognizes the moved package
-pnpm ls sndq-ui-v2
+pnpm ls @sndq/prototype
 
 # Build the moved prototype
-NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-ui-v2 run build
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/prototype run build
 
 # sndq-fe must still build (unaffected)
 NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build
@@ -135,14 +135,17 @@ NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build
 
 **Commit message**: `chore: move sndq-ui-v2 to apps/prototype`
 
-**Status**:
+**Status**: DONE
 
-- [ ] `git mv` done
-- [ ] `pnpm-workspace.yaml` updated (removed explicit `sndq-ui-v2` entry)
-- [ ] `pnpm install` succeeds
-- [ ] Prototype build passes
-- [ ] sndq-fe build still passes
-- [ ] Committed
+- [x] `git mv` done
+- [x] `pnpm-workspace.yaml` updated (removed explicit `sndq-ui-v2` entry)
+- [x] Package renamed to `@sndq/prototype`
+- [x] `pnpm install` succeeds
+- [x] Prototype build — **pre-existing type error** (`(showcase)/page.tsx` missing default export, unrelated to move)
+- [x] sndq-fe build passes
+- [x] No CI path filter changes needed (`.github/workflows/` has no `sndq-ui-v2` references)
+
+> **Decision**: Package renamed to `@sndq/prototype` (not kept as `sndq-ui-v2`). All filter commands from this point use `--filter @sndq/prototype`.
 
 ---
 
@@ -224,13 +227,13 @@ export default [
 pnpm install
 
 # Type-check
-pnpm --filter sndq-ui-v2 run type-check 2>&1 || pnpm --filter sndq-ui-v2 exec tsc --noEmit
+pnpm --filter @sndq/prototype run type-check 2>&1 || pnpm --filter @sndq/prototype exec tsc --noEmit
 
 # Lint
-pnpm --filter sndq-ui-v2 run lint
+pnpm --filter @sndq/prototype run lint
 
 # Build
-NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-ui-v2 run build
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/prototype run build
 ```
 
 **Commit message**: `refactor: wire apps/prototype to shared tsconfig, eslint, and prettier`
@@ -290,13 +293,13 @@ pnpm --filter sndq-fe run type-check
 
 ### Commit 4: Add UI-V2 semantic tokens to shared config
 
-**What**: Extract the UI-V2 semantic design tokens (`:root` block, lines 164-269 of `sndq-ui-v2/src/app/globals.css`) into a new file `packages/config/tailwind/semantic-tokens.css`.
+**What**: Extract the UI-V2 semantic design tokens (`:root` block, lines 164-269 of `apps/prototype/src/app/globals.css`) into a new file `packages/config/tailwind/semantic-tokens.css`.
 
 **Why a separate file (not appending to `tokens.css`)**: Semantic tokens reference Briicks primitives via `var(--color-brand-700)` etc. Keeping them separate makes the dependency chain clear: `tokens.css` (primitives) → `semantic-tokens.css` (semantic layer). Apps import both in order.
 
 **File to create**: `packages/config/tailwind/semantic-tokens.css`
 
-**Content**: The full `:root { ... }` block from `sndq-ui-v2/src/app/globals.css` lines 159-269, containing:
+**Content**: The full `:root { ... }` block from `apps/prototype/src/app/globals.css` lines 159-269, containing:
 - Action tokens (8 vars)
 - Surface tokens (3 vars)
 - Text tokens (7 vars)
@@ -336,7 +339,7 @@ cat packages/config/package.json | jq '.exports'
 
 ### Commit 5: Create shared component CSS
 
-**What**: Extract all `.ui-*` component CSS classes (lines 546-975 of `sndq-ui-v2/src/app/globals.css`) into `packages/config/tailwind/components.css`.
+**What**: Extract all `.ui-*` component CSS classes (lines 546-975 of `apps/prototype/src/app/globals.css`) into `packages/config/tailwind/components.css`.
 
 **File to create**: `packages/config/tailwind/components.css`
 
@@ -381,7 +384,7 @@ cat packages/config/package.json | jq '.exports'
 
 ### Commit 6: Create shared animations CSS
 
-**What**: Extract all `@keyframes` and `--animate-*` declarations (lines 271-441 of `sndq-ui-v2/src/app/globals.css`) into `packages/config/tailwind/animations.css`.
+**What**: Extract all `@keyframes` and `--animate-*` declarations (lines 271-441 of `apps/prototype/src/app/globals.css`) into `packages/config/tailwind/animations.css`.
 
 **File to create**: `packages/config/tailwind/animations.css`
 
@@ -471,19 +474,19 @@ body { font-family: "Inter", sans-serif; font-size: 14px; }
 
 ```bash
 # Prototype must build
-NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-ui-v2 run build
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/prototype run build
 
 # sndq-fe must still build (unaffected by prototype changes)
 NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build
 
 # Lint both
-pnpm --filter sndq-ui-v2 run lint
+pnpm --filter @sndq/prototype run lint
 pnpm --filter sndq-fe run lint
 ```
 
 **Visual verification** (manual):
 
-1. Start the prototype dev server: `pnpm --filter sndq-ui-v2 run dev`
+1. Start the prototype dev server: `pnpm --filter @sndq/prototype run dev`
 2. Open component showcase pages — every component must look identical to baseline
 3. Check button variants, input states, menu surfaces, badge styles
 4. Compare against baseline screenshots
@@ -703,7 +706,7 @@ NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/docs run build
 
 # Existing apps still build
 NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build
-NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-ui-v2 run build
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/prototype run build
 ```
 
 **Commit message**: `chore: create apps/docs placeholder and wire @sndq/ui-v2 dependencies`
@@ -889,7 +892,7 @@ Record notes, issues, and deviations here as you go.
 
 | Date | Commit | Notes |
 |------|--------|-------|
-| | 1 | |
+| 2026-04-27 | 1 | Done. Renamed to `@sndq/prototype`. Pre-existing type error in `(showcase)/page.tsx` (missing default export) — not caused by move. No CI changes needed. |
 | | 2 | |
 | | 3 | |
 | | 4 | |
