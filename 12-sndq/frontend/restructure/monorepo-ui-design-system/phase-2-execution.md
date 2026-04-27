@@ -1,0 +1,901 @@
+# Phase 2 Execution — Prototype Integration + Deprecate Old Submodule
+
+Step-by-step execution guide for Phase 2. Each commit is independently verifiable and revertable.
+
+**Created**: 2026-04-27
+**Status**: Pending — 10 commits across 3 PRs
+**Architecture**: [README.md](./README.md)
+**Migration plan**: [migration-plan.md](./migration-plan.md)
+**Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md)
+**Phase 1b execution**: [phase-1b-execution.md](./phase-1b-execution.md)
+**Branch**: `feature/phase-2-prototype-integration`
+
+---
+
+## Table of Contents
+
+1. [Overview](#1-overview)
+2. [Before You Start](#2-before-you-start)
+3. [PR 1 — Move Prototype + Wire Workspace](#3-pr-1--move-prototype--wire-workspace)
+4. [PR 2 — CSS/Token Extraction](#4-pr-2--csstoken-extraction)
+5. [PR 3 — Scaffold Packages + Deprecation](#5-pr-3--scaffold-packages--deprecation)
+6. [Final Verification](#6-final-verification)
+7. [Team Communication](#7-team-communication)
+8. [What's Next](#8-whats-next)
+
+---
+
+## 1. Overview
+
+**Goal**: Bring `sndq-ui-v2` into the monorepo as `apps/prototype/`, extract all design tokens and component CSS into `@sndq/config/tailwind/`, scaffold `@sndq/ui-v2` and `apps/docs/` packages, and deprecate the old `@sndq/ui` submodule.
+
+**Structure**: 10 commits across 3 PRs.
+
+| PR | Scope | Risk level | Commits |
+|----|-------|------------|---------|
+| **PR 1** | Move prototype + shared configs | Low | 1-2 |
+| **PR 2** | CSS/token extraction (Briicks + semantic + components + animations) | Medium-High | 3-7 |
+| **PR 3** | Scaffold empty packages + deprecation rule | Low | 8-10 |
+
+**Why 3 PRs**: PR 1 validates the move and config wiring with a Vercel preview build. PR 2 is the riskiest — all CSS extraction happens here, and each commit can be reverted independently if a visual regression is found. PR 3 is pure additions and a single ESLint rule change.
+
+### Prerequisites
+
+- Phase 1a is merged to dev
+- `sndq-ui-v2` custom branch is rebased onto the restructured dev
+- `packages/config/tailwind/tokens.css` already exists (created in Phase 1a branch, contains Briicks primitives)
+
+---
+
+## 2. Before You Start
+
+### Capture baselines
+
+Run these from the monorepo root and save the output.
+
+```bash
+# sndq-fe baselines
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build 2>&1 | tee /tmp/phase2-fe-build-before.txt
+pnpm --filter sndq-fe run lint 2>&1 | tee /tmp/phase2-fe-lint-before.txt
+pnpm --filter sndq-fe run type-check 2>&1 | tee /tmp/phase2-fe-typecheck-before.txt
+
+# sndq-ui-v2 baselines (before move)
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-ui-v2 run build 2>&1 | tee /tmp/phase2-uiv2-build-before.txt
+pnpm --filter sndq-ui-v2 run lint 2>&1 | tee /tmp/phase2-uiv2-lint-before.txt
+```
+
+Also capture visual baselines: open both `sndq-fe` (port 3000) and `sndq-ui-v2` (port 3001) locally and screenshot key pages.
+
+### Create branch
+
+```bash
+git checkout dev
+git pull origin dev
+git checkout -b feature/phase-2-prototype-integration
+```
+
+---
+
+## 3. PR 1 — Move Prototype + Wire Workspace
+
+Move `sndq-ui-v2` into `apps/prototype/` and switch it to shared configs. Low risk — the app's internal imports use `@/*` relative paths that are unaffected by the directory move.
+
+---
+
+### Commit 1: Move `sndq-ui-v2` to `apps/prototype/`
+
+**What**: Relocate the prototype app into the `apps/` directory structure and update workspace configuration.
+
+**Commands**:
+
+```bash
+git mv sndq-ui-v2 apps/prototype
+```
+
+**Files to edit**:
+
+- `apps/prototype/package.json` — update `"name"` from `"sndq-ui-v2"` to `"sndq-ui-v2"` (keep the name for now, or rename to `"@sndq/prototype"` — decide before executing)
+- `pnpm-workspace.yaml` — remove the explicit `'sndq-ui-v2'` entry (now covered by `'apps/*'` glob)
+- `lerna.json` — verify `apps/*` already covers it (it does from Phase 1a)
+
+**Target `pnpm-workspace.yaml`**:
+
+```yaml
+packages:
+  - 'sndq-fe'
+  - 'apps/*'
+  - 'packages/*'
+onlyBuiltDependencies:
+  - '@percy/core'
+```
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| `git mv` loses history | LOW | Git tracks renames. Verify with `git log --follow apps/prototype/package.json` after the move. |
+| Workspace resolution breaks | MEDIUM | `pnpm install` after the move — verify the prototype package is recognized under `apps/*`. |
+| CI path filters break | LOW | Check if `.github/workflows/` has path-specific triggers for `sndq-ui-v2/`. If so, update them. |
+| Dev server port conflict | LOW | `apps/prototype/package.json` runs on port 3001, `sndq-fe` on 3000. No conflict. |
+
+**Verification**:
+
+```bash
+pnpm install
+
+# Verify workspace recognizes the moved package
+pnpm ls sndq-ui-v2
+
+# Build the moved prototype
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-ui-v2 run build
+
+# sndq-fe must still build (unaffected)
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build
+```
+
+**Commit message**: `chore: move sndq-ui-v2 to apps/prototype`
+
+**Status**:
+
+- [ ] `git mv` done
+- [ ] `pnpm-workspace.yaml` updated (removed explicit `sndq-ui-v2` entry)
+- [ ] `pnpm install` succeeds
+- [ ] Prototype build passes
+- [ ] sndq-fe build still passes
+- [ ] Committed
+
+---
+
+### Commit 2: Switch prototype to shared configs
+
+**What**: Wire `apps/prototype/` to use `@sndq/tsconfig`, `@sndq/config` (ESLint + Prettier) — same shared configs as `sndq-fe`.
+
+**Files to create**:
+
+- `apps/prototype/eslint.config.mjs` — imports `createEslintConfig` from `@sndq/config/eslint.mjs`
+
+**Files to edit**:
+
+- `apps/prototype/tsconfig.json` — extend `@sndq/tsconfig/nextjs.json` (keep local `paths`, `include`, `exclude`)
+- `apps/prototype/package.json` — add `"prettier": "@sndq/config/prettier.json"`, add `@sndq/config` and `@sndq/tsconfig` as `devDependencies`
+
+**Target `apps/prototype/tsconfig.json`**:
+
+```json
+{
+  "extends": "@sndq/tsconfig/nextjs.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+```
+
+**Target `apps/prototype/eslint.config.mjs`**:
+
+```js
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { createEslintConfig } from '@sndq/config/eslint.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+export default [
+  {
+    ignores: [
+      'node_modules/**',
+      '.next/**',
+      'out/**',
+      'build/**',
+      'next-env.d.ts',
+    ],
+  },
+  ...createEslintConfig(__dirname),
+];
+```
+
+**Target additions to `apps/prototype/package.json`**:
+
+```json
+{
+  "prettier": "@sndq/config/prettier.json",
+  "devDependencies": {
+    "@sndq/config": "workspace:*",
+    "@sndq/tsconfig": "workspace:*"
+  }
+}
+```
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| tsconfig `include`/`exclude` path resolution | MEDIUM | Same lesson from Phase 1a — `include` and `exclude` must be local. The shared `nextjs.json` only has `compilerOptions`. |
+| ESLint peer dependency resolution | MEDIUM | `@sndq/config` declares ESLint tools as `peerDependencies`. Prototype needs `eslint`, `eslint-config-next`, etc. in its own `devDependencies` (or rely on hoisting). Check `pnpm install` output for unmet peer warnings. |
+| Prototype currently has no `eslint.config.mjs` | LOW | It uses the old `lint` script (`eslint --quiet .`). Creating the flat config file is new — verify `pnpm lint` works. |
+| Prettier plugin resolution | LOW | `prettier-plugin-tailwindcss` must be findable. Prototype may need it in `devDependencies`. |
+
+**Verification**:
+
+```bash
+pnpm install
+
+# Type-check
+pnpm --filter sndq-ui-v2 run type-check 2>&1 || pnpm --filter sndq-ui-v2 exec tsc --noEmit
+
+# Lint
+pnpm --filter sndq-ui-v2 run lint
+
+# Build
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-ui-v2 run build
+```
+
+**Commit message**: `refactor: wire apps/prototype to shared tsconfig, eslint, and prettier`
+
+**Status**:
+
+- [ ] `tsconfig.json` updated
+- [ ] `eslint.config.mjs` created
+- [ ] `package.json` updated (prettier + devDependencies)
+- [ ] Type-check passes
+- [ ] Lint passes
+- [ ] Build passes
+- [ ] Committed
+
+---
+
+## 4. PR 2 — CSS/Token Extraction
+
+Extract all design tokens, component CSS, and animations from inline `globals.css` files into shared `@sndq/config/tailwind/` files. This is the highest-risk PR — each commit can be reverted independently.
+
+---
+
+### Commit 3: Extract Briicks primitives from `sndq-fe/globals.css`
+
+**What**: The Phase 1b Commit 2 work — replace the ~99-line Briicks token block in `sndq-fe/src/app/globals.css` with `@import '@sndq/config/tailwind/tokens.css'`.
+
+**File to change**: `sndq-fe/src/app/globals.css`
+
+See [phase-1b-execution.md Commit 2](./phase-1b-execution.md) for full details including:
+- Add `@import '@sndq/config/tailwind/tokens.css';` after `@import 'tailwindcss';`
+- Remove lines 52-54 (dead shadcn radius)
+- Remove lines 57-155 (Briicks tokens — now in `tokens.css`)
+- Keep line 55 `--radius-xl` (shadcn-only)
+
+**Risks**: See phase-1b-execution.md Commit 2 risk table.
+
+**Verification**:
+
+```bash
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build
+pnpm --filter sndq-fe run lint
+pnpm --filter sndq-fe run type-check
+# Visual check — open sndq-fe, compare against baseline screenshots
+```
+
+**Commit message**: `refactor: import briicks tokens from @sndq/config/tailwind in sndq-fe`
+
+**Status**:
+
+- [ ] `globals.css` updated
+- [ ] Build passes
+- [ ] Lint passes
+- [ ] Visual check — no regressions
+- [ ] Committed
+
+---
+
+### Commit 4: Add UI-V2 semantic tokens to shared config
+
+**What**: Extract the UI-V2 semantic design tokens (`:root` block, lines 164-269 of `sndq-ui-v2/src/app/globals.css`) into a new file `packages/config/tailwind/semantic-tokens.css`.
+
+**Why a separate file (not appending to `tokens.css`)**: Semantic tokens reference Briicks primitives via `var(--color-brand-700)` etc. Keeping them separate makes the dependency chain clear: `tokens.css` (primitives) → `semantic-tokens.css` (semantic layer). Apps import both in order.
+
+**File to create**: `packages/config/tailwind/semantic-tokens.css`
+
+**Content**: The full `:root { ... }` block from `sndq-ui-v2/src/app/globals.css` lines 159-269, containing:
+- Action tokens (8 vars)
+- Surface tokens (3 vars)
+- Text tokens (7 vars)
+- Border tokens (4 vars)
+- Status tokens: success (8), warning (8), error (8), info (6)
+- Typography tokens (11 sizes + 3 font families)
+- Control sizing (3 vars)
+- UI radius (6 vars)
+- Shadow (5 vars)
+
+**File to edit**: `packages/config/package.json` — add `"./tailwind/semantic-tokens.css": "./tailwind/semantic-tokens.css"` to exports
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| Semantic tokens reference Briicks primitives | MEDIUM | `var(--color-brand-700)` etc. must be defined before these tokens are read. CSS custom properties resolve at use-time (not parse-time), so import order in the CSS file doesn't strictly matter for `:root` vars — but verify with a build. |
+| `:root` vs `@theme inline` | LOW | These stay as `:root { }` — they are standard CSS custom properties, not Tailwind theme values. Tailwind's `@theme inline` is for values that generate utility classes. Semantic tokens are consumed via `var()` in component CSS, not as Tailwind utilities. |
+
+**Verification**:
+
+```bash
+# Pure addition — nothing imports this file yet
+cat packages/config/tailwind/semantic-tokens.css
+cat packages/config/package.json | jq '.exports'
+```
+
+**Commit message**: `chore: extract ui-v2 semantic design tokens to @sndq/config`
+
+**Status**:
+
+- [ ] `semantic-tokens.css` created
+- [ ] `package.json` exports updated
+- [ ] Committed
+
+---
+
+### Commit 5: Create shared component CSS
+
+**What**: Extract all `.ui-*` component CSS classes (lines 546-975 of `sndq-ui-v2/src/app/globals.css`) into `packages/config/tailwind/components.css`.
+
+**File to create**: `packages/config/tailwind/components.css`
+
+**Content**: The full `@layer components { ... }` block containing:
+- `.ui-control` (input/select/textarea base)
+- `.ui-input-wrap` (icon + trailing action variant)
+- `.ui-btn` + all size/variant modifiers (primary, secondary, ghost, outline, destructive, light, white, warning, black)
+- `.ui-menu` (dropdown/popover surface)
+- `.ui-item` + `.ui-item-destructive` (menu items)
+- `.ui-menu-label`, `.ui-separator`
+- `.ui-label`, `.ui-helper`, `.ui-error-msg`
+- `.ui-badge`
+- `.ui-card`
+- `.font-heading`
+
+**File to edit**: `packages/config/package.json` — add `"./tailwind/components.css": "./tailwind/components.css"` to exports
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| Component CSS references semantic tokens | MEDIUM | `.ui-btn` uses `var(--ui-action)`, `.ui-control` uses `var(--ui-border)`, etc. These must be defined (via `semantic-tokens.css`) before the component CSS is consumed. |
+| `@layer components` specificity | LOW | Component classes use `@layer components` which is lower than utilities. This is the correct behavior — Tailwind utilities in `className` can override component defaults. |
+
+**Verification**:
+
+```bash
+# Pure addition — nothing imports this file yet
+cat packages/config/tailwind/components.css | head -20
+cat packages/config/package.json | jq '.exports'
+```
+
+**Commit message**: `chore: extract ui-v2 component CSS to @sndq/config`
+
+**Status**:
+
+- [ ] `components.css` created
+- [ ] `package.json` exports updated
+- [ ] Committed
+
+---
+
+### Commit 6: Create shared animations CSS
+
+**What**: Extract all `@keyframes` and `--animate-*` declarations (lines 271-441 of `sndq-ui-v2/src/app/globals.css`) into `packages/config/tailwind/animations.css`.
+
+**File to create**: `packages/config/tailwind/animations.css`
+
+**Content**: The `@theme { }` block containing:
+- Type scale overrides (`--text-xs`, `--text-sm`, `--text-base`)
+- Button component tokens (`--button-secondary-neutral-*`)
+- Animation definitions (`--animate-collapsible-down`, `--animate-hide`, `--animate-slideDownAndFade`, `--animate-dialogOverlayShow`, `--animate-accordionOpen`, `--animate-drawerSlideIn`, etc.)
+- All corresponding `@keyframes` blocks (ui-hide, ui-slideDownAndFade, ui-slideUpAndFade, ui-slideLeftAndFade, ui-slideRightAndFade, ui-dialogOverlayShow, ui-dialogContentShow, ui-accordionOpen, ui-accordionClose, ui-drawerSlideIn, ui-drawerSlideOut, collapsible-down, collapsible-up, ai-progress)
+
+**File to edit**: `packages/config/package.json` — add `"./tailwind/animations.css": "./tailwind/animations.css"` to exports
+
+**Risk**: None — pure file addition.
+
+**Verification**:
+
+```bash
+cat packages/config/tailwind/animations.css | head -20
+cat packages/config/package.json | jq '.exports'
+```
+
+**Commit message**: `chore: extract ui-v2 animations and keyframes to @sndq/config`
+
+**Status**:
+
+- [ ] `animations.css` created
+- [ ] `package.json` exports updated
+- [ ] Committed
+
+---
+
+### Commit 7: Replace prototype `globals.css` with shared imports
+
+**What**: Replace the ~700 lines of inline tokens/components/animations in `apps/prototype/src/app/globals.css` with `@import` statements from `@sndq/config/tailwind/*`. Keep app-specific sections (shadcn `:root`/`.dark` vars, `@layer base`, `@layer utilities`).
+
+**File to edit**: `apps/prototype/src/app/globals.css`
+
+**Target structure (after)**:
+
+```css
+@import url('https://fonts.googleapis.com/css2?family=Inter:...');
+
+@import 'tailwindcss';
+@import '@sndq/config/tailwind/tokens.css';
+@import '@sndq/config/tailwind/semantic-tokens.css';
+@import '@sndq/config/tailwind/animations.css';
+@import '@sndq/config/tailwind/components.css';
+
+@plugin "tailwindcss-animate";
+@custom-variant dark (&:is(.dark *));
+
+html { font-size: 16px; }
+body { font-family: "Inter", sans-serif; font-size: 14px; }
+
+@theme inline {
+  /* shadcn theme mappings only (lines 18-56 minus dead radius) */
+  --color-background: var(--background);
+  /* ... */
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+.animate-ai-progress { animation: ai-progress 1.4s ease-in-out infinite alternate; }
+
+:root { /* shadcn vars */ }
+.dark { /* shadcn dark vars */ }
+
+@layer base { /* ... */ }
+@layer utilities { /* app-specific utilities */ }
+```
+
+**What's removed from prototype `globals.css`**:
+- Lines 58-156: Briicks primitives (→ `tokens.css`)
+- Lines 159-269: UI-V2 semantic tokens (→ `semantic-tokens.css`)
+- Lines 271-441: `@theme` animations/button tokens (→ `animations.css`)
+- Lines 546-975: `@layer components` (→ `components.css`)
+- Lines 52-54: Dead shadcn radius (same fix as sndq-fe)
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| Visual regression in prototype | HIGH | Every component in the prototype app must look identical. Open the app and compare against baseline screenshots. |
+| `@import` order matters | HIGH | `tokens.css` must come before `semantic-tokens.css` (semantic tokens reference primitives). `animations.css` and `components.css` can be in any order but both need semantic tokens loaded. |
+| CSS `@import` resolution through workspace symlinks | MEDIUM | `@import '@sndq/config/tailwind/...'` must resolve via pnpm's `node_modules` symlink. If PostCSS can't follow it, fall back to relative path: `@import '../../../packages/config/tailwind/...'` |
+| `@layer components` from imported file | MEDIUM | The `@layer components` block in `components.css` must merge correctly with Tailwind's layer system when imported. Verify with a build. |
+
+**Verification**:
+
+```bash
+# Prototype must build
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-ui-v2 run build
+
+# sndq-fe must still build (unaffected by prototype changes)
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build
+
+# Lint both
+pnpm --filter sndq-ui-v2 run lint
+pnpm --filter sndq-fe run lint
+```
+
+**Visual verification** (manual):
+
+1. Start the prototype dev server: `pnpm --filter sndq-ui-v2 run dev`
+2. Open component showcase pages — every component must look identical to baseline
+3. Check button variants, input states, menu surfaces, badge styles
+4. Compare against baseline screenshots
+
+**If it fails**:
+
+- **"Cannot resolve '@sndq/config/tailwind/...'"**: Check symlink:
+  ```bash
+  ls -la apps/prototype/node_modules/@sndq/config/tailwind/
+  ```
+  If broken, run `pnpm install`. Fallback: relative paths.
+
+- **Component styles are missing**: Check `@import` order. `components.css` must come after `semantic-tokens.css`.
+
+- **Animation classes don't work**: Verify `tailwindcss-animate` plugin is loaded and `@theme` block from `animations.css` is processed.
+
+**Commit message**: `refactor: replace inline tokens/components/animations with shared imports in prototype`
+
+**Status**:
+
+- [ ] `globals.css` refactored (imports replace inline CSS)
+- [ ] Prototype build passes
+- [ ] sndq-fe build still passes
+- [ ] Visual check — prototype looks identical
+- [ ] Committed
+
+---
+
+## 5. PR 3 — Scaffold Packages + Deprecation
+
+Pure additions and a single ESLint rule change. Low risk.
+
+---
+
+### Commit 8: Create `packages/ui-v2/` empty skeleton
+
+**What**: Create the `@sndq/ui-v2` package as an empty skeleton. Components will be graduated here from `apps/prototype/` during Phase 3.
+
+**Note**: `@sndq/tsconfig/library.json` was deferred from Phase 1a. It must be created now for `packages/ui-v2/` to extend.
+
+**Files to create**:
+
+- `packages/tsconfig/library.json` — TypeScript config for library packages (extends `base.json`, adds `declaration`, `declarationMap`)
+- `packages/ui-v2/package.json`
+- `packages/ui-v2/tsconfig.json`
+- `packages/ui-v2/src/components/index.ts` (empty barrel)
+- `packages/ui-v2/src/blocks/index.ts` (empty barrel)
+
+**Target `packages/tsconfig/library.json`**:
+
+```json
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
+    "noEmit": false,
+    "outDir": "dist"
+  }
+}
+```
+
+**Target `packages/ui-v2/package.json`**:
+
+```json
+{
+  "name": "@sndq/ui-v2",
+  "private": true,
+  "version": "0.1.0",
+  "sideEffects": false,
+  "exports": {
+    "./components": "./src/components/index.ts",
+    "./components/*": "./src/components/*.tsx",
+    "./blocks": "./src/blocks/index.ts",
+    "./blocks/*": "./src/blocks/*.tsx"
+  },
+  "dependencies": {
+    "@sndq/config": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}
+```
+
+**Target `packages/ui-v2/tsconfig.json`**:
+
+```json
+{
+  "extends": "@sndq/tsconfig/library.json",
+  "compilerOptions": {
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["src"]
+}
+```
+
+**Target barrel files** (empty):
+
+```typescript
+// packages/ui-v2/src/components/index.ts
+// Components will be added here as they graduate from apps/prototype/
+
+// packages/ui-v2/src/blocks/index.ts
+// Blocks will be added here as they graduate from apps/prototype/
+```
+
+**Also update**: `packages/tsconfig/package.json` — add `library.json` to the `files` array.
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| `library.json` config correctness | MEDIUM | The `declaration` and `outDir` settings are new. Verify by running `tsc --showConfig` from `packages/ui-v2/`. |
+| Empty barrel exports | LOW | Importing from `@sndq/ui-v2/components` when the barrel is empty will give an empty module. This is expected — components arrive in Phase 3. |
+
+**Verification**:
+
+```bash
+pnpm install
+
+# Verify workspace resolution
+pnpm ls @sndq/ui-v2
+
+# Check tsconfig resolves correctly
+cd packages/ui-v2 && npx tsc --showConfig
+cd ../..
+
+# Existing builds must still pass
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build
+```
+
+**Commit message**: `chore: create @sndq/ui-v2 package skeleton and @sndq/tsconfig/library.json`
+
+**Status**:
+
+- [ ] `packages/tsconfig/library.json` created
+- [ ] `packages/tsconfig/package.json` updated (files array)
+- [ ] `packages/ui-v2/` created with package.json, tsconfig.json, barrel exports
+- [ ] `pnpm install` succeeds
+- [ ] Committed
+
+---
+
+### Commit 9: Create `apps/docs/` placeholder + wire dependencies
+
+**What**: Create a minimal Next.js docs app and wire `@sndq/ui-v2` as a `workspace:*` dependency in all consuming apps.
+
+**Files to create**:
+
+- `apps/docs/package.json`
+- `apps/docs/tsconfig.json`
+- `apps/docs/next.config.ts`
+- `apps/docs/src/app/layout.tsx`
+- `apps/docs/src/app/page.tsx`
+
+**Target `apps/docs/package.json`**:
+
+```json
+{
+  "name": "@sndq/docs",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev -p 3002 --turbopack",
+    "build": "next build",
+    "start": "next start -p 3002",
+    "lint": "eslint --quiet .",
+    "type-check": "tsc --noEmit"
+  },
+  "prettier": "@sndq/config/prettier.json",
+  "dependencies": {
+    "@sndq/ui-v2": "workspace:*",
+    "next": "15.5.9",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@sndq/config": "workspace:*",
+    "@sndq/tsconfig": "workspace:*",
+    "@types/node": "^20",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.1",
+    "typescript": "^5"
+  }
+}
+```
+
+**Target `apps/docs/src/app/page.tsx`**:
+
+```tsx
+export default function DocsPage() {
+  return (
+    <main>
+      <h1>Component Docs</h1>
+      <p>Coming soon — components will appear here as they graduate from the prototype.</p>
+    </main>
+  );
+}
+```
+
+**Also wire `@sndq/ui-v2`** in:
+- `apps/prototype/package.json` — add `"@sndq/ui-v2": "workspace:*"` to dependencies
+- `sndq-fe/package.json` — add `"@sndq/ui-v2": "workspace:*"` to devDependencies
+
+**Risk**: Low — pure additions. The docs app is a placeholder.
+
+**Verification**:
+
+```bash
+pnpm install
+
+# Docs app builds
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/docs run build
+
+# Existing apps still build
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-ui-v2 run build
+```
+
+**Commit message**: `chore: create apps/docs placeholder and wire @sndq/ui-v2 dependencies`
+
+**Status**:
+
+- [ ] `apps/docs/` created
+- [ ] `@sndq/ui-v2` wired in all consuming apps
+- [ ] `pnpm install` succeeds
+- [ ] All apps build
+- [ ] Committed
+
+---
+
+### Commit 10: Deprecate old `@sndq/ui` submodule
+
+**What**: Add an ESLint `no-restricted-imports` rule to `sndq-fe/eslint.config.mjs` that warns when importing from the old `@sndq/ui` submodule. This prevents new debt accumulation.
+
+**File to edit**: `sndq-fe/eslint.config.mjs`
+
+**Current rule** (paths-based restriction for zodResolver):
+
+```js
+{
+  rules: {
+    'no-restricted-imports': [
+      'error',
+      {
+        paths: [
+          {
+            name: '@hookform/resolvers/zod',
+            importNames: ['zodResolver'],
+            message: 'Use { zodResolver } from "@/lib/form/zod-resolver"...',
+          },
+        ],
+      },
+    ],
+  },
+}
+```
+
+**Target** (merged `paths` + `patterns`):
+
+```js
+{
+  rules: {
+    'no-restricted-imports': [
+      'error',
+      {
+        paths: [
+          {
+            name: '@hookform/resolvers/zod',
+            importNames: ['zodResolver'],
+            message:
+              'Use { zodResolver } from "@/lib/form/zod-resolver" (or useZodForm for new forms) instead. Direct import bypasses the centralized wrapper and causes 168+ type errors.',
+          },
+        ],
+        patterns: [
+          {
+            group: ['@sndq/ui', '@sndq/ui/*'],
+            message:
+              'Deprecated: do not add new imports from @sndq/ui. Use @sndq/ui-v2 instead.',
+          },
+        ],
+      },
+    ],
+  },
+}
+```
+
+**Important**: ESLint flat config merges rule arrays by key. Since the existing `no-restricted-imports` and the new one are in the same config object, they must be merged into a single declaration. If they were in separate config objects, the later one would override the earlier one entirely.
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| Existing `@sndq/ui` imports trigger warnings | EXPECTED | There are existing imports from `@sndq/ui` across `sndq-fe`. These will now show warnings. This is intentional — it prevents new imports while not blocking the build (it's `error` level but using `patterns` which only matches new imports, not existing `paths`). |
+| Rule merge conflict | MEDIUM | The `paths` and `patterns` keys must coexist in the same object. Verify by running `pnpm lint` — the zodResolver restriction must still work AND new `@sndq/ui` imports must warn. |
+
+**Verification**:
+
+```bash
+# Lint must pass (existing @sndq/ui imports will warn but not error with patterns)
+pnpm --filter sndq-fe run lint
+
+# Verify zodResolver restriction still works
+# (create a test file with `import { zodResolver } from '@hookform/resolvers/zod'` — should error)
+```
+
+**Commit message**: `refactor: deprecate @sndq/ui imports with eslint no-restricted-imports`
+
+**Status**:
+
+- [ ] `eslint.config.mjs` updated (merged paths + patterns)
+- [ ] Lint passes
+- [ ] Existing zodResolver restriction still works
+- [ ] `@sndq/ui` imports produce warnings
+- [ ] Committed
+
+---
+
+## 6. Final Verification
+
+After all 10 commits, run the full suite from the monorepo root:
+
+```bash
+pnpm install
+NODE_OPTIONS='--max-old-space-size=8192' pnpm build
+pnpm lint
+pnpm type-check
+```
+
+Compare against baselines:
+
+```bash
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter sndq-fe run build 2>&1 | tee /tmp/phase2-fe-build-final.txt
+pnpm --filter sndq-fe run lint 2>&1 | tee /tmp/phase2-fe-lint-final.txt
+pnpm --filter sndq-fe run type-check 2>&1 | tee /tmp/phase2-fe-typecheck-final.txt
+
+diff /tmp/phase2-fe-build-before.txt /tmp/phase2-fe-build-final.txt
+diff /tmp/phase2-fe-lint-before.txt /tmp/phase2-fe-lint-final.txt
+diff /tmp/phase2-fe-typecheck-before.txt /tmp/phase2-fe-typecheck-final.txt
+```
+
+**Expected result**: Zero visual differences in both apps. sndq-fe lint output may show new `@sndq/ui` deprecation warnings (expected). Build and type-check output should be identical.
+
+**Final status**:
+
+- [ ] All 10 commits complete
+- [ ] sndq-fe builds, lints, type-checks from root
+- [ ] Prototype builds, lints from root
+- [ ] Docs app builds from root
+- [ ] Visual check — both apps look identical to baselines
+- [ ] All 3 PRs created and merged
+
+---
+
+## 7. Team Communication
+
+Send to the team before merging PR 2 (the riskiest one):
+
+> **Heads up: monorepo Phase 2 — prototype integration incoming**
+>
+> This restructures `sndq-ui-v2` into the monorepo and extracts shared design tokens.
+>
+> After pulling:
+>
+> 1. Run `pnpm install` (lock file changed significantly)
+> 2. Restart your TypeScript server (Cmd+Shift+P > "TypeScript: Restart TS Server")
+> 3. Restart ESLint (Cmd+Shift+P > "ESLint: Restart ESLint Server")
+>
+> **Key changes**:
+> - `sndq-ui-v2/` moved to `apps/prototype/`
+> - Shared design tokens extracted to `packages/config/tailwind/`
+> - New packages: `@sndq/ui-v2` (empty skeleton), `apps/docs/` (placeholder)
+> - **`@sndq/ui` imports now show deprecation warnings** — do not add new imports; use `@sndq/ui-v2` for new work
+>
+> Files that changed (expect merge conflicts if your branch touches these):
+> - `pnpm-workspace.yaml`
+> - `sndq-fe/src/app/globals.css`
+> - `sndq-fe/eslint.config.mjs`
+> - `sndq-fe/package.json`
+> - All files previously under `sndq-ui-v2/` (now under `apps/prototype/`)
+
+---
+
+## 8. What's Next
+
+After Phase 2 is merged to dev, proceed to **Phase 3: Standardize + Graduate to Package** — standardize prototype components in batches, graduate them to `packages/ui-v2/`, and deprecate their legacy counterparts. See [migration-plan.md section 6](./migration-plan.md#6-phase-3-standardize--graduate-to-package).
+
+### Lessons to carry forward (from Phase 1a + 1b)
+
+- **`include`/`exclude` in shared tsconfigs are dead code.** TypeScript resolves inherited `include`/`exclude` relative to the config that defines them, not the consumer. Every app must define its own locally.
+- **`.mjs` exports need `.d.mts` type declarations.** Any shared package exporting `.mjs` files must ship a paired `.d.mts` and use conditional `exports` with `"types"` in `package.json`.
+- **Shared config packages use `peerDependencies`, not `devDependencies`.** `@sndq/config` declares ESLint/Prettier tools as `peerDependencies` with relaxed semver ranges. Each consumer app owns the exact pinned versions.
+- **CSS `@import` order matters for token dependencies.** `tokens.css` (primitives) must load before `semantic-tokens.css` (references primitives), which must load before `components.css` (references semantic tokens).
+
+---
+
+## Execution Log
+
+Record notes, issues, and deviations here as you go.
+
+| Date | Commit | Notes |
+|------|--------|-------|
+| | 1 | |
+| | 2 | |
+| | 3 | |
+| | 4 | |
+| | 5 | |
+| | 6 | |
+| | 7 | |
+| | 8 | |
+| | 9 | |
+| | 10 | |

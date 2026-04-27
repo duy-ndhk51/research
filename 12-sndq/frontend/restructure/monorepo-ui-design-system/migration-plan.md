@@ -8,6 +8,7 @@ Gradual, five-phase migration from legacy component libraries (`briicks/`, `ui/`
 **Ticket**: [ticket-migration.md](./ticket-migration.md)
 **Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md) — step-by-step commits, risk checklists, verification commands
 **Phase 1b execution**: [phase-1b-execution.md](./phase-1b-execution.md) — Briicks token extraction (folded into Phase 2)
+**Phase 2 execution**: [phase-2-execution.md](./phase-2-execution.md) — prototype integration, token/CSS extraction, package scaffolding, deprecation
 
 ---
 
