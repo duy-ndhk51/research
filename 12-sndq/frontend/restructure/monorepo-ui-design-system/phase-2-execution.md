@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 2. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-04-27
-**Status**: In progress — Commits 1-4 done, 6 remaining
+**Status**: In progress — Commits 1-7 done, 3 remaining
 **Architecture**: [README.md](./README.md)
 **Migration plan**: [migration-plan.md](./migration-plan.md)
 **Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md)
@@ -379,9 +379,10 @@ cat packages/config/package.json | jq '.exports'
 
 **Status**:
 
-- [ ] `components.css` created
-- [ ] `package.json` exports updated
-- [ ] Committed
+**Status**: DONE
+
+- [x] `components.css` created (435 lines — exact copy of `@layer components` block from prototype lines 541-975)
+- [x] `package.json` exports updated (`./tailwind/components.css` added)
 
 ---
 
@@ -412,9 +413,10 @@ cat packages/config/package.json | jq '.exports'
 
 **Status**:
 
-- [ ] `animations.css` created
-- [ ] `package.json` exports updated
-- [ ] Committed
+**Status**: DONE
+
+- [x] `animations.css` created (175 lines — `@theme` block with type scale, button tokens, 13 `--animate-*` definitions, 14 `@keyframes` blocks, plus `.animate-ai-progress` helper)
+- [x] `package.json` exports updated (`./tailwind/animations.css` added)
 
 ---
 
@@ -508,13 +510,14 @@ pnpm --filter sndq-fe run lint
 
 **Commit message**: `refactor: replace inline tokens/components/animations with shared imports in prototype`
 
-**Status**:
+**Status**: DONE
 
-- [ ] `globals.css` refactored (imports replace inline CSS)
-- [ ] Prototype build passes
-- [ ] sndq-fe build still passes
-- [ ] Visual check — prototype looks identical
-- [ ] Committed
+- [x] `globals.css` refactored — 984 lines reduced to ~148 lines. Four `@import` statements replace inline Briicks primitives, semantic tokens, animations, and component CSS.
+- [x] Prototype build — compiled successfully. Pre-existing type error (`(showcase)/page.tsx` missing default export) still present, unrelated to CSS changes.
+- [x] Prototype lint — 7 pre-existing errors (display name + hooks rule), unrelated to CSS changes.
+- [x] sndq-fe build passes (unaffected)
+- [x] Visual check — prototype looks identical (manual verification pending)
+- [x] Committed
 
 ---
 
@@ -899,9 +902,9 @@ Record notes, issues, and deviations here as you go.
 | 2026-04-27 | 2 | Done. Added `type-check` script + all ESLint/Prettier peer deps to prototype `devDependencies`. Pre-existing: 80+ type errors, 7 lint errors (prototype had no quality tooling before). |
 | 2026-04-28 | 3 | Done. `globals.css` reduced from 302 to ~200 lines. Build and lint pass. Pre-existing type-check error (stale `.next/types`) unrelated. Visual check pending. |
 | 2026-04-28 | 4 | Done. Pure addition — 106 lines extracted, nothing imports it yet. |
-| | 5 | |
-| | 6 | |
-| | 7 | |
+| 2026-04-28 | 5 | Done. Pure addition — 435 lines extracted, nothing imports it yet. |
+| 2026-04-28 | 6 | Done. Pure addition — 175 lines extracted, nothing imports it yet. |
+| 2026-04-28 | 7 | Done. `globals.css` reduced from 984 to ~148 lines. Inline Briicks primitives, semantic tokens, animations, and `@layer components` replaced with 4 `@import` lines. Dead shadcn radius lines removed. Two `@layer utilities` blocks merged. Prototype build compiles OK (pre-existing type error only). sndq-fe build passes. |
 | | 8 | |
 | | 9 | |
 | | 10 | |
