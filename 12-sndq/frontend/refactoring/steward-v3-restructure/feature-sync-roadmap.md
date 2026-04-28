@@ -33,6 +33,7 @@ These steward differences must be respected when porting any syndic feature:
 | 5 | Description section upgrade | 2 | Not started | |
 | 6 | Partial edit mode | 2 | Not started | |
 | 7 | AI document extraction | 3 | Not started | |
+| 7.5 | Zod v4 steward schema migration | 3 | Not started | After AI extraction, before inline lines — 4 syntax substitutions |
 | 8 | Inline invoice lines table | 3 | Not started | Largest effort — adapt for cost categories + settlement |
 | 9 | Line bulk selection + bulk actions | 3 | Not started | Depends on #8 |
 | 10 | Amount mode toggle (single total vs line-by-line) | 4 | Not started | Depends on #8 |
@@ -151,6 +152,25 @@ Wrap the steward form with `AiExtractionProvider`, add `AiExtractionBanner` and 
 
 **Risk**: High integration surface. Consider a phased approach: (a) file upload + Peppol prefill first (already working), (b) add AI field confidence indicators, (c) add full extraction with amount mapping.
 
+**Pre-work completed**: `useAiExtraction` made generic via `AiExtractableInvoiceFields` interface — steward form no longer needs `as never` casts. `transformExtractedDataToFormData` returns `Partial<AiExtractableInvoiceFields>` instead of `Partial<PurchaseInvoiceFormV2Data>`. Unit tests added for the transform function.
+
+### 7.5. Zod v4 steward schema migration
+
+Migrate `purchase-invoice-v2-steward/schema.ts` from Zod v3 to v4 syntax. Placed after AI extraction (#7) and before inline invoice lines (#8) so all new Batch 5+ code is written in v4 from the start.
+
+**Prerequisite**: Project-wide Zod v4 setup (package version, resolver, hooks) and upstream syndic schema (`purchase-invoice-v2/schema.ts`) already migrated.
+
+**Files involved**:
+- `purchase-invoice-v2-steward/schema.ts` — 4 syntax substitutions
+
+**Changes**:
+- `z.string().uuid({ message })` → `{ error }` (senderId)
+- `z.string({ required_error })` → `{ error }` (dueDate)
+- `.date('message')` → `.date({ error })` (dueDate)
+- `z.nativeEnum(PaymentMessageTypeEnum)` → `z.enum(PAYMENT_MESSAGE_TYPE_LIST)` (remittanceType)
+
+**Risk**: Low. Pure syntax migration, no behavioral change. All `superRefine`/`addIssue` calls are unchanged (v4-compatible).
+
 ### 8. Inline invoice lines table
 
 Replace the current `PurchaseInvoiceAmountsSectionV2Steward` with an adapted version of `InvoiceLinesTableV3`. This is the largest feature port.
@@ -250,6 +270,7 @@ Tier 2 (independent of each other, but after Tier 1 for stability)
 
 Tier 3
   7. AI extraction (independent)
+  7.5. Zod v4 steward schema → after #7, before #8
   8. Inline invoice lines (independent, largest effort)
   9. Bulk selection → depends on #8
 

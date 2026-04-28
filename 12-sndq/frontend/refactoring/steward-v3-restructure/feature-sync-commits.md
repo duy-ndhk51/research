@@ -309,7 +309,7 @@ Combined 4A + 4B into a single commit since the steward schema (`PurchaseInvoice
 - `purchase-invoice-v3-steward/sections/FormBody.tsx` — add `AiExtractionOverlay` with `relative` positioning
 
 **Changes**:
-- Called `useAiExtraction` in `useStewardForm` with type-cast `setValue`/`getValues` (safe — all extraction fields exist in both schemas). `onExtractionComplete` switches right panel to `'uploader'`
+- Called `useAiExtraction` in `useStewardForm` — previously used `as never` casts on `setValue`/`getValues`, now properly typed via `AiExtractableInvoiceFields` generic (see pre-work below). `onExtractionComplete` switches right panel to `'uploader'`
 - Added `handleFileUploaded` callback (`setValue('file', file)` + `aiExtraction.resetExtraction()`) — replaces the inline `setValue` in the right panel
 - Wrapped form content with `AiExtractionProvider` inside `FormProvider`, passing confidence, review, and VAT data from `form.aiExtraction`
 - Added `AiExtractionBanner` between `FormHeader` and `ResizablePanelGroup`
@@ -348,6 +348,83 @@ Combined 4A + 4B into a single commit since the steward schema (`PurchaseInvoice
 - [x] Submit extracted form (after setting cost categories) — API payload correct
 - [x] Submit Peppol-prefilled form — API payload matches previous behavior
 - [x] `pnpm test` — all 1262 tests pass (49 files), no regressions
+
+**Pre-work (already done)**:
+- Extracted `AiExtractableInvoiceFields` interface in `useAiExtraction.ts` — the 10 fields AI extraction reads/writes
+- Made `useAiExtraction` generic over `T extends AiExtractableInvoiceFields`
+- Updated `transformExtractedDataToFormData` to return `Partial<AiExtractableInvoiceFields>` instead of `Partial<PurchaseInvoiceFormV2Data>`
+- Removed `as never` casts in `useStewardForm.ts` — TypeScript now verifies structural compatibility
+- Added unit tests for `transformExtractedDataToFormData` (16 tests, 9 groups)
+
+---
+
+### Commit 4C · Full Zod v4 schema migration (syndic + steward)
+
+**Roadmap**: N/A (infrastructure) · **Risk**: Medium
+
+**What**: Full migration of both syndic and steward purchase invoice schemas from Zod v3 to v4. Both schemas must migrate together because the steward schema imports `amountWithDistributionSchema` from the syndic schema, and Zod v3/v4 runtimes have incompatible internal structures (`_def`/`_parse` vs `_zod`/`run`).
+
+**Files changed**:
+- `purchase-invoice-v2/schema.ts` — switch to `zod/v4`, 6 syntax substitutions
+- `purchase-invoice-v2-steward/schema.ts` — switch to `zod/v4`, 3 syntax substitutions
+- `src/lib/form/zod-resolver.ts` — structural `ZodLike` interface (accepts both v3 and v4)
+- `__tests__/helpers/schemaTestFactory.ts` — `SafeParsable.path` updated to `PropertyKey[]` (v4 compat)
+- `purchase-invoice-v2-steward/__tests__/schemaFixtures.ts` — switch to `zod/v4`, add `peppolData`
+- All snapshot files regenerated (steward, syndic v2, syndic v3)
+
+**Syndic schema changes** (`purchase-invoice-v2/schema.ts`):
+
+| Location | v3 (before) | v4 (after) |
+|----------|------------|------------|
+| import | `import { z } from 'zod'` | `import { z } from 'zod/v4'` |
+| `unitSchema.splitClearing` | `z.nativeEnum(AllocationSplitClearing)` | `z.enum(AllocationSplitClearing)` |
+| `senderId` | `.uuid({ message: '...' })` | `.uuid({ error: '...' })` |
+| `dueDate` | `z.string({ required_error: '...' })` | `z.string({ error: '...' })` |
+| `dueDate` | `.date('...')` | `.date({ error: '...' })` |
+| `remittanceType` | `z.nativeEnum(PaymentMessageTypeEnum)` | `z.enum(PaymentMessageTypeEnum)` |
+
+**Steward schema changes** (`purchase-invoice-v2-steward/schema.ts`):
+
+| Location | v3 (before) | v4 (after) |
+|----------|------------|------------|
+| import | `import { z } from 'zod'` | `import { z } from 'zod/v4'` |
+| `senderId` | `.uuid({ message: '...' })` | `.uuid({ error: '...' })` |
+| `dueDate` | `z.string({ required_error: '...' })` | `z.string({ error: '...' })` |
+| `dueDate` | `.date('...')` | `.date({ error: '...' })` |
+
+Note: `remittanceType` already used `z.enum(PAYMENT_MESSAGE_TYPE_LIST)` from previous partial migration.
+
+**zodResolver changes** (`src/lib/form/zod-resolver.ts`):
+- Removed `import type { z } from 'zod'` dependency
+- Added structural `ZodLike<T>` interface with `readonly _output: T` (phantom type present on both v3 and v4 `ZodType`)
+- Function signature: `<T extends z.ZodTypeAny>` → `<T extends ZodLike>`, return `Resolver<T['_output']>`
+- Accepts both v3 schemas (other forms not yet migrated) and v4 schemas
+
+**Test infrastructure changes**:
+- `schemaTestFactory.ts`: `SafeParsable.path` updated from `Array<string | number>` to `PropertyKey[]` (v4 uses `PropertyKey[]` which includes `symbol`)
+- `schemaFixtures.ts`: added `peppolData: undefined` to `validStewardInvoiceData` — v4 makes `z.any()` fields required in `z.input<>` (no longer optional)
+
+**Snapshot changes** (expected v4 behavioral differences):
+- Error code `invalid_type` → `invalid_value` for enum fields (v4 merged enum issue types)
+- Error code `invalid_string` → `invalid_format` for UUID format validation
+- `file`, `payments`, `peppolData` now appear as `undefined` in minimal parse output (v4 surfaces `.optional().transform()` fields)
+- Steward snapshots: freshly generated (no prior baseline to diff)
+
+**Test checklist** (see [zod-v4-migration-manual-tests.md](./zod-v4-migration-manual-tests.md) for manual test scripts):
+
+*Automated:*
+- [x] `pnpm test purchase-invoice-v2-steward` — 50 files, 1278 tests pass
+- [x] `pnpm test purchase-invoice-v2/__tests__/schema.snapshot` — 10 syndic snapshot tests pass
+- [x] `pnpm test purchase-invoice-v3/__tests__/schema.snapshot` — 4 v3 snapshot tests pass
+- [x] `pnpm test transformExtractedDataToFormData` — 16 AI extraction tests pass
+- [x] `pnpm run type-check` — zero new type errors (only pre-existing `.next/types/` errors)
+
+*Manual (see companion doc):*
+- [ ] Create steward invoice — fill all fields, submit, verify API payload
+- [ ] Edit existing steward invoice — verify data hydration
+- [ ] Trigger validation errors — verify error messages display correctly
+- [ ] Create syndic invoice — verify no regression from shared schema migration
+- [ ] Payment method matrix — pay_now, pay_later, already_paid all work
 
 ---
 
