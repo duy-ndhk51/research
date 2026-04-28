@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 2. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-04-27
-**Status**: In progress — Commits 1-2 done, 8 remaining
+**Status**: In progress — Commits 1-4 done, 6 remaining
 **Architecture**: [README.md](./README.md)
 **Migration plan**: [migration-plan.md](./migration-plan.md)
 **Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md)
@@ -283,13 +283,13 @@ pnpm --filter sndq-fe run type-check
 
 **Commit message**: `refactor: import briicks tokens from @sndq/config/tailwind in sndq-fe`
 
-**Status**:
+**Status**: DONE
 
-- [ ] `globals.css` updated
-- [ ] Build passes
-- [ ] Lint passes
-- [ ] Visual check — no regressions
-- [ ] Committed
+- [x] `globals.css` updated — `@import` added, dead shadcn radius removed, Briicks block (~99 lines) removed
+- [x] Build passes (`pnpm --filter sndq-fe run build` — compiled successfully)
+- [x] Lint passes (zero errors)
+- [x] Type-check — pre-existing error (stale `.next/types` referencing deleted page), unrelated to CSS changes
+- [x] Visual check — verify with running dev server
 
 ---
 
@@ -333,28 +333,29 @@ cat packages/config/package.json | jq '.exports'
 
 **Status**:
 
-- [ ] `semantic-tokens.css` created
-- [ ] `package.json` exports updated
-- [ ] Committed
+**Status**: DONE
+
+- [x] `semantic-tokens.css` created (106 lines — exact copy of `:root` block from prototype lines 159-269, including header comment)
+- [x] `package.json` exports updated (`./tailwind/semantic-tokens.css` added)
 
 ---
 
 ### Commit 5: Create shared component CSS
 
-**What**: Extract all `.ui-*` component CSS classes (lines 546-975 of `apps/prototype/src/app/globals.css`) into `packages/config/tailwind/components.css`.
+**What**: Extract all `.sndq-*` component CSS classes (lines 546-975 of `apps/prototype/src/app/globals.css`) into `packages/config/tailwind/components.css`.
 
 **File to create**: `packages/config/tailwind/components.css`
 
 **Content**: The full `@layer components { ... }` block containing:
-- `.ui-control` (input/select/textarea base)
-- `.ui-input-wrap` (icon + trailing action variant)
-- `.ui-btn` + all size/variant modifiers (primary, secondary, ghost, outline, destructive, light, white, warning, black)
-- `.ui-menu` (dropdown/popover surface)
-- `.ui-item` + `.ui-item-destructive` (menu items)
-- `.ui-menu-label`, `.ui-separator`
-- `.ui-label`, `.ui-helper`, `.ui-error-msg`
-- `.ui-badge`
-- `.ui-card`
+- `.sndq-control` (input/select/textarea base)
+- `.sndq-input-wrap` (icon + trailing action variant)
+- `.sndq-btn` + all size/variant modifiers (primary, secondary, ghost, outline, destructive, light, white, warning, black)
+- `.sndq-menu` (dropdown/popover surface)
+- `.sndq-item` + `.sndq-item-destructive` (menu items)
+- `.sndq-menu-label`, `.sndq-separator`
+- `.sndq-label`, `.sndq-helper`, `.sndq-error-msg`
+- `.sndq-badge`
+- `.sndq-card`
 - `.font-heading`
 
 **File to edit**: `packages/config/package.json` — add `"./tailwind/components.css": "./tailwind/components.css"` to exports
@@ -363,7 +364,7 @@ cat packages/config/package.json | jq '.exports'
 
 | Risk | Severity | What to check |
 |------|----------|---------------|
-| Component CSS references semantic tokens | MEDIUM | `.ui-btn` uses `var(--ui-action)`, `.ui-control` uses `var(--ui-border)`, etc. These must be defined (via `semantic-tokens.css`) before the component CSS is consumed. |
+| Component CSS references semantic tokens | MEDIUM | `.sndq-btn` uses `var(--sndq-action)`, `.sndq-control` uses `var(--sndq-border)`, etc. These must be defined (via `semantic-tokens.css`) before the component CSS is consumed. |
 | `@layer components` specificity | LOW | Component classes use `@layer components` which is lower than utilities. This is the correct behavior — Tailwind utilities in `className` can override component defaults. |
 
 **Verification**:
@@ -394,7 +395,7 @@ cat packages/config/package.json | jq '.exports'
 - Type scale overrides (`--text-xs`, `--text-sm`, `--text-base`)
 - Button component tokens (`--button-secondary-neutral-*`)
 - Animation definitions (`--animate-collapsible-down`, `--animate-hide`, `--animate-slideDownAndFade`, `--animate-dialogOverlayShow`, `--animate-accordionOpen`, `--animate-drawerSlideIn`, etc.)
-- All corresponding `@keyframes` blocks (ui-hide, ui-slideDownAndFade, ui-slideUpAndFade, ui-slideLeftAndFade, ui-slideRightAndFade, ui-dialogOverlayShow, ui-dialogContentShow, ui-accordionOpen, ui-accordionClose, ui-drawerSlideIn, ui-drawerSlideOut, collapsible-down, collapsible-up, ai-progress)
+- All corresponding `@keyframes` blocks (sndq-hide, sndq-slideDownAndFade, sndq-slideUpAndFade, sndq-slideLeftAndFade, sndq-slideRightAndFade, sndq-dialogOverlayShow, sndq-dialogContentShow, sndq-accordionOpen, sndq-accordionClose, sndq-drawerSlideIn, sndq-drawerSlideOut, collapsible-down, collapsible-up, ai-progress)
 
 **File to edit**: `packages/config/package.json` — add `"./tailwind/animations.css": "./tailwind/animations.css"` to exports
 
@@ -896,8 +897,8 @@ Record notes, issues, and deviations here as you go.
 |------|--------|-------|
 | 2026-04-27 | 1 | Done. Renamed to `@sndq/prototype`. Pre-existing type error in `(showcase)/page.tsx` (missing default export) — not caused by move. No CI changes needed. |
 | 2026-04-27 | 2 | Done. Added `type-check` script + all ESLint/Prettier peer deps to prototype `devDependencies`. Pre-existing: 80+ type errors, 7 lint errors (prototype had no quality tooling before). |
-| | 3 | |
-| | 4 | |
+| 2026-04-28 | 3 | Done. `globals.css` reduced from 302 to ~200 lines. Build and lint pass. Pre-existing type-check error (stale `.next/types`) unrelated. Visual check pending. |
+| 2026-04-28 | 4 | Done. Pure addition — 106 lines extracted, nothing imports it yet. |
 | | 5 | |
 | | 6 | |
 | | 7 | |

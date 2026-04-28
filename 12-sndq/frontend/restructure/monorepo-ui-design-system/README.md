@@ -281,7 +281,7 @@ Single source of truth for the Briicks design system. Contains:
 - **Type scale**: `--font-size-xs` through `--font-size-3xl`, weights, line-heights
 - **Spacing scale**: `--spacing-1` through `--spacing-12` (4px base)
 - **Radius**: `--radius-sm`, `--radius-md`, `--radius-lg`, `--radius-full`
-- **UI-V2 semantic tokens**: `--ui-action`, `--ui-surface`, `--ui-text`, `--ui-border`, `--ui-success`, `--ui-warning`, `--ui-error`, `--ui-info`, typography, control sizing
+- **UI-V2 semantic tokens**: `--sndq-action`, `--sndq-surface`, `--sndq-text`, `--sndq-border`, `--sndq-success`, `--sndq-warning`, `--sndq-error`, `--sndq-info`, typography, control sizing
 
 Source: extracted from `apps/prototype/src/app/globals.css` lines 17-253.
 
@@ -289,16 +289,16 @@ Source: extracted from `apps/prototype/src/app/globals.css` lines 17-253.
 
 UI-V2 component base CSS classes used by `@sndq/ui-v2` components:
 
-- `.ui-control` — shared base for input/select/textarea
-- `.ui-input-wrap` — icon + trailing action variant
-- `.ui-btn` + variants (`.ui-btn-primary`, `.ui-btn-secondary`, `.ui-btn-ghost`, `.ui-btn-outline`, `.ui-btn-destructive`, `.ui-btn-light`)
-- `.ui-btn-sm`, `.ui-btn-lg`, `.ui-btn-icon` — size variants
-- `.ui-menu` — dropdown/popover surface
-- `.ui-item` — menu item
-- `.ui-menu-label`, `.ui-separator` — menu section elements
-- `.ui-label`, `.ui-helper`, `.ui-error-msg` — form text
-- `.ui-badge` — badge base
-- `.ui-card` — card/panel surface
+- `.sndq-control` — shared base for input/select/textarea
+- `.sndq-input-wrap` — icon + trailing action variant
+- `.sndq-btn` + variants (`.sndq-btn-primary`, `.sndq-btn-secondary`, `.sndq-btn-ghost`, `.sndq-btn-outline`, `.sndq-btn-destructive`, `.sndq-btn-light`)
+- `.sndq-btn-sm`, `.sndq-btn-lg`, `.sndq-btn-icon` — size variants
+- `.sndq-menu` — dropdown/popover surface
+- `.sndq-item` — menu item
+- `.sndq-menu-label`, `.sndq-separator` — menu section elements
+- `.sndq-label`, `.sndq-helper`, `.sndq-error-msg` — form text
+- `.sndq-badge` — badge base
+- `.sndq-card` — card/panel surface
 - `.font-heading` — typography helper
 
 Source: extracted from `apps/prototype/src/app/globals.css` lines 464-743.

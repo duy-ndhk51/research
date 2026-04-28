@@ -191,8 +191,8 @@ pnpm type-check  # tsc --noEmit passes with shared tsconfig
 
 ### What's NOT in this phase
 
-- No UI-V2 semantic tokens (`--ui-action`, `--ui-surface`, etc.) — those only exist in `sndq-ui-v2`
-- No component CSS classes (`.ui-btn`, `.ui-control`, etc.)
+- No UI-V2 semantic tokens (`--sndq-action`, `--sndq-surface`, etc.) — those only exist in `sndq-ui-v2`
+- No component CSS classes (`.sndq-btn`, `.sndq-control`, etc.)
 - No animations
 
 ### Verification
@@ -219,27 +219,27 @@ pnpm type-check  # tsc --noEmit passes with shared tsconfig
    - Update `sndq-fe/src/app/globals.css`: add `@import '@sndq/config/tailwind/tokens.css';`, remove the duplicated Briicks color/type/spacing/radius block (~100 lines), remove dead shadcn radius lines (52-54)
    - See [phase-1b-execution.md](./phase-1b-execution.md) Commit 2 for full details and risks
 4. Add UI-V2 semantic tokens to `packages/config/tailwind/tokens.css`:
-   - Action tokens (`--ui-action`, `--ui-action-hover`, `--ui-action-fg`, etc.)
-   - Surface tokens (`--ui-surface`, `--ui-surface-subtle`, `--ui-surface-muted`)
-   - Text tokens (`--ui-text`, `--ui-text-secondary`, `--ui-text-tertiary`, etc.)
-   - Border tokens (`--ui-border`, `--ui-border-strong`, `--ui-border-focus`, `--ui-ring`)
+   - Action tokens (`--sndq-action`, `--sndq-action-hover`, `--sndq-action-fg`, etc.)
+   - Surface tokens (`--sndq-surface`, `--sndq-surface-subtle`, `--sndq-surface-muted`)
+   - Text tokens (`--sndq-text`, `--sndq-text-secondary`, `--sndq-text-tertiary`, etc.)
+   - Border tokens (`--sndq-border`, `--sndq-border-strong`, `--sndq-border-focus`, `--sndq-ring`)
    - Status tokens (success, warning, error, info groups)
-   - Typography tokens (`--ui-text-xs` through `--ui-text-7xl`, font families)
-   - Control sizing (`--ui-h-sm`, `--ui-h`, `--ui-h-lg`)
-   - Radius (`--ui-r-xs` through `--ui-r-full`)
-   - Shadow (`--ui-shadow-xs`, `--ui-shadow-sm`, `--ui-shadow-md`, insets)
+   - Typography tokens (`--sndq-text-xs` through `--sndq-text-7xl`, font families)
+   - Control sizing (`--sndq-h-sm`, `--sndq-h`, `--sndq-h-lg`)
+   - Radius (`--sndq-r-xs` through `--sndq-r-full`)
+   - Shadow (`--sndq-shadow-xs`, `--sndq-shadow-sm`, `--sndq-shadow-md`, insets)
    - Source: `apps/prototype/src/app/globals.css` lines 164-269
 5. Create `packages/config/tailwind/components.css` with UI-V2 component CSS:
-   - `.ui-control`, `.ui-input-wrap`, `.ui-btn` + all variants/sizes
-   - `.ui-menu`, `.ui-item`, `.ui-menu-label`, `.ui-separator`
-   - `.ui-label`, `.ui-helper`, `.ui-error-msg`
-   - `.ui-badge`, `.ui-card`, `.font-heading`
+   - `.sndq-control`, `.sndq-input-wrap`, `.sndq-btn` + all variants/sizes
+   - `.sndq-menu`, `.sndq-item`, `.sndq-menu-label`, `.sndq-separator`
+   - `.sndq-label`, `.sndq-helper`, `.sndq-error-msg`
+   - `.sndq-badge`, `.sndq-card`, `.font-heading`
    - Source: `apps/prototype/src/app/globals.css` lines 546-975
 6. Create `packages/config/tailwind/animations.css` with shared keyframes:
-   - `ui-hide`, `ui-slideDownAndFade`, `ui-slideUpAndFade`, `ui-slideLeftAndFade`, `ui-slideRightAndFade`
-   - `ui-dialogOverlayShow`, `ui-dialogContentShow`
-   - `ui-accordionOpen`, `ui-accordionClose`
-   - `ui-drawerSlideIn`, `ui-drawerSlideOut`
+   - `sndq-hide`, `sndq-slideDownAndFade`, `sndq-slideUpAndFade`, `sndq-slideLeftAndFade`, `sndq-slideRightAndFade`
+   - `sndq-dialogOverlayShow`, `sndq-dialogContentShow`
+   - `sndq-accordionOpen`, `sndq-accordionClose`
+   - `sndq-drawerSlideIn`, `sndq-drawerSlideOut`
    - `collapsible-down`, `collapsible-up`, `ai-progress`
    - Source: `apps/prototype/src/app/globals.css` lines 271-441
 7. Update `packages/config/package.json` exports to include all three tailwind files
@@ -512,7 +512,7 @@ The briicks and ui-v2 component APIs are **not drop-in compatible**. Direct migr
 | Sizes | `default`, `sm`, `lg`, `icon` | `sm`, `md`, `lg`, `icon` | `default` → `md` |
 | `tooltip` prop | Supported (wraps in Tooltip) | Not supported | Wrap with standalone `<Tooltip>` |
 | `loading` prop | Not supported | Supported (`loading`, `loadingText`) | New capability, no migration needed |
-| CSS system | CVA + Tailwind utilities | `.ui-btn` + semantic tokens | Automatic via component swap |
+| CSS system | CVA + Tailwind utilities | `.sndq-btn` + semantic tokens | Automatic via component swap |
 
 ### Input
 
