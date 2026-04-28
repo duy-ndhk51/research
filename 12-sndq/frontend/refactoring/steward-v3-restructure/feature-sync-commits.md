@@ -420,11 +420,11 @@ Note: `remittanceType` already used `z.enum(PAYMENT_MESSAGE_TYPE_LIST)` from pre
 - [x] `pnpm run type-check` — zero new type errors (only pre-existing `.next/types/` errors)
 
 *Manual (see companion doc):*
-- [ ] Create steward invoice — fill all fields, submit, verify API payload
-- [ ] Edit existing steward invoice — verify data hydration
-- [ ] Trigger validation errors — verify error messages display correctly
-- [ ] Create syndic invoice — verify no regression from shared schema migration
-- [ ] Payment method matrix — pay_now, pay_later, already_paid all work
+- [x] Create steward invoice — fill all fields, submit, verify API payload
+- [x] Edit existing steward invoice — verify data hydration
+- [x] Trigger validation errors — verify error messages display correctly
+- [x] Create syndic invoice — verify no regression from shared schema migration
+- [x] Payment method matrix — pay_now, pay_later, already_paid all work
 
 ---
 
@@ -436,32 +436,55 @@ Largest effort. Four sequential commits. Consider building in a parallel directo
 
 **Roadmap**: #8 part 1 (Tier 3) · **Risk**: Medium
 
-**What**: Adapted data layer for steward invoice lines.
+**What**: Data layer for steward invoice lines — thin adapter files that reuse the shared syndic reducer and add steward-specific `costCategoryId` handling and settlement defaults on units.
 
-**New directory**: `purchase-invoice-v3-steward/components/invoice-lines-steward/`
+**Strategy**: Instead of duplicating the syndic `invoice-lines/` directory, the steward creates adapter files that import from the shared syndic reducer directly. The base `AmountWithDistributionData` type is identical for both flows; the steward's `amountWithDistributionSchemaSteward` adds a `superRefine` on top. The shared reducer operates on this base type, so all distribution/amount/VAT/period actions work as-is.
 
-**Changes**:
-- Copy from syndic `purchase-invoice-v3/components/invoice-lines/`:
-  - `types.ts` — replace `motherId` with `costCategoryId`, add `units[]` and settlement fields
-  - `amountDefaults.ts` — default line includes `costCategoryId: undefined`, `units: []`, settlement defaults
-  - `reducer.ts` — line actions handle steward-specific fields (cost category, units, settlement)
-- Keep everything else unchanged for now
+**New directory**: `purchase-invoice-v3-steward/components/invoice-lines/`
 
-**Reference**: `purchase-invoice-v3/components/invoice-lines/types.ts`, `amountDefaults.ts`, `reducer.ts`
+**New files**:
+
+| File | Purpose |
+|------|---------|
+| `types.ts` | `StewardAmountsFieldArray` (typed to `PurchaseInvoiceFormV2StewardData`), `CostCategoryOption` (id + name, replaces syndic's `LedgerOption`), `StewardInvoiceLineAction` union (replaces `SET_LEDGER` with `SET_COST_CATEGORY`), re-exports `InvoiceLineUiAction`/`InvoiceLineUiState` |
+| `amountDefaults.ts` | `createDefaultStewardAmount` — uses `costCategoryId` instead of `motherId`/`motherName`/`motherCode`, generates units via `createDefaultUnitData` (with settlement fields: `splitClearing`, `ownerSplit`, `tenantSplit`). Also `createDefaultStewardAmountWithDefaults` for distribution key application |
+| `reducer.ts` | `applyStewardInvoiceLineAction` — handles `SET_COST_CATEGORY` locally, delegates all other actions to the shared `applyInvoiceLineAction` from syndic |
+| `index.ts` | Barrel export |
+| `__tests__/amountDefaults.test.ts` | 12 tests: default values, settlement fields on units, no syndic mother fields, overrides, empty properties, distribution key application/stripping |
+| `__tests__/reducer.test.ts` | 11 tests: SET_COST_CATEGORY (set/clear/preserve), delegation of SET_TOTAL_AMOUNT, SET_VAT, SET_PERIOD, CLEAR_PERIOD, DISTRIBUTE_EQUALLY, ALLOCATE_LATER, APPLY_DISTRIBUTION_KEY, SET_DESCRIPTION |
+
+**Key differences from syndic**:
+- `CostCategoryOption` has only `id`/`name` (no `code`/`parentMotherName` like `LedgerOption`)
+- Default units include settlement fields (`splitClearing: SETTLEMENT`, `ownerSplit: 50`, `tenantSplit: 50`)
+- `StewardInvoiceLineAction` replaces `SET_LEDGER` with `SET_COST_CATEGORY`
+- No `motherId`/`motherName`/`motherCode`/`parentMotherName` in defaults
+
+**Existing syndic files NOT modified** — shared reducer, types, and hooks are imported as-is.
 
 **Test checklist**:
-- [ ] **Unit tests** for adapted types:
-  - [ ] Default line factory produces object with `costCategoryId`, `units`, settlement fields
-  - [ ] Default line factory does NOT have `motherId`
-- [ ] **Unit tests** for reducer:
-  - [ ] `ADD_LINE` action — creates line with steward defaults
-  - [ ] `UPDATE_LINE` action — updates `costCategoryId`
-  - [ ] `UPDATE_LINE` action — updates `units` array
-  - [ ] `UPDATE_LINE` action — updates settlement fields (`ownerSplit`, `tenantSplit`, `splitClearing`)
-  - [ ] `DELETE_LINE` action — removes line
-  - [ ] `DUPLICATE_LINE` action — copies all steward fields
-- [ ] Existing `pnpm test` — schema snapshot tests still pass (no production code changed yet)
-- [ ] TypeScript compiles without errors
+- [x] **Unit tests** for `createDefaultStewardAmount` (12 tests):
+  - [x] Default values include `costCategoryId: undefined`
+  - [x] Does NOT have `motherId`, `motherName`, `motherCode`, `parentMotherName`
+  - [x] Units include settlement defaults (`splitClearing: SETTLEMENT`, `ownerSplit: 50`, `tenantSplit: 50`)
+  - [x] Empty properties → empty units
+  - [x] Overrides merge correctly (amount, costCategoryId, etc.)
+  - [x] Units can be overridden entirely
+  - [x] `createDefaultStewardAmountWithDefaults` applies distribution key
+  - [x] Strips distributionKeyId when key not found
+  - [x] Preserves overrides when distribution key applied
+- [x] **Unit tests** for `applyStewardInvoiceLineAction` (11 tests):
+  - [x] `SET_COST_CATEGORY` sets `costCategoryId`
+  - [x] `SET_COST_CATEGORY` with `undefined` clears `costCategoryId`
+  - [x] Preserves other fields when setting cost category
+  - [x] Delegates `SET_TOTAL_AMOUNT` → recalculates amounts
+  - [x] Delegates `SET_VAT` → recalculates total
+  - [x] Delegates `SET_PERIOD` / `CLEAR_PERIOD`
+  - [x] Delegates `DISTRIBUTE_EQUALLY` → creates equal distribution
+  - [x] Delegates `ALLOCATE_LATER` → clears distribution
+  - [x] Delegates `APPLY_DISTRIBUTION_KEY` → applies key shares
+  - [x] Delegates `SET_DESCRIPTION`
+- [x] `pnpm vitest run` — all 23 new tests pass
+- [x] `pnpm run type-check` — zero new type errors (pre-existing `.next/types/` errors only)
 
 ---
 
@@ -471,7 +494,7 @@ Largest effort. Four sequential commits. Consider building in a parallel directo
 
 **What**: UI components for individual invoice lines, adapted for steward model.
 
-**New files in**: `purchase-invoice-v3-steward/components/invoice-lines-steward/`
+**New files in**: `purchase-invoice-v3-steward/components/invoice-lines/`
 
 **Changes**:
 - Adapt `InvoiceLineCard` — replace ledger/mother account select with cost category select
@@ -517,7 +540,7 @@ Largest effort. Four sequential commits. Consider building in a parallel directo
 - Wire orchestrator hooks: `useInvoiceLinesData` (adapted), `useInvoiceLineHandlers`
 
 **Changes**:
-- Import adapted `InvoiceLinesTableV3Steward` from `invoice-lines-steward/`
+- Import adapted `InvoiceLinesTableV3Steward` from `invoice-lines/`
 - Wire to form context (amounts field, selected properties, cost categories)
 - Verify save/draft flow — `convertFormDataV2StewardToApiData` should still produce correct payloads from the new line structure
 
@@ -552,7 +575,7 @@ Largest effort. Four sequential commits. Consider building in a parallel directo
 
 **What**: Multi-select lines and apply bulk operations.
 
-**Files**: `purchase-invoice-v3-steward/components/invoice-lines-steward/` — new bulk components + hooks
+**Files**: `purchase-invoice-v3-steward/components/invoice-lines/` — new bulk components + hooks
 
 **Changes**:
 - Reuse `useLineSelection` from syndic as-is (no steward-specific logic needed)
