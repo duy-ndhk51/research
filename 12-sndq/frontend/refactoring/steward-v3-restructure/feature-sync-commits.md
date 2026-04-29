@@ -488,61 +488,63 @@ Largest effort. Four sequential commits. Consider building in a parallel directo
 
 ---
 
-### Commit 5B · Adapt line card + cost/distribution components
+### Commit 5B · Adapt line card + cost/distribution components ✅
 
 **Roadmap**: #8 part 2 (Tier 3) · **Risk**: High
 
-**What**: UI components for individual invoice lines, adapted for steward model.
+**What**: UI components for individual invoice lines, adapted for steward model. Maximizes code reuse by refactoring shared pieces to accept props and creating steward-specific adapters.
 
-**New files in**: `purchase-invoice-v3-steward/components/invoice-lines/`
+**Sharing strategy**:
+- **Directly reused** (zero changes): `useInvoiceLineUiState`, `useLineTotals`, `PeriodExpandableSection`, `VatRatePicker`, `DistributionMethodSelect`
+- **Refactored for sharing**: `InvoiceLinesTableFooter` — accepts `isCreditNote` prop instead of reading syndic context
+- **New steward-specific**: dispatch hook, handlers hook, cost/distribution component, line card component
 
-**Changes**:
-- Adapt `InvoiceLineCard` — replace ledger/mother account select with cost category select
-- Adapt `InvoiceLineCostAndDistribution` — distribution across selected units (not building properties)
-- Add unit settlement controls per line — reuse `UnitSettlementPopover` from `purchase-invoice-v2-steward/components/`
-- Adapt hooks: `useInvoiceLineHandlers`, `useInvoiceLineDispatch` for steward fields
+**Modified files**:
+- `purchase-invoice-v3/components/invoice-lines/InvoiceLinesTableFooter.tsx` — removed `usePurchaseInvoiceFormContext` dependency, added `isCreditNote` prop
+- `purchase-invoice-v3/components/invoice-lines/InvoiceLinesTableV3.tsx` — passes `isCreditNote={mode === 'credit_note'}` to footer
+- `purchase-invoice-v3-steward/components/invoice-lines/types.ts` — added `SET_UNIFORM_SETTLEMENT` action with `SettlementData` payload
+- `purchase-invoice-v3-steward/components/invoice-lines/reducer.ts` — added `SET_UNIFORM_SETTLEMENT` handler (applies settlement uniformly to all units), refactored to switch statement
 
-**Reference**:
-- Syndic: `purchase-invoice-v3/components/invoice-lines/InvoiceLineCard.tsx`, `InvoiceLineCostAndDistribution/`
-- Steward settlement: `purchase-invoice-v2-steward/components/UnitSettlementPopover`
+**New files**:
+- `hooks/useStewardInvoiceLineDispatch.ts` — steward form type, steward reducer, revalidation on `SET_COST_CATEGORY`
+- `hooks/useStewardInvoiceLineHandlers.ts` — composes steward dispatch + shared `useInvoiceLineUiState`
+- `StewardInvoiceLineCostAndDistribution.tsx` — cost category select (via `useCostCategoryContext` + `SearchableSelect`), `DistributionMethodSelect`, optional `UnitSettlementPopover` for uniform settlement
+- `StewardInvoiceLineCard.tsx` — collapsible card with amount/VAT, cost/distribution, period, action bar; no meter section; cost category name in collapsed header
+- `index.ts` — updated barrel export
 
-**Test checklist** (isolated rendering — Storybook or dev test page):
-- [ ] Line card renders without errors
-- [ ] **Cost category dropdown**:
-  - [ ] Opens and shows available cost categories
-  - [ ] Selecting a category updates the line
-  - [ ] No "ledger" or "mother account" references visible
-- [ ] **Distribution section**:
-  - [ ] Shows selected units (from parent form's property selection)
-  - [ ] Distribution method selector: share / percentage / free / key / split-later
-  - [ ] Changing method updates distribution inputs per unit
-  - [ ] Distribution total validates correctly
-- [ ] **Settlement controls**:
-  - [ ] `UnitSettlementPopover` opens on each unit row
-  - [ ] Can set `ownerSplit` percentage (0–100)
-  - [ ] Can set `tenantSplit` percentage
-  - [ ] Can set `splitClearing` mode
-  - [ ] Values persist after closing popover
-- [ ] **VAT section** — expand/collapse, rate selection works
-- [ ] **Period section** — expand/collapse, date range works
-- [ ] TypeScript compiles without errors
+**Tests added**:
+- `__tests__/reducer.test.ts` — 3 new tests for `SET_UNIFORM_SETTLEMENT` (uniform apply, field preservation, empty units)
+- `__tests__/StewardInvoiceLineCostAndDistribution.test.tsx` — 5 tests: renders selects, options from context, callback firing, disabled state, settlement conditional rendering
+- `__tests__/StewardInvoiceLineCard.test.tsx` — 5 tests: header rendering, cost category name, expanded content, no meter, selected style
+
+**Verification**: 36 new tests pass, 194 regression tests pass, zero type errors in modified files
 
 ---
 
-### Commit 5C · Wire lines table into FormBody
+### Commit 5C · Wire lines table into FormBody ✅
 
 **Roadmap**: #8 part 3 (Tier 3) · **Risk**: High
 
-**What**: Replace the V2 amounts section with the new lines table.
+**What**: Replace the V2 amounts section (`PurchaseInvoiceAmountsSectionV2Steward`) with the new V3 inline lines table. Key architectural move: introduced a steward-specific orchestrator hook that internally fetches distribution keys and composes shared syndic hooks.
 
-**Files**:
-- `purchase-invoice-v3-steward/sections/FormBody.tsx` — swap `PurchaseInvoiceAmountsSectionV2Steward` for `InvoiceLinesTableV3Steward`
-- Wire orchestrator hooks: `useInvoiceLinesData` (adapted), `useInvoiceLineHandlers`
+**Sharing strategy**:
+- **Refactored for sharing**: `useLineCrud` — now accepts a `createDefaultLine` factory parameter instead of importing `createDefaultAmountWithDefaults` directly, making it reusable for both syndic and steward line creation
+- **Directly reused**: `useLineSelection`, `useLineTotals`, `InvoiceLinesTableFooter` (from 5B), `DeleteAmountDialog`
+- **Reused from V2**: `StewardAmountDistributionSheet` (full-screen distribution sheet)
+- **New steward-specific**: `useStewardInvoiceLinesData` (orchestrator), `InvoiceLinesTableV3Steward` (table component)
 
-**Changes**:
-- Import adapted `InvoiceLinesTableV3Steward` from `invoice-lines/`
-- Wire to form context (amounts field, selected properties, cost categories)
-- Verify save/draft flow — `convertFormDataV2StewardToApiData` should still produce correct payloads from the new line structure
+**Modified files**:
+- `purchase-invoice-v3/components/invoice-lines/hooks/useLineCrud.ts` — removed `AmountsFieldArray` import; replaced typed field array params with generic function signatures (`(value: AmountWithDistributionData) => void`); added `createDefaultLine` factory param; removed `properties`, `distributionKeys`, `supplierDefaults` params (now encapsulated in factory)
+- `purchase-invoice-v3/components/invoice-lines/hooks/useInvoiceLinesData.ts` — wraps `createDefaultAmountWithDefaults` in a `useCallback` factory and passes it to `useLineCrud`
+- `purchase-invoice-v3-steward/sections/FormBody.tsx` — replaced `PurchaseInvoiceAmountsSectionV2Steward` import/usage with `InvoiceLinesTableV3Steward`; removed unused `amounts`, `selectedProperties`, `buildingId` from context destructure
+- `purchase-invoice-v3-steward/components/invoice-lines/index.ts` — added exports for `InvoiceLinesTableV3Steward` and `useStewardInvoiceLinesData`
+
+**New files**:
+- `hooks/useStewardInvoiceLinesData.ts` — orchestrator hook: uses `useFieldArray` with steward schema, fetches distribution keys via `useDistributionKeys(buildingId)`, builds `propertiesMap` from `selectedProperties`, composes `useLineSelection`, `useLineTotals`, `useLineCrud` (with `createDefaultStewardAmountWithDefaults` factory)
+- `InvoiceLinesTableV3Steward.tsx` — renders `StewardInvoiceLineCard` per line, add button (disabled when no properties), `InvoiceLinesTableFooter`, `DeleteAmountDialog`, `StewardAmountDistributionSheet`
+- `__tests__/InvoiceLinesTableV3Steward.test.tsx` — 12 tests: card rendering, footer, add button, delete dispatch, duplicate, delete dialog, confirm delete, distribution sheet open/close, empty state, disabled add, credit note flag
+
+**Verification**: 92 tests pass (38 steward + 54 syndic), zero new type errors
 
 **Test checklist**:
 - [ ] Open create form — empty lines section shown (add button visible)
