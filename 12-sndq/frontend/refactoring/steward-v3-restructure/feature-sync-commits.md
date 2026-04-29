@@ -430,7 +430,7 @@ Note: `remittanceType` already used `z.enum(PAYMENT_MESSAGE_TYPE_LIST)` from pre
 
 ## Batch 5 — Inline invoice lines table
 
-Largest effort. Four sequential commits. Consider building in a parallel directory (`invoice-lines-steward/`) and swapping in at 5C.
+Largest effort. Three sequential commits (5A–5C). Bulk selection (5D) deferred until per-line selection UI is needed.
 
 ### Commit 5A · Scaffold steward invoice lines (types + defaults + reducer)
 
@@ -564,45 +564,13 @@ Largest effort. Four sequential commits. Consider building in a parallel directo
 
 ---
 
-### Commit 5D · Line bulk selection + bulk actions
+### ~~Commit 5D · Line bulk selection + bulk actions~~ → Deferred
 
-**Roadmap**: #9 (Tier 3) · **Risk**: Medium (after 5C)
+**Status**: DEFERRED
 
-**What**: Multi-select lines and apply bulk operations.
+Bulk actions (set cost category, set distribution, delete in bulk) require per-line selection UI (checkboxes on line cards). Neither syndic v3 nor steward v3 currently wire `onSelect` to any visible UI element, so the bulk actions bar can never appear. Deferred until per-line selection is designed and implemented across both flows.
 
-**Files**: `purchase-invoice-v3-steward/components/invoice-lines/` — new bulk components + hooks
-
-**Changes**:
-- Reuse `useLineSelection` from syndic as-is (no steward-specific logic needed)
-- Adapt `useLineBulkActions`:
-  - Bulk set cost category (replaces syndic's bulk set ledger)
-  - Bulk set distribution method across units
-  - Bulk clear distribution
-- Add multi-select checkboxes to steward line cards
-- Add floating bulk action bar
-
-**Reference**: `purchase-invoice-v3/components/invoice-lines/hooks/useLineSelection.ts`, `useLineBulkActions.ts`
-
-**Test checklist**:
-- [ ] Add 3+ lines to the form
-- [ ] **Select** — checkbox appears on each line card
-- [ ] Click checkbox on one line — selected (visual highlight)
-- [ ] Click checkboxes on multiple lines — all selected
-- [ ] **Select all** — if available, all lines selected
-- [ ] **Bulk action bar** appears when 1+ lines selected
-- [ ] **Bulk set cost category**:
-  - [ ] Pick a category from bulk action dropdown
-  - [ ] All selected lines update to that cost category
-  - [ ] Unselected lines unchanged
-- [ ] **Bulk set distribution method**:
-  - [ ] Pick a method from bulk action dropdown
-  - [ ] All selected lines update distribution method
-- [ ] **Bulk clear distribution**:
-  - [ ] Click clear action
-  - [ ] All selected lines have distribution cleared
-- [ ] **Deselect all** — bulk action bar hides
-- [ ] Submit after bulk operations — API payload reflects bulk-set values
-- [ ] `pnpm test` — existing tests pass
+**When revisiting**: create `useStewardLineBulkActions` (modeled after syndic `useLineBulkActions` but with `handleBulkSetCostCategory` instead of `handleBulkSetLedger`), a `StewardInvoiceLineBulkActions` component (using `useCostCategoryContext`), add checkboxes to `StewardInvoiceLineCard`, and wire into `InvoiceLinesTableV3Steward`.
 
 ---
 
