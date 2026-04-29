@@ -12,7 +12,7 @@
 ## 1. Automated Tests
 
 ```bash
-# Run all steward invoice-lines tests (should be 38 pass)
+# Run all steward invoice-lines tests (should be 30 pass)
 pnpm vitest run src/modules/financial/forms/purchase-invoice-v3-steward/
 
 # Run syndic invoice-lines regression (should be 54 pass)
@@ -22,7 +22,7 @@ pnpm vitest run src/modules/financial/forms/purchase-invoice-v3/components/invoi
 pnpm tsc --noEmit 2>&1 | grep -v '.next/types'
 ```
 
-Expected: 92 tests pass (38 steward + 54 syndic), zero type errors in modified files.
+Expected: 84 tests pass (30 steward + 54 syndic), zero type errors in modified files.
 
 ---
 
@@ -201,18 +201,18 @@ Verify these files exist and have correct exports:
 ```
 purchase-invoice-v3-steward/components/invoice-lines/
 ├── __tests__/
-│   ├── amountDefaults.test.ts          (5A)
-│   ├── reducer.test.ts                 (5A + 5B)
-│   └── InvoiceLinesTableV3Steward.test.tsx  (5C - NEW)
+│   ├── amountDefaults.test.ts              (5A)
+│   ├── reducer.test.ts                     (5A)
+│   └── InvoiceLinesTableV3Steward.test.tsx (5C)
 ├── hooks/
 │   ├── useStewardInvoiceLineDispatch.ts    (5B)
 │   ├── useStewardInvoiceLineHandlers.ts    (5B)
-│   └── useStewardInvoiceLinesData.ts       (5C - NEW)
-├── amountDefaults.ts                   (5A)
-├── reducer.ts                          (5A + 5B)
-├── types.ts                            (5A + 5B)
-├── StewardInvoiceLineCard.tsx          (5B)
+│   └── useStewardInvoiceLinesData.ts       (5C)
+├── amountDefaults.ts                       (5A)
+├── reducer.ts                              (5A)
+├── types.ts                                (5A)
+├── StewardInvoiceLineCard.tsx              (5B)
 ├── StewardInvoiceLineCostAndDistribution.tsx (5B)
-├── InvoiceLinesTableV3Steward.tsx      (5C - NEW)
-└── index.ts                            (5A + 5B + 5C)
+├── InvoiceLinesTableV3Steward.tsx          (5C)
+└── index.ts                                (5A + 5B + 5C)
 ```

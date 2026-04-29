@@ -25,16 +25,16 @@ These steward differences must be respected when porting any syndic feature:
 
 | # | Feature | Tier | Status | Notes |
 |---|---------|------|--------|-------|
-| 0 | UI layout consistency (form shell) | 0 | Not started | Align with syndic V3 layout |
-| 1 | Duplicate invoice warning | 1 | Not started | |
-| 2 | Invoice date bounds | 1 | Not started | |
-| 3 | Auto invoice number generation | 1 | Not started | |
-| 4 | Invoice mode toggle | 2 | Not started | |
-| 5 | Description section upgrade | 2 | Not started | |
-| 6 | Partial edit mode | 2 | Not started | |
-| 7 | AI document extraction | 3 | Not started | |
-| 7.5 | Zod v4 steward schema migration | 3 | Not started | After AI extraction, before inline lines — 4 syntax substitutions |
-| 8 | Inline invoice lines table | 3 | Not started | Largest effort — adapt for cost categories + settlement |
+| 0 | UI layout consistency (form shell) | 0 | Done | Commit 1A |
+| 1 | Duplicate invoice warning | 1 | Done | Commit 1B |
+| 2 | Invoice date bounds | 1 | Done | Commit 1C |
+| 3 | Auto invoice number generation | 1 | Done | Deferred to 2C (needs mode) |
+| 4 | Invoice mode toggle | 2 | Done | Commit 2A |
+| 5 | Description section upgrade | 2 | Done | Commit 2B |
+| 6 | Partial edit mode | 2 | Done | Commits 3A + 3B |
+| 7 | AI document extraction | 3 | Done | Commit 4A+4B |
+| 7.5 | Zod v4 steward schema migration | 3 | Done | Commit 4C |
+| 8 | Inline invoice lines table | 3 | In progress | Commits 5A–5C done, 5D pending |
 | 9 | Line bulk selection + bulk actions | 3 | Not started | Depends on #8 |
 | 10 | Amount mode toggle (single total vs line-by-line) | 4 | Not started | Depends on #8 |
 | 11 | V3 payment section | 4 | Not started | |
@@ -206,12 +206,14 @@ purchase-invoice-v3/components/invoice-lines/
 
 **Steward adaptations needed**:
 - Replace `motherId` (ledger) references with `costCategoryId` in `InvoiceLineCard`, `InvoiceLineCostAndDistribution`, bulk actions
-- Add unit settlement controls (owner/tenant split) per line — reuse `UnitSettlementPopover` from V2 steward
+- Unit settlement controls (owner/tenant split) accessed via the custom distribution sheet (not inline on the line card)
 - Adapt distribution methods: steward distributes across selected units (not just building properties)
-- `amountDefaults.ts` — default line must include `costCategoryId`, `units[]`, settlement defaults
-- `reducer.ts` — line actions must handle steward-specific fields
+- `amountDefaults.ts` — `createDefaultStewardAmount` includes `costCategoryId`, `units[]`, settlement defaults; no distribution-key-aware factory (distribution keys applied at action dispatch time, not at line creation)
+- `reducer.ts` — line actions handle steward-specific fields (`SET_COST_CATEGORY`)
 
-**Risk**: High. This touches the core data entry experience. Recommend building in parallel as `invoice-lines-steward/` within the V3 steward module, then swapping in `FormBody` once stable.
+**Progress**: Commits 5A–5C done (scaffold, line card + cost/distribution components, table wired into FormBody). Commit 5D (bulk selection + bulk actions) pending.
+
+**Risk**: High. This touches the core data entry experience. Built in parallel as `invoice-lines/` within the V3 steward module, swapped into `FormBody` at 5C.
 
 ### 9. Line bulk selection + bulk actions
 

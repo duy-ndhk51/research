@@ -3,7 +3,7 @@
 ## 1. Automated Tests
 
 ```bash
-# Run all steward invoice-lines tests (should be 36 passing)
+# Run all steward invoice-lines tests (should be 30 passing)
 cd sndq-fe && pnpm vitest run src/modules/financial/forms/purchase-invoice-v3-steward/components/invoice-lines/__tests__/
 
 # Run syndic + steward regression tests (should be 194 passing)
@@ -52,13 +52,9 @@ These cannot be fully tested until Commit 5C wires the components into FormBody,
 ### StewardInvoiceLineCostAndDistribution
 - [ ] Cost category select populated from `useCostCategoryContext`
 - [ ] Distribution method select for key/equal/custom/later
-- [ ] Settlement popover shown when `onSettlementChange` is provided and units exist
-- [ ] Settlement popover hidden when no units
+- [ ] 2-column grid layout (cost category + distribution)
 
-### SET_UNIFORM_SETTLEMENT Reducer Action
-- [ ] Applies `splitClearing`, `ownerSplit`, `tenantSplit` to ALL units in a line
-- [ ] Preserves other unit fields (id, selected, amount, share)
-- [ ] Handles empty units array gracefully
+> **Note**: Uniform settlement (owner/tenant split) was removed from this inline component. Users access settlement controls within the custom distribution sheet instead.
 
 ## 5. File Structure Check
 
@@ -66,16 +62,14 @@ These cannot be fully tested until Commit 5C wires the components into FormBody,
 purchase-invoice-v3-steward/components/invoice-lines/
 ├── __tests__/
 │   ├── amountDefaults.test.ts        (from 5A)
-│   ├── reducer.test.ts               (extended with SET_UNIFORM_SETTLEMENT)
-│   ├── StewardInvoiceLineCard.test.tsx
-│   └── StewardInvoiceLineCostAndDistribution.test.tsx
+│   └── reducer.test.ts               (from 5A)
 ├── hooks/
 │   ├── useStewardInvoiceLineDispatch.ts
 │   └── useStewardInvoiceLineHandlers.ts
 ├── amountDefaults.ts                  (from 5A)
 ├── index.ts                           (updated barrel)
-├── reducer.ts                         (extended with SET_UNIFORM_SETTLEMENT)
+├── reducer.ts                         (from 5A)
 ├── StewardInvoiceLineCard.tsx
 ├── StewardInvoiceLineCostAndDistribution.tsx
-└── types.ts                           (extended with SET_UNIFORM_SETTLEMENT)
+└── types.ts                           (from 5A)
 ```
