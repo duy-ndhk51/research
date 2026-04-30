@@ -36,8 +36,8 @@ These steward differences must be respected when porting any syndic feature:
 | 7.5 | Zod v4 steward schema migration | 3 | Done | Commit 4C |
 | 8 | Inline invoice lines table | 3 | Done | Commits 5A–5C complete |
 | 9 | Line bulk selection + bulk actions | 3 | Deferred | No selection UI yet; revisit when per-line checkboxes are needed |
-| 10 | Amount mode toggle (single total vs line-by-line) | 4 | Not started | Depends on #8 |
-| 11 | V3 payment section | 4 | Not started | |
+| 10 | Amount mode toggle (single total vs line-by-line) | 4 | Done | Commit 6A |
+| 11 | V3 payment section | 4 | Done | Commit 6B |
 | 12 | V3 inline building/supplier select | 4 | Not started | |
 
 ---

@@ -578,82 +578,119 @@ Bulk actions (set cost category, set distribution, delete in bulk) require per-l
 
 High risk. Defer until Batch 5 is stable. Two independent commits.
 
-### Commit 6A · Amount mode toggle (single total vs line-by-line)
+### Commit 6A · Amount mode toggle (single total vs line-by-line) ✅
 
 **Roadmap**: #10 (Tier 4) · **Depends on**: Batch 5 · **Risk**: High
 
-**What**: Toggle between single total amount and line-by-line entry.
+**What**: Toggle between single total amount and line-by-line entry. Includes merge conflict detection for cost categories (steward equivalent of syndic's ledger-based conflict detection) and a merge confirmation dialog.
 
-**Changes**:
-- Adapt `useGroupingTransition` for steward's cost category + unit distribution model
-- Adapt `lineGroupingUtils` — merging lines with different cost categories and unit distributions
-- Add `AmountModeToggle` to the lines section header
+**Sharing strategy**:
+- **Directly reused** (zero changes): `AmountModeToggle` (already props-based), `applyGroupingPipeline`, `useLineTotals`, `GroupingStrategy` enum, `MergeDialogState` interface
+- **New steward-specific**: `hasStewardMergeConflicts` (checks `costCategoryId` instead of `motherId`), `useStewardGroupingTransition`, `useStewardLineGrouping`, `StewardSingleTotalView`
 
-**Key challenge**: Grouping/merging assumes syndic's simpler ledger model. Steward has cost categories + per-unit settlement, making merge logic much more complex.
+**Modified files**:
+- `purchase-invoice-v3-steward/hooks/useStewardForm.ts` — added `groupingStrategy` (`useState(GroupingStrategy.NONE)`) and `mergeDialog` state; both flow through `StewardFormContext` automatically
+- `purchase-invoice-v3-steward/components/invoice-lines/hooks/useStewardInvoiceLinesData.ts` — added `replace` from `useFieldArray`; composes `useStewardLineGrouping` instead of standalone `useLineTotals`; returns `grouping` (strategy + handler + totals)
+- `purchase-invoice-v3-steward/components/invoice-lines/InvoiceLinesTableV3Steward.tsx` — added `AmountModeToggle` at top; conditionally renders `StewardSingleTotalView` (when `isSimpleMode && liveAmounts.length > 0`) or line cards + add button; footer uses `grouping.totals`
+- `purchase-invoice-v3-steward/sections/FormDialogs.tsx` — added merge conflict `Dialog` (warning variant, "Group all" confirm button)
+- `purchase-invoice-v3-steward/components/invoice-lines/index.ts` — added barrel exports for new files
+
+**New files**:
+- `lineGroupingUtils.ts` — `hasStewardMergeConflicts`: checks if amounts have different `costCategoryId` or `distributionKeyId` values (steward equivalent of syndic's `hasMergeConflicts`)
+- `hooks/useStewardGroupingTransition.ts` — manages state transitions between grouping strategies; saves originals on leaving individual mode, restores on returning; triggers merge dialog on conflicts
+- `hooks/useStewardLineGrouping.ts` — thin composition of `useStewardGroupingTransition` + `useLineTotals`
+- `StewardSingleTotalView.tsx` — merged single-total view with total amount input, VAT toggle, `StewardInvoiceLineCostAndDistribution` for cost category + distribution
+- `__tests__/lineGroupingUtils.test.ts` — 7 tests (empty, single, same values, different categories, different keys, undefined handling)
+- `__tests__/useStewardGroupingTransition.test.ts` — 4 tests (no-op same strategy, merge without conflicts, merge dialog on conflicts, restore originals)
+
+**Verification**: 202 steward tests pass (9 files), zero new type errors
 
 **Test checklist**:
-- [ ] Open create form — default mode (check which: single total or line-by-line)
-- [ ] **Toggle to single total** (from line-by-line):
-  - [ ] Multiple lines merge into one
-  - [ ] Merged total equals sum of individual lines
-  - [ ] Cost category: merged line uses majority or first? (verify strategy)
-  - [ ] Unit distributions: merged correctly or cleared with warning?
-- [ ] **Toggle to line-by-line** (from single total):
-  - [ ] Single line can be split (add more lines)
-  - [ ] Original data preserved
+- [ ] Open create form — default mode is **line-by-line** (individual lines shown)
+- [ ] **Toggle to single total** (from line-by-line with one line):
+  - [ ] Line card disappears, replaced by single total view
+  - [ ] Total amount input shows the line's total
+  - [ ] VAT toggle works (add/remove VAT)
+  - [ ] Cost category select works
+  - [ ] Distribution select works
+  - [ ] Custom distribution opens the `StewardAmountDistributionSheet`
+- [ ] **Toggle back to line-by-line** — original lines restored, add button reappears
+- [ ] **Merge conflict scenario** (two lines with different cost categories):
+  - [ ] Toggle to single total — merge dialog appears with warning
+  - [ ] Cancel — stays in line-by-line mode
+  - [ ] Confirm ("Group all") — merges into single total, cost category from first line preserved
+- [ ] **Merge conflict scenario** (two lines with different distribution keys):
+  - [ ] Toggle to single total — merge dialog appears
+- [ ] **No conflict scenario** (two lines with same cost category and distribution key):
+  - [ ] Toggle to single total — merges directly (no dialog)
 - [ ] **Round-trip test**: line-by-line → single total → line-by-line
-  - [ ] Data not lost (or clear warning shown if merge is lossy)
-- [ ] Save in **single total mode** — API payload correct
-- [ ] Save in **line-by-line mode** — API payload correct
-- [ ] Edit form with single total — shows single total mode
-- [ ] Edit form with multiple lines — shows line-by-line mode
-- [ ] `pnpm test` — existing tests pass
+  - [ ] Original line data preserved on return to line-by-line
+- [ ] **Footer totals** — correct in both modes
+- [ ] Save in **single total mode** — API payload correct (single amount in array)
+- [ ] Save in **line-by-line mode** — API payload correct (multiple amounts)
+- [ ] `pnpm test` — 202 steward tests pass, zero type errors
 
 ---
 
-### Commit 6B · Replace payment section with V3 PaymentDetailsSection
+### Commit 6B · Replace payment section with V3 PaymentDetailsSection ✅
 
 **Roadmap**: #11 (Tier 4) · **Risk**: High
 
-**What**: Swap V2 payment section for V3's `PaymentDetailsSection`.
+**What**: Replaced the V2 `PurchaseInvoicePaymentSectionV2` (flat checkbox layout) with the syndic V3 `PaymentDetailsSection` (card-based payment method selection UI). Refactored shared components to be props-based (decoupled from syndic context) so both syndic and steward can reuse them.
 
-**File**: `purchase-invoice-v3-steward/sections/FormBody.tsx`
+**Sharing strategy — pure components + local wrappers for render isolation**:
+- **Pure shared components** (zero react-hook-form or context hooks, value + callback props):
+  - `PaymentDetailsSection` — accepts 3 grouped props: `isCreditNote`, `pontoConfig: PontoConfig`, `paymentMethod: PaymentMethodState`; zero Controllers, zero form hooks
+  - `DueDateField` — accepts `dueDate`, `onDateChange`, optional `confidenceScore`
+  - `UtilityToggle` — accepts `isUtility`, `onUtilityChange`
+  - `DirectDebitSubOption` — accepts `showSetSupplierDirectDebit`, `checked`, `onCheckedChange`
+  - `InvoicePaymentMethodSection` — accepts `isDirectDebit`, `onDirectDebitChange`, `pontoProps`, direct debit sub-option props
+- **Connected wrappers** (Controller + context reads, isolate re-renders):
+  - `ConnectedDueDateField` — wraps Controller(`dueDate`) + `useAiExtractionContext` + pure `DueDateField`
+  - `ConnectedUtilityToggle` — wraps Controller(`isUtility`) + pure `UtilityToggle`
+- **Local FormBody wrappers** (not shared, isolate payment field re-renders from FormBody):
+  - `SyndicPaymentSection` (in syndic FormBody.tsx) — useWatch for `invoiceNumber`/`isDirectDebit`/`setSupplierAsDirectDebit`; builds `PontoConfig` + `PaymentMethodState`; passes to pure `PaymentDetailsSection`
+  - `StewardPaymentSection` (in steward FormBody.tsx) — watch for `invoiceNumber`/`isDirectDebit`; builds `PontoConfig` + `PaymentMethodState`; passes to pure `PaymentDetailsSection`
+- **Directly reused** (zero changes): `PayNowViaPontoSection`, `CollapsibleSection`, `SectionCard`, `PaymentMethodCard`
 
-**Changes**:
-- Replace `PurchaseInvoicePaymentSectionV2` with `PaymentDetailsSection` from V3
-- Pass `buildingId={undefined}`, `requireBuildingId={false}`
-- Verify: Ponto flow, direct debit toggle, "already paid" with payment entries, due date field
+**Modified files**:
+- `purchase-invoice-v3/sections/PaymentDetailsSection.tsx` — fully pure; exports `PontoConfig` and `PaymentMethodState` types; accepts 3 grouped props; zero Controllers/form hooks; `InvoicePaymentMethodSection` unchanged (already pure)
+- `purchase-invoice-v3/sections/DirectDebitSubOption.tsx` — fully pure; accepts `checked` + `onCheckedChange` props; zero form hooks
+- `purchase-invoice-v3/sections/DueDateField.tsx` — `DueDateField` pure (value + callback props); `ConnectedDueDateField` wraps Controller + AI context
+- `purchase-invoice-v3/sections/steps/UtilityToggle.tsx` — `UtilityToggle` pure; `ConnectedUtilityToggle` wraps Controller
+- `purchase-invoice-v3/sections/FormBody.tsx` — added local `SyndicPaymentSection` wrapper (useWatch + useFormContext for payment fields); FormBody itself has no payment field subscriptions; uses `ConnectedDueDateField`
+- `purchase-invoice-v3/sections/OtherSection.tsx` — uses `ConnectedUtilityToggle`
+- `purchase-invoice-v3-steward/sections/FormBody.tsx` — added local `StewardPaymentSection` wrapper (watch for payment fields); FormBody itself has no payment field subscriptions; uses `ConnectedDueDateField` and `ConnectedUtilityToggle`
 
-**Pre-check**: Confirm Ponto and direct debit work without a building context. Check if payment section queries are building-scoped.
+**Key decisions**:
+- **Pure + local wrapper pattern**: Shared components are fully pure (zero RHF coupling); each FormBody has a local wrapper that subscribes to form fields and builds grouped prop objects, isolating re-renders from FormBody
+- **Direct debit sub-option**: Always hidden in steward (`showSetSupplierDirectDebit={false}`) — steward has no supplier-building direct debit concept
+- **SectionCard**: Payment section uses `SectionCard` for visual consistency with syndic V3
+- **UtilityToggle**: Moved from V2 payment section to a separate "Other" `SectionCard` (matches syndic V3 pattern where `UtilityToggle` lives in `OtherSection`)
+- **DueDateField**: Placed inside the payment `SectionCard` (same as syndic V3)
+
+**Verification**: 370 tests pass (18 files), zero new type errors
 
 **Test checklist**:
-- [ ] Open create form — payment section renders without errors
-- [ ] **Pay Later** mode:
-  - [ ] Selected by default (or verify expected default)
-  - [ ] No payment fields shown beyond due date
-  - [ ] Submit — API payload has correct `paymentMethod: 'pay_later'`
-- [ ] **Pay Now** mode:
-  - [ ] Select pay now — IBAN dropdown appears
-  - [ ] Select payment origin (paymentFrom) — works
-  - [ ] Select destination (paymentTo / contactIban) — works
-  - [ ] Submit — API payload has `paymentMethodId`, `contactIbanId`
-- [ ] **Already Paid** mode:
-  - [ ] Select already paid — payment entries section appears
-  - [ ] Add a payment entry — date + amount fields
-  - [ ] Submit — API payload includes payments array
-- [ ] **Direct debit toggle**:
-  - [ ] Toggle on — direct debit flag set
-  - [ ] Toggle off — cleared
-  - [ ] In credit note mode — direct debit forced off (not toggleable)
-- [ ] **Ponto** (if applicable):
-  - [ ] Ponto-connected IBAN appears in dropdown
-  - [ ] Ponto status indicator visible
-  - [ ] (Skip if Ponto not available in dev)
-- [ ] **Due date field** — date picker works, bounds respected
+- [ ] Open create form — payment section renders in a `SectionCard` with credit card icon
+- [ ] **Direct debit mode**:
+  - [ ] Select direct debit card — selected state with brand styling
+  - [ ] "Set supplier as direct debit" checkbox is NOT visible (hidden in steward)
+- [ ] **Bank payment mode**:
+  - [ ] Select bank payment card — Ponto section appears
+  - [ ] IBAN dropdown works (paymentFrom / paymentTo)
+  - [ ] Submit — API payload correct
+- [ ] **Credit note mode**:
+  - [ ] Toggle to credit note via header — payment section shows Ponto only (no method cards)
+- [ ] **Due date field** — visible inside payment card, date picker works
+- [ ] **Utility toggle** — visible in separate "Other" `SectionCard` with MoreVertical icon
+  - [ ] Toggle on/off — `isUtility` value changes
+  - [ ] Submit — API payload includes `isUtility`
+- [ ] **Partial edit mode** — payment fields disabled with `opacity-60`
 - [ ] **Edit** existing invoice — payment section pre-filled correctly
-- [ ] Edit invoice with "already paid" — payment entries shown
 - [ ] Compare API payload with V2 steward payment output — **structure matches**
-- [ ] `pnpm test` — existing tests pass, converter tests pass
+- [ ] Syndic V3 form — payment section still works identically (regression check)
+- [ ] `pnpm test` — 370 tests pass, zero type errors
 
 ---
 
