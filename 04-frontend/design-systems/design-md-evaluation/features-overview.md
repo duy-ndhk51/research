@@ -2,7 +2,7 @@
 
 Full feature map of the DESIGN.md format specification and CLI toolchain. This document is framework-agnostic and applies to any project considering DESIGN.md adoption.
 
-**Source**: [DESIGN.md spec](https://github.com/nichochar/design.md/blob/main/docs/spec.md) | [CLI README](https://github.com/nichochar/design.md)
+**Source**: [DESIGN.md spec](https://github.com/google-labs-code/design.md/blob/main/docs/spec.md) | [CLI README](https://github.com/google-labs-code/design.md)
 
 ---
 
@@ -362,9 +362,9 @@ This tolerance model means DESIGN.md can accommodate domain-specific extensions 
 
 ## References
 
-- [DESIGN.md README](https://github.com/nichochar/design.md/blob/main/README.md) — CLI reference, installation, examples
-- [DESIGN.md Spec](https://github.com/nichochar/design.md/blob/main/docs/spec.md) — Full format specification
+- [DESIGN.md README](https://github.com/google-labs-code/design.md/blob/main/README.md) — CLI reference, installation, examples
+- [DESIGN.md Spec](https://github.com/google-labs-code/design.md/blob/main/docs/spec.md) — Full format specification
 - [W3C Design Tokens Format Module](https://tr.designtokens.org/format/) — The standard DESIGN.md's references are inspired by
-- [Example: Atmospheric Glass](https://github.com/nichochar/design.md/blob/main/examples/atmospheric-glass/DESIGN.md) — Glassmorphism dark theme with 50+ color tokens
-- [Example: Paws and Paths](https://github.com/nichochar/design.md/blob/main/examples/paws-and-paths/DESIGN.md) — Warm, approachable pet-care design
-- [Example: Totality Festival](https://github.com/nichochar/design.md/blob/main/examples/totality-festival/DESIGN.md) — Bold event branding
+- [Example: Atmospheric Glass](https://github.com/google-labs-code/design.md/blob/main/examples/atmospheric-glass/DESIGN.md) — Glassmorphism dark theme with 50+ color tokens
+- [Example: Paws and Paths](https://github.com/google-labs-code/design.md/blob/main/examples/paws-and-paths/DESIGN.md) — Warm, approachable pet-care design
+- [Example: Totality Festival](https://github.com/google-labs-code/design.md/blob/main/examples/totality-festival/DESIGN.md) — Bold event branding

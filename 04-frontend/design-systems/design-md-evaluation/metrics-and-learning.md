@@ -36,8 +36,8 @@ Metrics to gather **before** making an adopt/defer/reject decision. Run these du
 
 | Resource | Type | What you learn |
 |----------|------|----------------|
-| [DESIGN.md README](https://github.com/nichochar/design.md/blob/main/README.md) | Documentation | CLI commands, installation, linting rules, programmatic API |
-| [DESIGN.md Spec (docs/spec.md)](https://github.com/nichochar/design.md/blob/main/docs/spec.md) | Specification | Token schema, section order, component properties, consumer behavior |
+| [DESIGN.md README](https://github.com/google-labs-code/design.md/blob/main/README.md) | Documentation | CLI commands, installation, linting rules, programmatic API |
+| [DESIGN.md Spec (docs/spec.md)](https://github.com/google-labs-code/design.md/blob/main/docs/spec.md) | Specification | Token schema, section order, component properties, consumer behavior |
 | `npx @google/design.md spec` | CLI output | The full spec formatted for agent prompt injection |
 | `npx @google/design.md spec --rules` | CLI output | Spec + all linting rules in one document |
 
@@ -45,9 +45,9 @@ Metrics to gather **before** making an adopt/defer/reject decision. Run these du
 
 | Example | Style | Token count | Notable features |
 |---------|-------|-------------|------------------|
-| [Atmospheric Glass](https://github.com/nichochar/design.md/blob/main/examples/atmospheric-glass/DESIGN.md) | Dark glassmorphism | 50+ colors, 6 typography, 6 rounded, 5 spacing, 10 components | Large color palette, `rgba()` in component tokens, composite `typography` references |
-| [Paws and Paths](https://github.com/nichochar/design.md/blob/main/examples/paws-and-paths/DESIGN.md) | Warm, approachable | Smaller token set | Minimal, focused design system |
-| [Totality Festival](https://github.com/nichochar/design.md/blob/main/examples/totality-festival/DESIGN.md) | Bold event branding | Medium token set | Strong brand personality in prose |
+| [Atmospheric Glass](https://github.com/google-labs-code/design.md/blob/main/examples/atmospheric-glass/DESIGN.md) | Dark glassmorphism | 50+ colors, 6 typography, 6 rounded, 5 spacing, 10 components | Large color palette, `rgba()` in component tokens, composite `typography` references |
+| [Paws and Paths](https://github.com/google-labs-code/design.md/blob/main/examples/paws-and-paths/DESIGN.md) | Warm, approachable | Smaller token set | Minimal, focused design system |
+| [Totality Festival](https://github.com/google-labs-code/design.md/blob/main/examples/totality-festival/DESIGN.md) | Bold event branding | Medium token set | Strong brand personality in prose |
 
 Each example also includes an exported `tailwind.config.js` and `design_tokens.json` (DTCG), demonstrating the full export pipeline.
 

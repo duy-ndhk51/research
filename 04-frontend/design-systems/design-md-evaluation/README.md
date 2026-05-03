@@ -10,7 +10,7 @@ DESIGN.md is a Google-authored, open-format specification that encodes a visual 
 |-------|-------|
 | **Decision** | Evaluating |
 | **Version** | alpha (spec, token schema, and CLI under active development) |
-| **Source** | [github.com/nichochar/design.md](https://github.com/nichochar/design.md) |
+| **Source** | [github.com/google-labs-code/design.md](https://github.com/google-labs-code/design.md) |
 | **Package** | `@google/design.md` (npm) |
 | **Last reviewed** | 2026-04-29 |
 

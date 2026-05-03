@@ -1,6 +1,6 @@
 # DESIGN.md Integration Planning
 
-Planning document for integrating [DESIGN.md](https://github.com/nichochar/design.md) into the SNDQ monorepo UI migration. Determines WHAT to do and WHEN in the 5-phase migration, without prescribing exact commits.
+Planning document for integrating [DESIGN.md](https://github.com/google-labs-code/design.md) into the SNDQ monorepo UI migration. Determines WHAT to do and WHEN in the 5-phase migration, without prescribing exact commits.
 
 **Created**: 2026-04-29
 **Status**: Planning
