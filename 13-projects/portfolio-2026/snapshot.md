@@ -47,6 +47,8 @@ Project name in package.json remains `nextjs-notion-starter-kit` (upstream start
 
 ## Deployment
 
+**Status:** Deferred (Vercel account); production URL remains TBD until Phase A resumes.
+
 **Target:** TBD (Vercel suggested by `pnpm deploy` script). Record production URL here when set:
 
 - Production URL: _TBD_

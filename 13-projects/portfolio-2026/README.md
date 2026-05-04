@@ -4,7 +4,7 @@ Personal site and blog: Notion as CMS, Next.js App Router, with a minimal home s
 
 ## Motivation
 
-Ship a production URL quickly, then iterate on content, UX, and motion without blocking the MVP.
+Ship a production URL quickly, then iterate on content, UX, and motion without blocking the MVP. **Phase A (deploy) can be deferred** (for example hosting account issues) without blocking Notion content and IA work in Phase B on a local dev setup.
 
 ## Goals
 
@@ -26,7 +26,7 @@ External inspiration (URL only): `https://2023.rauno.me/`
 | **C** | UX baseline: readability, accessibility, theme |
 | **D** | Motion and interaction polish |
 
-See [mvp-roadmap.md](./mvp-roadmap.md) for P0/P1/P2 ordering. Execute steps in [tracking.md](./tracking.md). For each phase completion, run the matching checklist under [manual-tests/](./manual-tests/).
+See [mvp-roadmap.md](./mvp-roadmap.md) for P0/P1/P2 ordering. Execute steps in [tracking.md](./tracking.md); if Phase A is deferred, follow [current-focus.md](./current-focus.md) for the active phase. For each phase completion, run the matching checklist under [manual-tests/](./manual-tests/).
 
 ## Tech stack (summary)
 

@@ -1,5 +1,7 @@
 # Manual tests — Phase A: deploy and smoke
 
+When Phase A is **deferred** (no production URL yet), skip the prod-oriented sections below until a URL exists; optional local smoke (`pnpm dev`, `pnpm build`) is still useful.
+
 Run against **production** (or staging URL that matches prod config). Record pass/fail and date.
 
 ## Environment and URL

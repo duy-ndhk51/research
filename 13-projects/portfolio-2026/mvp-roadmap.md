@@ -34,6 +34,10 @@ Rauno-style motion and bespoke typography refinements are **out of MVP** unless 
 | P1 | End of A / B |
 | P2 | Phase D (with C as UX prerequisite) |
 
+## Current execution order
+
+MVP still assumes **P0 production deploy** eventually. Until Phase A is complete, **Phases B, C, and D** may proceed on local development (and any preview URL you add later). Items that require a live host—`sitemap` / `robots` on the production domain, OG or social previews against the public URL—stay tied to Phase A completion. See [tracking.md](./tracking.md) and [decisions.md](./decisions.md) for the active deferral.
+
 ## Cross-references
 
 | Topic | Related notes |

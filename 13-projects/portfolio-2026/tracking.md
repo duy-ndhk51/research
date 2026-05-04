@@ -4,11 +4,15 @@ Check off steps in order within each phase. After completing a phase, run the li
 
 **Agent hint:** Keep [current-focus.md](./current-focus.md) in sync with the next 1–3 unchecked items when ending a session.
 
+**Phase A status:** **Deferred** — deploy is on hold until the Vercel account (or another host) is available. Work continues with **Phase B — Content and IA**; resume Phase A when hosting is unblocked. See [decisions.md](./decisions.md).
+
 ---
 
 ## Phase A — Go live
 
 **Goal:** Production URL, env vars, smoke routes, accurate public `site.config.ts` (no starter social/domain placeholders in user-facing surfaces).
+
+**While deferred:** Until deploy is unblocked, optional local smoke only (`pnpm dev`, `pnpm build`) if you want a sanity check; production URL and prod env steps stay unchecked.
 
 - [ ] Pick host (e.g. Vercel) and connect the Git repo or deploy from CLI
 - [ ] Set production env: Notion token and any vars required by the app README

@@ -4,17 +4,17 @@
 
 ## Active phase
 
-Phase A — Go live
+Phase B — Content and IA
 
 ## Next steps (unchecked)
 
-1. Choose host and deploy; set `NOTION_TOKEN` (and related) in production
-2. Record production URL in [snapshot.md](./snapshot.md)
-3. Run [manual-tests/phase-a-deploy-and-smoke.md](./manual-tests/phase-a-deploy-and-smoke.md) and note the date on the tracking checklist
+1. Document which Notion pages are public vs draft (workflow for yourself)
+2. Confirm blog index lists expected posts only
+3. Decide default vs custom navigation; implement in `site.config.ts` if custom
 
 ## Blockers
 
-_None — add dated notes here when stuck._
+**2026-05-03:** Production deploy (Phase A) deferred — Vercel account issue. Content and IA work proceeds locally or against any non-Vercel preview you set up later.
 
 ## Last session
 
