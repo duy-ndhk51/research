@@ -9,7 +9,7 @@ sndq/
 ├── sndq-fe/              # Main frontend application (kept at root)
 ├── apps/
 │   ├── docs/             # Standalone docs site — standardized components only
-│   └── prototype/        # UI prototype/component playground (sndq-ui-v2)
+│   └── ui-v2-dev/        # Standalone UI v2 dev playground (was sndq-ui-v2)
 │
 ├── packages/
 │   ├── ui-v2/            # Shared UI component library (@sndq/ui-v2)
@@ -32,9 +32,9 @@ Main production frontend application (kept at root to avoid conflicts with other
 
 Standalone documentation site for standardized components. Imports `@sndq/ui-v2` directly, manages its own showcase UI.
 
-### apps/prototype
+### apps/ui-v2-dev
 
-Experimental playground for testing and previewing UI components. Imports `@sndq/ui-v2` directly, manages its own showcase UI.
+Experimental playground for testing and previewing UI components. Imports `@sndq/ui-v2` directly, manages its own showcase UI. This is **not** the same as the in-app `sndq-fe` route hub at `/prototype` (see `sndq-fe/src/app/(dashboard)/prototype/`).
 
 ### packages/ui-v2
 
@@ -61,7 +61,7 @@ Reusable TypeScript presets for:
 
 ```
 sndq-fe ────────────────▶ @sndq/ui-v2
-apps/prototype ─────────▶ @sndq/ui-v2
+apps/ui-v2-dev ─────────▶ @sndq/ui-v2
 apps/docs ──────────────▶ @sndq/ui-v2
 
 @sndq/ui-v2 ────────────▶ @sndq/config

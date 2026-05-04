@@ -52,7 +52,7 @@ Replace three legacy UI component sources in `sndq-fe` with a single, standardiz
 | Gradual deprecation per-batch | Deprecation without available replacement is noise that developers learn to ignore |
 | `@sndq/ui` submodule deprecated early (Phase 2) | Exception — prevents new imports without needing per-component replacement |
 | Tokens extracted in two passes | Phase 1b: Briicks only (sndq-fe's subset). Phase 2: full UI-V2 semantic tokens (when prototype joins) |
-| Components stay in `apps/prototype/` until standardized | Prevents polluting the formal package with prototype code |
+| Components stay in `apps/ui-v2-dev/` until standardized | Prevents polluting the formal package with prototype code |
 | Pilot migration on small module first | `financial` has 44 cross-module exports — too risky for first test |
 
 ---
@@ -88,7 +88,7 @@ sndq/
 │   └── src/app/globals.css          # Imports from @sndq/config/tailwind/* + app theme only
 ├── apps/
 │   ├── docs/                        # Standalone docs site — standardized components only
-│   └── prototype/                   # Experimental playground (moved from sndq-ui-v2)
+│   └── ui-v2-dev/                   # Standalone UI v2 dev playground (moved from sndq-ui-v2)
 ├── packages/
 │   ├── ui-v2/                       # @sndq/ui-v2 — standardized components
 │   │   ├── src/components/          # Primitives
@@ -107,7 +107,7 @@ sndq/
 
 ```
 sndq-fe ────────────────▶ @sndq/ui-v2
-apps/prototype ─────────▶ @sndq/ui-v2
+apps/ui-v2-dev ─────────▶ @sndq/ui-v2
 apps/docs ──────────────▶ @sndq/ui-v2
 
 @sndq/ui-v2 ────────────▶ @sndq/config
@@ -119,7 +119,7 @@ all apps + packages ────▶ @sndq/config + @sndq/tsconfig
 - `sndq-fe/src/components/briicks/` — replaced by `@sndq/ui-v2`
 - `sndq-fe/src/components/ui/` — replaced by `@sndq/ui-v2`
 - `sndq-fe/packages/ui/` — git submodule removed
-- `sndq-ui-v2/` at root — moved to `apps/prototype/`
+- `sndq-ui-v2/` at root — moved to `apps/ui-v2-dev/`
 
 ---
 
@@ -213,8 +213,8 @@ pnpm type-check  # tsc --noEmit passes with shared tsconfig
 
 ### Steps
 
-1. `git mv sndq-ui-v2 apps/prototype`
-2. Update `apps/prototype/package.json` name to `@sndq/prototype`
+1. `git mv sndq-ui-v2 apps/ui-v2-dev`
+2. Update `apps/ui-v2-dev/package.json` name to `@sndq/ui-v2-dev`
 3. **Extract Briicks primitive tokens into `sndq-fe`** (from Phase 1b — `tokens.css` already created in Phase 1a branch):
    - Update `sndq-fe/src/app/globals.css`: add `@import '@sndq/config/tailwind/tokens.css';`, remove the duplicated Briicks color/type/spacing/radius block (~100 lines), remove dead shadcn radius lines (52-54)
    - See [phase-1b-execution.md](./phase-1b-execution.md) Commit 2 for full details and risks
@@ -228,27 +228,27 @@ pnpm type-check  # tsc --noEmit passes with shared tsconfig
    - Control sizing (`--sndq-h-sm`, `--sndq-h`, `--sndq-h-lg`)
    - Radius (`--sndq-r-xs` through `--sndq-r-full`)
    - Shadow (`--sndq-shadow-xs`, `--sndq-shadow-sm`, `--sndq-shadow-md`, insets)
-   - Source: `apps/prototype/src/app/globals.css` lines 164-269
+   - Source: `apps/ui-v2-dev/src/app/globals.css` lines 164-269
 5. Create `packages/config/tailwind/components.css` with UI-V2 component CSS:
    - `.sndq-control`, `.sndq-input-wrap`, `.sndq-btn` + all variants/sizes
    - `.sndq-menu`, `.sndq-item`, `.sndq-menu-label`, `.sndq-separator`
    - `.sndq-label`, `.sndq-helper`, `.sndq-error-msg`
    - `.sndq-badge`, `.sndq-card`, `.font-heading`
-   - Source: `apps/prototype/src/app/globals.css` lines 546-975
+   - Source: `apps/ui-v2-dev/src/app/globals.css` lines 546-975
 6. Create `packages/config/tailwind/animations.css` with shared keyframes:
    - `sndq-hide`, `sndq-slideDownAndFade`, `sndq-slideUpAndFade`, `sndq-slideLeftAndFade`, `sndq-slideRightAndFade`
    - `sndq-dialogOverlayShow`, `sndq-dialogContentShow`
    - `sndq-accordionOpen`, `sndq-accordionClose`
    - `sndq-drawerSlideIn`, `sndq-drawerSlideOut`
    - `collapsible-down`, `collapsible-up`, `ai-progress`
-   - Source: `apps/prototype/src/app/globals.css` lines 271-441
+   - Source: `apps/ui-v2-dev/src/app/globals.css` lines 271-441
 7. Update `packages/config/package.json` exports to include all three tailwind files
-8. Update `apps/prototype/src/app/globals.css`:
+8. Update `apps/ui-v2-dev/src/app/globals.css`:
    - Replace the ~700 lines of tokens/components/animations with imports from `@sndq/config/tailwind/*`
    - Keep app-specific `:root`/`.dark` shadcn vars, `@layer base`
-9. Add ESLint config to prototype: create `apps/prototype/eslint.config.mjs` importing from `@sndq/config/eslint.mjs`
+9. Add ESLint config to prototype: create `apps/ui-v2-dev/eslint.config.mjs` importing from `@sndq/config/eslint.mjs`
 10. Add Prettier config to prototype via `package.json`: `"prettier": "@sndq/config/prettier.json"`
-11. Update `apps/prototype/tsconfig.json` to extend `@sndq/tsconfig/nextjs.json`
+11. Update `apps/ui-v2-dev/tsconfig.json` to extend `@sndq/tsconfig/nextjs.json`
 12. Create `packages/ui-v2/` (`@sndq/ui-v2`) as **empty skeleton**:
     - `package.json` with name `@sndq/ui-v2`, `workspace:*` dependency on `@sndq/config`
     - `tsconfig.json` extending `@sndq/tsconfig/library.json`
@@ -274,7 +274,7 @@ pnpm type-check  # tsc --noEmit passes with shared tsconfig
 - `sndq-fe/packages/ui/` git submodule — untouched
 - `sndq-fe/src/components/briicks/` — no deprecation yet (no replacement available)
 - `sndq-fe/src/components/ui/` — no deprecation yet
-- Components remain in `apps/prototype/src/components/ui-v2/` — they are prototypes, not graduated
+- Components remain in `apps/ui-v2-dev/src/components/ui-v2/` — they are prototypes, not graduated
 - `apps/docs/` is a placeholder — content arrives as components graduate in Phase 3
 
 ### Verification
@@ -300,17 +300,17 @@ pnpm type-check      # both apps pass tsc
 ### Per-batch workflow
 
 ```
-1. Standardize in apps/prototype/
+1. Standardize in apps/ui-v2-dev/
    - Props audit: define stable interfaces, add JSDoc
    - Ensure extensibility (className forwarding, ref forwarding, asChild where appropriate)
    - Unit tests: rendering, variant coverage, accessibility, keyboard interaction
-   - Storybook/playground pages stay in apps/prototype/
+   - Storybook/playground pages stay in apps/ui-v2-dev/
 
 2. Graduate to packages/ui-v2/
-   - Move component files from apps/prototype/src/components/ui-v2/ to packages/ui-v2/src/components/
+   - Move component files from apps/ui-v2-dev/src/components/ui-v2/ to packages/ui-v2/src/components/
    - Move block files to packages/ui-v2/src/blocks/
    - Add to barrel exports (src/components/index.ts or src/blocks/index.ts)
-   - Update imports in apps/prototype/ and apps/docs/ to use @sndq/ui-v2/components
+   - Update imports in apps/ui-v2-dev/ and apps/docs/ to use @sndq/ui-v2/components
 
 3. Deprecate legacy counterparts
    - Add JSDoc @deprecated to the specific briicks/ and ui/ exports that now have a replacement
@@ -566,13 +566,13 @@ The detection script showed `financial` has 44 cross-module component exports �
 
 Phase 1b extracts only Briicks primitive tokens (~140 lines) that `sndq-fe` currently uses. UI-V2 semantic tokens and component CSS classes (~680 lines) only exist in `sndq-ui-v2`, which isn't in the monorepo until Phase 2. Extracting the full set in Phase 1b would mean extracting tokens with no consumer — they'd be untested and potentially wrong.
 
-### Why components stay in `apps/prototype/` until standardized
+### Why components stay in `apps/ui-v2-dev/` until standardized
 
 Moving unstandardized prototypes into `packages/ui-v2/` would signal "these are ready to use" when they're not. Developers might import them, build features, then face breaking changes during standardization. Keeping them in the prototype app until they pass quality gates prevents this.
 
 ### Why no shared docs package
 
-Both `apps/docs/` and `apps/prototype/` import `@sndq/ui-v2` directly and manage their own showcase UI locally. A shared docs package added indirection without enough benefit — each app has different presentation needs and can evolve independently.
+Both `apps/docs/` and `apps/ui-v2-dev/` import `@sndq/ui-v2` directly and manage their own showcase UI locally. A shared docs package added indirection without enough benefit — each app has different presentation needs and can evolve independently.
 
 ---
 

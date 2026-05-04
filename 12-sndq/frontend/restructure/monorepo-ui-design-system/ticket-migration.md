@@ -28,7 +28,7 @@ No big bang. Each phase is independently mergeable. Old and new imports coexist 
 
 ### Phase 2 — Prototype Integration
 
-- Move `sndq-ui-v2` to `apps/prototype/`
+- Move `sndq-ui-v2` to `apps/ui-v2-dev/`
 - Add UI-V2 semantic tokens + component CSS + animations to `@sndq/config/tailwind/`
 - Add ESLint/Prettier to prototype
 - Create empty skeletons: `packages/ui-v2/`, `apps/docs/`
@@ -70,7 +70,7 @@ Two-tier, timed to avoid noise:
 Per-batch flow:
 
 ```
-Standardize in apps/prototype/
+Standardize in apps/ui-v2-dev/
   → Graduate to packages/ui-v2/
   → Deprecate legacy counterparts
 ```
@@ -85,8 +85,8 @@ Standardize in apps/prototype/
 - Old `@sndq/ui` submodule (`sndq-fe/packages/ui/`) stays until Phase 5
 - New package is `@sndq/ui-v2` (avoids naming conflict with submodule)
 - No re-export bridge — APIs are incompatible (different variants, different prop shapes)
-- Components stay in `apps/prototype/` until standardized — package only holds production-ready code
-- Both `apps/docs/` and `apps/prototype/` import `@sndq/ui-v2` directly
+- Components stay in `apps/ui-v2-dev/` until standardized — package only holds production-ready code
+- Both `apps/docs/` and `apps/ui-v2-dev/` import `@sndq/ui-v2` directly
 
 ## Risks
 

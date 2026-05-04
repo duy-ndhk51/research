@@ -37,7 +37,7 @@ For full details, see the [general research](../../../../04-frontend/design-syst
 The SNDQ migration plan already involves:
 - Extracting design tokens from `globals.css` into `@sndq/config/tailwind/` (Phase 1b/2)
 - Standardizing components in batches with quality gates (Phase 3)
-- Maintaining token consistency across `sndq-fe`, `apps/prototype`, and `apps/docs` (all phases)
+- Maintaining token consistency across `sndq-fe`, `apps/ui-v2-dev`, and `apps/docs` (all phases)
 
 DESIGN.md could serve as a **specification layer above the CSS tokens** — the authoritative source that describes not just the values but the rationale, validates token integrity, and generates exports.
 
@@ -94,7 +94,7 @@ This is where DESIGN.md provides the most value. Each standardization batch defi
 
 ```
 Per-batch addition to the standardization checklist:
-1. Standardize in apps/prototype/  (existing)
+1. Standardize in apps/ui-v2-dev/  (existing)
 2. Graduate to packages/ui-v2/     (existing)
 3. Define component tokens in DESIGN.md   ← NEW
 4. Run `lint` — 0 errors, 0 contrast warnings
@@ -215,7 +215,7 @@ How component tokens integrate with the Phase 3 batch standardization process.
 The existing Phase 3 [per-batch workflow](./migration-plan.md#6-phase-3-standardize--graduate-to-package) gains two additional steps:
 
 ```
-1. Standardize in apps/prototype/               (existing)
+1. Standardize in apps/ui-v2-dev/               (existing)
 2. Graduate to packages/ui-v2/                   (existing)
 3. Define component tokens in DESIGN.md          ← NEW
    - Add YAML entries for each component + variants

@@ -137,8 +137,8 @@ sndq/
 │   │   ├── package.json
 │   │   ├── tsconfig.json         # extends @sndq/tsconfig/nextjs.json
 │   │   └── src/app/              # Imports @sndq/ui-v2, manages its own showcase UI
-│   └── prototype/                # UI prototype/component playground (was sndq-ui-v2)
-│       ├── package.json          # name: "@sndq/prototype"
+│   └── ui-v2-dev/                # Standalone UI v2 dev playground (was sndq-ui-v2)
+│       ├── package.json          # name: "@sndq/ui-v2-dev"
 │       ├── tsconfig.json         # extends @sndq/tsconfig/nextjs.json
 │       ├── eslint.config.mjs     # imports from @sndq/config/eslint.mjs
 │       ├── next.config.ts
@@ -284,7 +284,7 @@ Single source of truth for the Briicks design system. Contains:
 - **Radius**: `--radius-sm`, `--radius-md`, `--radius-lg`, `--radius-full`
 - **UI-V2 semantic tokens**: `--sndq-action`, `--sndq-surface`, `--sndq-text`, `--sndq-border`, `--sndq-success`, `--sndq-warning`, `--sndq-error`, `--sndq-info`, typography, control sizing
 
-Source: extracted from `apps/prototype/src/app/globals.css` lines 17-253.
+Source: extracted from `apps/ui-v2-dev/src/app/globals.css` lines 17-253.
 
 #### `tailwind/components.css`
 
@@ -302,13 +302,13 @@ UI-V2 component base CSS classes used by `@sndq/ui-v2` components:
 - `.sndq-card` — card/panel surface
 - `.font-heading` — typography helper
 
-Source: extracted from `apps/prototype/src/app/globals.css` lines 464-743.
+Source: extracted from `apps/ui-v2-dev/src/app/globals.css` lines 464-743.
 
 #### `tailwind/animations.css`
 
 Shared keyframes for dialogs, accordions, drawers, collapsibles, and tooltips.
 
-Source: extracted from `apps/prototype/src/app/globals.css` lines 270-358.
+Source: extracted from `apps/ui-v2-dev/src/app/globals.css` lines 270-358.
 
 #### `tailwind/shared-sources.css`
 
@@ -316,7 +316,7 @@ Tells Tailwind where to scan for class usage across the monorepo:
 
 ```css
 @source "../../../sndq-fe/src/**/*.{js,ts,jsx,tsx}";
-@source "../../../apps/prototype/src/**/*.{js,ts,jsx,tsx}";
+@source "../../../apps/ui-v2-dev/src/**/*.{js,ts,jsx,tsx}";
 @source "../../../packages/ui-v2/src/**/*.{js,ts,jsx,tsx}";
 ```
 
@@ -472,7 +472,7 @@ Apps extend and add local paths, `include`, and `exclude`:
 
 ### Tier 1 — Primitives (`@sndq/ui-v2/components`)
 
-Well-known UI atoms. Zero business logic, fully controlled via props. 70 components from `apps/prototype/src/components/ui-v2/`:
+Well-known UI atoms. Zero business logic, fully controlled via props. 70 components from `apps/ui-v2-dev/src/components/ui-v2/`:
 
 | Category | Components |
 |----------|-----------|
@@ -490,7 +490,7 @@ Well-known UI atoms. Zero business logic, fully controlled via props. 70 compone
 
 ### Tier 2 — Blocks (`@sndq/ui-v2/blocks`)
 
-Reusable compositions that combine primitives into opinionated layouts. No business logic — no API calls, no translations, no app context. 9 blocks from `apps/prototype/src/components/ui-v2/blocks/` + FormShell from `apps/prototype/src/patterns/form/`:
+Reusable compositions that combine primitives into opinionated layouts. No business logic — no API calls, no translations, no app context. 9 blocks from `apps/ui-v2-dev/src/components/ui-v2/blocks/` + FormShell from `apps/ui-v2-dev/src/patterns/form/`:
 
 | Block | Composes |
 |-------|----------|
@@ -533,9 +533,9 @@ Does it import from @/hooks, @/services, @/contexts, or use useTranslations()?
   YES → Tier 3 (business) → sndq-fe/src/components/
 ```
 
-### Note on `apps/prototype/src/patterns/form/` demo forms
+### Note on `apps/ui-v2-dev/src/patterns/form/` demo forms
 
-The 6 demo forms (`AddContactForm`, `CreateLeaseForm`, `CreateInvoiceForm`, etc.) are **prototype-only** — they demonstrate how to use `@sndq/ui-v2` components in forms. They stay in `apps/prototype/src/patterns/form/`. Only `FormShell` (the reusable layout wrapper) moves to `@sndq/ui-v2/blocks`.
+The 6 demo forms (`AddContactForm`, `CreateLeaseForm`, `CreateInvoiceForm`, etc.) are **prototype-only** — they demonstrate how to use `@sndq/ui-v2` components in forms. They stay in `apps/ui-v2-dev/src/patterns/form/`. Only `FormShell` (the reusable layout wrapper) moves to `@sndq/ui-v2/blocks`.
 
 ---
 
@@ -603,7 +603,7 @@ packages:
 
 ### App `globals.css` (after migration)
 
-Both `sndq-fe` and `apps/prototype` reduce to:
+Both `sndq-fe` and `apps/ui-v2-dev` reduce to:
 
 ```css
 @import url('https://fonts.googleapis.com/css2?family=Inter:...');
@@ -642,7 +642,7 @@ graph TD
     config["@sndq/config"]
     uiv2["@sndq/ui-v2"]
     web["sndq-fe"]
-    prototype["apps/prototype"]
+    prototype["apps/ui-v2-dev"]
     docs_app["apps/docs"]
 
     uiv2 -->|"workspace:*"| config
@@ -747,7 +747,7 @@ The migration follows a **five-phase gradual approach** — each phase is indepe
 |-------|------|-----------|
 | **1a** | Structural Foundation | Create `apps/`, `packages/` dirs. Extract `@sndq/tsconfig` + `@sndq/config` (ESLint, Prettier). Wire `sndq-fe`. |
 | **1b** | Tailwind Tokens | Extract Briicks primitive tokens into `@sndq/config/tailwind/tokens.css`. |
-| **2** | Prototype Integration | `sndq-ui-v2` moved to `apps/prototype/` (renamed `@sndq/prototype`). Add UI-V2 tokens. Create `packages/ui-v2/` and `apps/docs/` skeletons. Deprecate old submodule via ESLint. |
+| **2** | Prototype Integration | `sndq-ui-v2` moved to `apps/ui-v2-dev/` (renamed `@sndq/ui-v2-dev`). Add UI-V2 tokens. Create `packages/ui-v2/` and `apps/docs/` skeletons. Deprecate old submodule via ESLint. |
 | **3** | Standardize + Graduate | Standardize components in batches, graduate to `packages/ui-v2/`, deprecate legacy per-batch. |
 | **4** | Module Migration | Direct per-module migration: change imports + update props. Pilot on small module first. |
 | **5** | Cleanup | Remove `briicks/`, `ui/`, old submodule. Optional rename `@sndq/ui-v2` → `@sndq/ui`. Bundle audit. |

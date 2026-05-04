@@ -24,7 +24,7 @@ Reorganize into a hybrid `sndq-fe` + `apps/` + `packages/` monorepo structure:
 | Before | After |
 |--------|-------|
 | `sndq-fe/` (top-level) | `sndq-fe/` (stays at root to avoid conflicts) |
-| `sndq-ui-v2/` (top-level) | `apps/prototype/` |
+| `sndq-ui-v2/` (top-level) | `apps/ui-v2-dev/` |
 | `sndq-ui-v2/src/components/ui-v2/` (inside app) | `packages/ui-v2/` (`@sndq/ui-v2`) — after standardization |
 | Git submodule `sndq-fe/packages/ui/` | Stays until full cleanup (Phase 5) — deprecated via ESLint in Phase 2 |
 | Duplicated design tokens in globals.css | `packages/config/` (`@sndq/config`) |
@@ -41,7 +41,7 @@ Reorganize into a hybrid `sndq-fe` + `apps/` + `packages/` monorepo structure:
 ### New apps
 
 - **`apps/docs/`** — standalone docs site for standardized components
-- **`apps/prototype/`** — experimental playground (moved from `sndq-ui-v2/`)
+- **`apps/ui-v2-dev/`** — experimental playground (moved from `sndq-ui-v2/`)
 
 ### Component classification
 
@@ -83,7 +83,7 @@ Five-phase gradual approach — see **[migration-plan.md](./migration-plan.md)**
 |------|--------|------------|
 | Import path breakage | Build failures | Phase-by-phase approach, verify with `pnpm build && pnpm type-check` |
 | CI/CD path references | Deploy failures | Update GitHub Actions workflows before merge |
-| Vercel project config | Wrong build root | Update Vercel project settings for prototype app |
+| Vercel project config | Wrong build root | Update Vercel project settings for the UI v2 dev app (`apps/ui-v2-dev`) |
 | Branch divergence before Phase 2 | Painful merge | Rebase `sndq-ui-v2` branch onto dev after Phase 1 merges |
 
 ## Related documents

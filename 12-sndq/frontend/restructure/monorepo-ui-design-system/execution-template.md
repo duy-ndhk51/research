@@ -61,8 +61,8 @@ pnpm --filter sndq-fe run type-check 2>&1 | tee /tmp/{phase-slug}-fe-typecheck-b
 <!-- Example:
 ```bash
 # prototype baselines
-NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/prototype run build 2>&1 | tee /tmp/{phase-slug}-proto-build-before.txt
-pnpm --filter @sndq/prototype run lint 2>&1 | tee /tmp/{phase-slug}-proto-lint-before.txt
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build 2>&1 | tee /tmp/{phase-slug}-proto-build-before.txt
+pnpm --filter @sndq/ui-v2-dev run lint 2>&1 | tee /tmp/{phase-slug}-proto-lint-before.txt
 ```
 -->
 
