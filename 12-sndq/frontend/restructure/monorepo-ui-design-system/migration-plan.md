@@ -9,6 +9,10 @@ Gradual, five-phase migration from legacy component libraries (`briicks/`, `ui/`
 **Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md) — step-by-step commits, risk checklists, verification commands
 **Phase 1b execution**: [phase-1b-execution.md](./phase-1b-execution.md) — Briicks token extraction (folded into Phase 2)
 **Phase 2 execution**: [phase-2-execution.md](./phase-2-execution.md) — prototype integration, token/CSS extraction, package scaffolding, deprecation
+**Phase 3, Batch 0 execution**: [phase-3-batch-0-execution.md](./phase-3-batch-0-execution.md) — Fumadocs at site root (`baseUrl: '/'`), Orama search, IA stubs in `apps/docs`
+**Phase 3, Batch 1 execution**: [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md) — Typography (`Text`, `Heading`) first, then Button, Input, Badge, Select, Dialog, Sheet; incremental `@theme` aliases; package graduation + MDX + `sndq-fe` deprecations · [typography-system-reference.md](./typography-system-reference.md)
+**Phase 3, Batch 2 execution**: [phase-3-batch-2-execution.md](./phase-3-batch-2-execution.md) — Card, Tabs, Tooltip, EmptyState, Skeleton
+**Phase 3, Batch 3 execution**: [phase-3-batch-3-execution.md](./phase-3-batch-3-execution.md) — Remaining primitives + blocks (waves); final legacy deprecation pass
 
 ---
 
@@ -297,6 +301,30 @@ pnpm type-check      # both apps pass tsc
 
 `packages/ui-v2/` already exists from Phase 2 as an empty skeleton, wired as `workspace:*` in all apps. Ready to receive graduated components.
 
+### Batch 0: Docs Infrastructure (Fumadocs)
+
+Before any component graduation, set up Fumadocs in `apps/docs`:
+
+- Install `fumadocs-ui`, `fumadocs-core`, `fumadocs-mdx` in `apps/docs`
+- Add `source.config.ts` (MDX content source under `apps/docs/content/docs/`)
+- Replace placeholder root layout with Fumadocs `RootProvider` + `DocsLayout`
+- Set Fumadocs `loader()` **baseUrl** to `/` so the public site home and all doc pages live at the site root (no `/docs` URL prefix). On disk, MDX still lives under `apps/docs/content/docs/`. Remove the placeholder `app/page.tsx` so an optional catch-all `app/[[...slug]]/` can serve `/`
+- Add `/api/search` route using built-in Orama (client-side, free, swappable later to Algolia/Inkeep)
+- Seed three top-level categories with stub MDX:
+  - **Foundations** (tokens, colors, typography, spacing — placeholders; **typography** content is implemented in Batch 1 and documented in [typography-system-reference.md](./typography-system-reference.md))
+  - **Primitives** (components catalog — placeholder until Batch 1)
+  - **Blocks** (compositions catalog — placeholder)
+
+**Why before Batch 1**: The per-batch workflow already lists tests + storybook pages + graduation steps. Adding "set up MDX/sidebar/search" inside Batch 1 would entangle infra plumbing with the first component doc and make that PR much larger than subsequent ones.
+
+**Why category stubs**: With three empty-but-real pages, the IA is visible from day one. Each later batch only adds component MDX into Primitives/Blocks — no information-architecture decisions need to repeat per batch.
+
+**Decision rationale**: see [fumadocs-decision.md](./fumadocs-decision.md) for the framework / layout / search / routing choices and tradeoffs. Background library research lives at [04-frontend/nextjs/fumadocs/](../../../../04-frontend/nextjs/fumadocs/).
+
+See [phase-3-batch-0-execution.md](./phase-3-batch-0-execution.md) for step-by-step.
+
+**Batch 1–3 step-by-step**: [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md) · [phase-3-batch-2-execution.md](./phase-3-batch-2-execution.md) · [phase-3-batch-3-execution.md](./phase-3-batch-3-execution.md)
+
 ### Per-batch workflow
 
 ```
@@ -326,7 +354,7 @@ pnpm type-check      # both apps pass tsc
 
 | Batch | Components | Legacy counterparts to deprecate |
 |-------|-----------|----------------------------------|
-| **1** | Button, Input, Badge, Select, Dialog, Sheet | `briicks/button`, `briicks/input`, `briicks/badge`, `briicks/select`, `ui/dialog`, `ui/sheet` |
+| **1** | `Text`, `Heading`, then Button, Input, Badge, Select, Dialog, Sheet | `briicks/text`, `briicks/button`, `briicks/input`, `briicks/badge`, `briicks/select`, `ui/dialog`, `ui/sheet` |
 | **2** | Card, Tabs, Tooltip, EmptyState, Skeleton | `briicks/empty-state`, `ui/card`, `ui/tabs`, `ui/tooltip`, `ui/skeleton` |
 | **3** | Remaining components | Remaining counterparts |
 
@@ -493,7 +521,7 @@ export { Button } from './button';
 | Phase | What gets deprecated | Method |
 |-------|---------------------|--------|
 | Phase 2 | `@sndq/ui`, `@sndq/ui/*` | ESLint `no-restricted-imports` |
-| Phase 3, Batch 1 | Button, Input, Badge, Select, Dialog, Sheet in briicks/ui | JSDoc `@deprecated` |
+| Phase 3, Batch 1 | `Text`, `Heading`, Button, Input, Badge, Select, Dialog, Sheet in briicks/ui | JSDoc `@deprecated` |
 | Phase 3, Batch 2 | Card, Tabs, Tooltip, EmptyState, Skeleton in briicks/ui | JSDoc `@deprecated` |
 | Phase 3, Batch 3 | Remaining briicks/ui exports | JSDoc `@deprecated` |
 | Phase 5 | All removed | Directories deleted |
@@ -532,6 +560,17 @@ The briicks and ui-v2 component APIs are **not drop-in compatible**. Direct migr
 | Variants | 15+ including `*Saturated` variants | `neutral`, `brand`, `success`, `warning`, `error` (5) | Map to closest semantic variant |
 | `asChild` | Supported | Not supported | Remove or wrap differently |
 | Action/dismiss | `actionIcon`, `onActionClick`, `actionLabel` | Not supported | Build dismiss behavior in consuming code |
+
+### Typography (`Heading`, `Paragraph`, `Caption` → `Heading`, `Text`)
+
+| Aspect | briicks (`text/index.tsx`) | ui-v2 | Migration action |
+|--------|---------------------------|-------|------------------|
+| Component split | `Heading`, `Paragraph`, `Caption` (three exports) | `Heading`, `Text` (two exports) | Map `Paragraph` and `Caption` to `Text` variants in Phase 4; use `Heading` for titles |
+| `Heading` sizes | `large`, `medium`, `small` (CVA) | Define stable ui-v2 `size` / variant API in Batch 1 | Align names or map per call site in Phase 4 |
+| `Paragraph` variants | `label`, `default`, `label-link`, `inline-link`, `mono`, `inherit` | `Text` variant axis | Map each briicks variant to closest ui-v2 `Text` variant |
+| `Caption` variants | `default`, `inline-link`, `mono`, `inherit` | `Text` (caption-style variants) | Same as paragraph mapping |
+| Token / CSS | Hardcoded Tailwind in CVA | `semantic-tokens.css` (`--sndq-text-*`, `--sndq-text`, …); optional short utilities via **gradual** `@theme` aliases in `tokens.css` | Batch 1 standardizes package; see [typography-system-reference.md](./typography-system-reference.md) |
+| Overrides | `className` + `cn` in briicks | `cn(variantClasses, className)`; `packages/ui-v2/src/lib/utils.ts` mirrors submodule `cn` | Phase 4 swap import; adjust props |
 
 ---
 
@@ -573,6 +612,20 @@ Moving unstandardized prototypes into `packages/ui-v2/` would signal "these are 
 ### Why no shared docs package
 
 Both `apps/docs/` and `apps/ui-v2-dev/` import `@sndq/ui-v2` directly and manage their own showcase UI locally. A shared docs package added indirection without enough benefit — each app has different presentation needs and can evolve independently.
+
+### Why Fumadocs with built-in Orama search
+
+Fumadocs provides a Next App Router-native docs framework with first-class MDX, sidebar generation, and a swappable search backend. Default Orama search is client-side, free, indexed at build time — ideal for an internal docs site whose content size is bounded. Algolia/Inkeep can replace Orama later by swapping the `/api/search` route without changing component pages. Authoring stays MDX, which matches how component teams already write Storybook descriptions.
+
+Full SNDQ-specific rationale (framework, layout, search, routing) and alternatives considered: [fumadocs-decision.md](./fumadocs-decision.md). Background library research: [04-frontend/nextjs/fumadocs/](../../../../04-frontend/nextjs/fumadocs/).
+
+### Why an infra batch (Batch 0) instead of folding into Batch 1
+
+Batch 1 graduates typography plus six interactive primitives — already a substantial PR set with tests, deprecation, and prop migration. Coupling Fumadocs install + layout + search + IA seeding with that batch would make it un-reviewable and create false sequencing (you cannot verify "search works" until Batch 1 is half-done). Batch 0 is infra-only and ships with placeholder content.
+
+### Why typography is first in Batch 1 (with gradual `@theme`)
+
+Foundations-adjacent work (`Text`, `Heading`) ships **before** Button–Sheet so token usage, `cn()` merging, and optional Tailwind `@theme` aliases are established early. Variant styles must reference `packages/config/tailwind/semantic-tokens.css`; short utilities are added **incrementally** in `tokens.css` only when a shipped variant needs them — avoiding a one-shot full palette mapping. `@sndq/ui-v2` uses `packages/ui-v2/src/lib/utils.ts` (`clsx` + `tailwind-merge`) matching `sndq-fe/packages/ui/src/lib/utils.ts`, without depending on the submodule. Full rationale: [typography-system-reference.md](./typography-system-reference.md).
 
 ---
 
