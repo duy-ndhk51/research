@@ -163,7 +163,7 @@ export const source = loader({
 
 **Note**: `collections/server` maps to `./.source/server` via `tsconfig` paths after `pnpm run generate:source` (or `next dev` / `next build`). Do not import `../../.source` without `/server` — there is no package entry on the folder alone.
 
-**Shared ESLint (`@sndq/config`)**: `packages/config/eslint.mjs` loads **flat** configs from `eslint-config-next` when the resolved package is **16+** (Next 16 + `eslint-config-next` 16 no longer works with `FlatCompat` for `next/core-web-vitals`). Apps on **Next 15** keep the legacy `FlatCompat.extends(...)` path.
+**Shared ESLint (`@sndq/config`)**: `createEslintConfig(dirname, options?)` in `packages/config/eslint.mjs` defaults to **`nextMajor: 15`** (FlatCompat + `next/core-web-vitals`, `next/typescript`, `plugin:prettier/recommended`). **`eslint-config-next` 16** is flat-first; combining it with `FlatCompat` and the legacy `next/*` presets breaks under ESLint 9 (for example circular JSON errors). Callers on Next 16 pass **`{ nextMajor: 16 }`** so the factory spreads the flat `eslint-config-next/core-web-vitals` + `typescript` arrays and flat `eslint-plugin-prettier/recommended`. **`apps/docs`** passes `{ nextMajor: 16 }`; other apps keep a single-argument call and stay on the default 15 path.
 
 **Risks**:
 
@@ -384,12 +384,14 @@ pnpm --filter @sndq/docs run dev
 
 **Status**:
 
-- [ ] `[[...slug]]/layout.tsx` created
-- [ ] `[[...slug]]/page.tsx` created
-- [ ] Placeholder `src/app/page.tsx` deleted
-- [ ] `generateStaticParams` exported
-- [ ] Build passes
-- [ ] Committed
+- [x] `[[...slug]]/layout.tsx` created
+- [x] `[[...slug]]/page.tsx` created
+- [x] Placeholder `src/app/page.tsx` deleted
+- [x] `generateStaticParams` exported
+- [x] Build passes (remove stale `apps/docs/.next` if `tsc` still references deleted `page.tsx`)
+- [x] Committed (manual)
+
+**SNDQ note (2026-05-04)**: If `pnpm --filter @sndq/docs run lint` fails with a circular JSON error after upgrading docs to Next 16, ensure **`apps/docs/eslint.config.mjs`** calls **`createEslintConfig(__dirname, { nextMajor: 16 })`** so `@sndq/config` uses the flat Next 16 branch (not the default `nextMajor: 15` + `FlatCompat` path).
 
 ---
 
@@ -734,6 +736,6 @@ Record notes, issues, and deviations here as you go.
 | 2026-05-04 | Platform | Next **16.2.4**, `eslint-config-next` **16.2.4**, Fumadocs **16.8.7** / MDX **14.3.2**, **zod 4**, Tailwind **4.2.4**, `postcss.config.mjs`, `global.css`, `collections/server` path, `@sndq/config` ESLint flat path for Next 16 |
 |      | 1      | (Historical) Fumadocs install + source — superseded by platform row if applied in one step |
 |      | 2      | Root layout + `RootProvider` + global CSS |
-|      | 3      |       |
+| 2026-05-04 | 3      | Root `[[...slug]]` + `DocsLayout` / `DocsPage`; removed placeholder `page.tsx`; restored `@sndq/config` ESLint Next-16 branch if lint broke |
 |      | 4      |       |
 |      | 5      |       |

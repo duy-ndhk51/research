@@ -63,4 +63,5 @@ APIs are **not** drop-in compatible; call sites change in Phase 4 per [migration
 ## 6. Related documents
 
 - [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md) — commit order, verification, deprecations.
+- [layout-system-reference.md](./layout-system-reference.md) — CVA `Container` / `Section` (Batch 1 sub-batch 1B).
 - [migration-plan.md](./migration-plan.md) — phases, API matrix, deprecation strategy.

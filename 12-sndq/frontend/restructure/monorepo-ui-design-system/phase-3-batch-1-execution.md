@@ -1,4 +1,4 @@
-# Phase 3, Batch 1 Execution — Typography (`Text`, `Heading`), then Button, Input, Badge, Select, Dialog, Sheet
+# Phase 3, Batch 1 Execution — Sub-batches: Typography, layout shell, interactive primitives
 
 Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently verifiable and revertable.
 
@@ -7,6 +7,7 @@ Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently 
 **Architecture**: [README.md](./README.md)  
 **Migration plan**: [migration-plan.md](./migration-plan.md)  
 **Typography reference**: [typography-system-reference.md](./typography-system-reference.md)  
+**Layout shell reference**: [layout-system-reference.md](./layout-system-reference.md)  
 **Phase 2 execution**: [phase-2-execution.md](./phase-2-execution.md)  
 **Phase 3, Batch 0 execution**: [phase-3-batch-0-execution.md](./phase-3-batch-0-execution.md)
 
@@ -28,17 +29,26 @@ Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently 
 
 ## 1. Overview
 
-**Goal**: Standardize **`Text`** and **`Heading`** first (foundations-aligned typography), then the six highest-leverage interactive primitives in `apps/ui-v2-dev/`, graduate them into `packages/ui-v2/`, document each in `apps/docs` under Primitives, and add JSDoc `@deprecated` on the matching `sndq-fe` briicks/ui barrel exports — without rewriting `sndq-fe` call sites (Phase 4).
+**Goal**: Standardize and graduate, in order: **`Text`** and **`Heading`** (typography); **`Container`** and **`Section`** (CVA-based layout shell — SNDQ semantic tokens only, **not** `@radix-ui/themes`); then the six highest-leverage interactive primitives (Button, Input, Badge, Select, Dialog, Sheet). Each graduate moves into `packages/ui-v2/`, with MDX in `apps/docs` (typography + interactive under **Primitives**; layout shell under **Foundations**). Finish with one JSDoc `@deprecated` pass on matching `sndq-fe` briicks/ui barrel exports — without rewriting `sndq-fe` call sites (Phase 4).
 
-**Structure**: **17 commits** across **1 PR** (default). Typography uses four commits (`Text` standardize + graduate, `Heading` standardize + graduate). Each remaining component uses two commits (standardize + graduate). The last commit applies all legacy deprecations together.
+**Structure**: **21 commits** across **1 PR** (default), grouped into **sub-batches** for review and narrative:
+
+| Sub-batch | Commits | Scope |
+|-----------|---------|--------|
+| **1A — Typography** | 1–4 | `Text` then `Heading` (standardize + graduate each) |
+| **1B — Layout shell** | 5–8 | `Container` then `Section` (standardize + graduate each); CVA + `semantic-tokens.css` layout variables |
+| **1C — Interactive** | 9–20 | Button (+ co-located exports), Input, Badge, Select, Dialog, Sheet (standardize + graduate each) |
+| **1D — Deprecations** | 21 | Single `sndq-fe` JSDoc pass |
 
 | PR | Scope | Risk level | Commits |
 |----|-------|------------|---------|
-| **PR 1** | `Text`, `Heading`, then Button (+ co-located button exports), Input, Badge, Select, Dialog, Sheet + docs MDX + incremental `@sndq/config` `@theme` aliases as needed + `sndq-fe` deprecations | Medium | 1–17 |
+| **PR 1** | Sub-batches 1A–1D: typography, CVA `Container`/`Section`, six interactives, docs (primitives + foundations layout MDX), incremental `@sndq/config` `@theme` aliases as needed, `sndq-fe` deprecations | Medium | 1–21 |
 
-**Why typography first**: Establishes token usage, `cn()` pattern, and optional short Tailwind utilities before the larger interactive set. See [typography-system-reference.md](./typography-system-reference.md).
+**Why typography first (1A)**: Establishes token usage, `cn()` pattern, and optional short Tailwind utilities before layout and the larger interactive set. See [typography-system-reference.md](./typography-system-reference.md).
 
-**Why 1 PR**: Keeps one reviewable narrative for the first graduation batch. Commits stay ordered so you can split later (e.g. commits 1–16 merged first, commit 17 as follow-up) if CI or policy requires it.
+**Why layout shell next (1B)**: Introduces **page-level** width and vertical rhythm via a small, strict API (`size` presets on `Container` / `Section`) backed by the same token discipline; inner flex/grid remains Tailwind at call sites. See [layout-system-reference.md](./layout-system-reference.md).
+
+**Why 1 PR**: Keeps one reviewable narrative for the first graduation batch. Commits stay ordered so you can split later (e.g. commits **1–20** merged first, commit **21** as follow-up) if CI or policy requires it.
 
 ### Typography and `@theme` utilities (gradual)
 
@@ -47,10 +57,20 @@ Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently 
 - **Do not** map the entire semantic palette in one commit.
 - **`cn`**: `packages/ui-v2/src/lib/utils.ts` mirrors `sndq-fe/packages/ui/src/lib/utils.ts` (`clsx` + `tailwind-merge`). Components use `cn(variantClasses, className)` on the root. `@sndq/ui-v2` must not import the submodule.
 
+### Layout tokens and CVA (gradual)
+
+- **Not Radix Themes**: Do **not** add `@radix-ui/themes`, its `Theme` provider for spacing, or its layout CSS. Implement **`Container`** and **`Section`** with [`cva`](https://cva.style/docs) + `cn()` only, same spirit as typography.
+- **Canonical layout values** live in `packages/config/tailwind/semantic-tokens.css`. Add variables **incrementally** in the same commit that first uses them in a `cva` recipe, for example:
+  - **Container**: max width and horizontal inset — e.g. `--sndq-container-max-sm`, `--sndq-container-max-md`, `--sndq-container-gutter` (exact set is defined in [layout-system-reference.md](./layout-system-reference.md) and implemented alongside Commits 5–6).
+  - **Section**: vertical padding / band rhythm — e.g. `--sndq-section-py-sm`, `--sndq-section-py-md`, `--sndq-section-py-lg` (alongside Commits 7–8).
+- **`cva` recipes** must reference only those `var(--sndq-…)` values (or existing primitives they compose). No ad-hoc pixel literals in component files.
+- **Optional `@theme` aliases** in `packages/config/tailwind/tokens.css`: only when a shipped `Container`/`Section` variant needs a shorter utility in the **same** commit.
+- **v1 API**: Prefer a single **`size`** enum per component (e.g. `sm | md | lg` — exact names in layout reference). **No** Radix-style responsive object props (`gap={{ sm: '2', lg: '4' }}`) in Batch 1 unless explicitly deferred to a later batch.
+
 ### Prerequisites
 
 - Phase 2 is merged to dev (`packages/ui-v2` skeleton, `apps/ui-v2-dev`, `apps/docs`, `@sndq/config` tailwind pipeline).
-- Phase 3, Batch 0 is merged to dev (Fumadocs at `/`, Primitives IA exists under `apps/docs/content/docs/primitives/`).
+- Phase 3, Batch 0 is merged to dev (Fumadocs at `/`, **Primitives** IA under `apps/docs/content/docs/primitives/`, **Foundations** IA under `apps/docs/content/docs/foundations/`).
 
 ### Legacy deprecation mapping (Batch 1)
 
@@ -60,7 +80,8 @@ Apply JSDoc `@deprecated` on barrel exports only **after** the replacement exist
 |-------------------|---------------------------|--------|
 | `Text`, related types / variant helpers | `sndq-fe/src/components/briicks/text/` (and briicks barrel) | `Paragraph` / `Caption` map to `Text` variants in Phase 4; deprecate after package exports exist |
 | `Heading`, related types / variant helpers | same folder / barrel | Align briicks `Heading` with ui-v2 `Heading` API |
-| `Button`, `buttonVariants`, `ButtonProps`, and any co-located exports (e.g. `ComboButton`) | `sndq-fe/src/components/briicks/button/` (or barrel `briicks/button/index.ts`) | Inspect actual folder layout before Commit 17 |
+| `Container`, `Section` | *(none by default)* | **Inspect** `sndq-fe` before **Commit 21**: add a table row and JSDoc only if a matching barrel export exists (e.g. a legacy layout helper). If none, skip. |
+| `Button`, `buttonVariants`, `ButtonProps`, and any co-located exports (e.g. `ComboButton`) | `sndq-fe/src/components/briicks/button/` (or barrel `briicks/button/index.ts`) | Inspect actual folder layout before Commit 21 |
 | `Input` and related types | `sndq-fe/src/components/briicks/input/` | briicks may expose `InputV2` — deprecate the exported surface that maps to ui-v2 `Input` |
 | `Badge` | `sndq-fe/src/components/briicks/badge/` | |
 | `Select` and subcomponents | `sndq-fe/src/components/briicks/select/` | Match export names to ui-v2 Select API |
@@ -82,14 +103,15 @@ A component may graduate only when:
 - [ ] Stable prop interface with JSDoc on public props
 - [ ] `className` forwarding via `cn()` where applicable (`cn(variantClasses, className)` so overrides merge correctly)
 - [ ] `ref` forwarding where applicable (and `asChild` if the design requires it)
-- [ ] Unit tests: variants, a11y basics, keyboard interaction as relevant
+- [ ] Unit tests: variants, a11y basics, keyboard interaction as relevant (keyboard/a11y depth varies by component; layout primitives: render + variant class coverage)
 - [ ] No imports from app-specific code (hooks, services, `next-intl`, `@/modules`, etc.)
 - [ ] Uses `@sndq/config/tailwind` tokens / shared component CSS (no hardcoded one-off theme in the component file)
-- [ ] **Typography only**: variant styles reference `semantic-tokens.css` variables; any new **`@theme`** alias for shorter utilities is added **incrementally** in the same change that introduces the variant needing it (see [Typography and `@theme` utilities (gradual)](#typography-and-theme-utilities-gradual))
+- [ ] **Typography (`Text`, `Heading`)**: variant styles reference `semantic-tokens.css` variables; any new **`@theme`** alias is added **incrementally** in the same change that introduces the variant needing it (see [Typography and `@theme` utilities (gradual)](#typography-and-theme-utilities-gradual))
+- [ ] **Layout (`Container`, `Section`)**: `cva` maps reference only layout semantic tokens from `semantic-tokens.css`; default elements documented (`Container` → `div`, `Section` → `section` for document outline unless design specifies otherwise); **v1** uses discrete `size` presets only (see [Layout tokens and CVA (gradual)](#layout-tokens-and-cva-gradual))
 
 ### Inspect prototype tree (once)
 
-Before **Commit 5**, list `apps/ui-v2-dev/src/components/ui-v2/` for `Text` / `Heading` and (separately) any `button/` subfolder. If `ComboButton`, `buttonVariants`, or other exports live beside `Button`, include them in the **Button** vertical slice (commits 5–6) so the briicks barrel deprecation stays truthful.
+Before **Commit 9**, list `apps/ui-v2-dev/src/components/ui-v2/` for `Text`, `Heading`, `Container`, `Section`, and (separately) any `button/` subfolder. If `ComboButton`, `buttonVariants`, or other exports live beside `Button`, include them in the **Button** vertical slice (commits **9–10**) so the briicks barrel deprecation stays truthful. If `Container` / `Section` are missing in the prototype, implement them during **Commits 5** and **7** per [layout-system-reference.md](./layout-system-reference.md).
 
 ### Capture baselines
 
@@ -123,9 +145,11 @@ git checkout -b feature/phase-3-batch-1-standardize-graduate
 
 ## 3. PR 1 — Standardize, graduate, deprecate (Batch 1)
 
-**Scope**: `Text` and `Heading` graduate first; then six primitives move from prototype to `packages/ui-v2/src/components/`, barrels and consumers in `apps/ui-v2-dev` and `apps/docs` update, MDX pages added, then one deprecation pass on `sndq-fe`.
+**Scope**: Sub-batches **1A** (typography) → **1B** (`Container`, `Section`) → **1C** (Button … Sheet) → **1D** (deprecations). Package exports for all components live on `@sndq/ui-v2/components`. Docs: **Primitives** for `text`, `heading`, and interactives; **Foundations** for `container`, `section` MDX and `foundations/meta.json` updates.
 
-**PR split note**: If review load is high, merge through **Commit 16** first (all moves + docs), then **Commit 17** (deprecations only) as a tiny follow-up PR.
+**PR split note**: If review load is high, merge through **Commit 20** first (all moves + docs), then **Commit 21** (deprecations only) as a tiny follow-up PR.
+
+### Sub-batch 1A — Typography (Commits 1–4)
 
 ---
 
@@ -160,7 +184,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ### Commit 2: Graduate `Text` to package + MDX + update consumers
 
-**What**: Move `Text` into `packages/ui-v2`, export from `src/components/index.ts`, fix imports in `apps/ui-v2-dev` and `apps/docs`, add `apps/docs/content/docs/primitives/text.mdx` and `meta.json` entry **above** Button in sidebar order if applicable.
+**What**: Move `Text` into `packages/ui-v2`, export from `src/components/index.ts`, fix imports in `apps/ui-v2-dev` and `apps/docs`, add `apps/docs/content/docs/primitives/text.mdx` and `primitives/meta.json` entry **above** Button in sidebar order if applicable.
 
 **Files to create**:
 
@@ -207,7 +231,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ### Commit 4: Graduate `Heading` + MDX + consumers
 
-**What**: Move `Heading` to `packages/ui-v2`, export, add `primitives/heading.mdx`, update `meta.json`.
+**What**: Move `Heading` to `packages/ui-v2`, export, add `primitives/heading.mdx`, update `primitives/meta.json`.
 
 **Commit message**: `feat(ui-v2): graduate Heading to package and document`
 
@@ -217,7 +241,101 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 5: Standardize Button (+ co-located exports) in prototype
+### Sub-batch 1B — Layout shell (Commits 5–8)
+
+---
+
+### Commit 5: Standardize `Container` in prototype
+
+**What**: Finalize `Container` with **cva** `size` variants (max-width + horizontal inset) backed by new semantic layout tokens in `semantic-tokens.css` (add tokens in this commit or the prior slice only if already present). JSDoc, `ref`, tests (render + variant classes). Default element: `div`. See [layout-system-reference.md](./layout-system-reference.md).
+
+**Files to edit** (adjust paths to match repo):
+
+- `apps/ui-v2-dev/src/components/ui-v2/**/container*.tsx` — or create if missing
+- `packages/config/tailwind/semantic-tokens.css` — layout tokens for container presets
+- Colocated tests
+
+**Verification**:
+
+```bash
+pnpm --filter @sndq/ui-v2-dev run test -- --testPathPattern=container
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
+pnpm --filter @sndq/ui-v2-dev run lint
+pnpm --filter @sndq/ui-v2-dev run type-check
+```
+
+**Commit message**: `refactor(ui-v2-dev): standardize Container for package graduation`
+
+**Status**:
+
+- [ ] Layout gate checklist satisfied for `Container`
+- [ ] Committed
+
+---
+
+### Commit 6: Graduate `Container` to package + foundations MDX + update consumers
+
+**What**: Move `Container` to `packages/ui-v2`, export from `src/components/index.ts`, add **`apps/docs/content/docs/foundations/container.mdx`**, update **`apps/docs/content/docs/foundations/meta.json`** (`pages` includes `container`). Fix imports in `apps/ui-v2-dev` / `apps/docs` / any consumer.
+
+**Files to create**:
+
+- `packages/ui-v2/src/components/container.tsx` (or folder per convention)
+- `apps/docs/content/docs/foundations/container.mdx`
+
+**Files to edit**:
+
+- `packages/ui-v2/src/components/index.ts` — export `Container` (+ types)
+- `apps/docs/content/docs/foundations/meta.json`
+
+**Commit message**: `feat(ui-v2): graduate Container to package and document`
+
+**Status**:
+
+- [ ] Docs: `/foundations/container` renders
+- [ ] Committed
+
+---
+
+### Commit 7: Standardize `Section` in prototype
+
+**What**: Same pattern for `Section`: **cva** `size` variants for vertical band rhythm; semantic tokens; default element **`section`**. See [layout-system-reference.md](./layout-system-reference.md).
+
+**Verification**:
+
+```bash
+pnpm --filter @sndq/ui-v2-dev run test -- --testPathPattern=section
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
+pnpm --filter @sndq/ui-v2-dev run lint
+pnpm --filter @sndq/ui-v2-dev run type-check
+```
+
+**Commit message**: `refactor(ui-v2-dev): standardize Section for package graduation`
+
+**Status**:
+
+- [ ] Layout gate checklist satisfied for `Section`
+- [ ] Committed
+
+---
+
+### Commit 8: Graduate `Section` + foundations MDX + consumers
+
+**What**: Move `Section` to package, export, add **`apps/docs/content/docs/foundations/section.mdx`**, update **`foundations/meta.json`**.
+
+**Commit message**: `feat(ui-v2): graduate Section to package and document`
+
+**Status**:
+
+- [ ] Docs: `/foundations/section` renders
+- [ ] Committed
+
+---
+
+### Sub-batch 1C — Interactive primitives (Commits 9–20)
+
+---
+
+### Commit 9: Standardize Button (+ co-located exports) in prototype
 
 **What**: Finalize props, JSDoc, `cn`/`ref`/variants, tests, and Storybook/playground references for `Button` (and any co-located button primitives in the same directory).
 
@@ -258,9 +376,9 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 6: Graduate Button to package + MDX + update consumers
+### Commit 10: Graduate Button to package + MDX + update consumers
 
-**What**: Move Button implementation into `packages/ui-v2`, export from `src/components/index.ts`, fix imports in `apps/ui-v2-dev` and `apps/docs`, add `apps/docs/content/docs/primitives/button.mdx` (and update `meta.json` `pages` if required).
+**What**: Move Button implementation into `packages/ui-v2`, export from `src/components/index.ts`, fix imports in `apps/ui-v2-dev` and `apps/docs`, add `apps/docs/content/docs/primitives/button.mdx` (and update `primitives/meta.json` `pages` if required).
 
 **Files to create**:
 
@@ -302,7 +420,7 @@ pnpm --filter @sndq/ui-v2 run test -- --testPathPattern=button
 
 ---
 
-### Commit 7: Standardize Input in prototype
+### Commit 11: Standardize Input in prototype
 
 **What**: Same as prior batch pattern for `Input` (label, `error` as string, `helperText`, icons as `ReactNode`, etc. per migration plan matrix).
 
@@ -324,7 +442,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 8: Graduate Input + MDX + consumers
+### Commit 12: Graduate Input + MDX + consumers
 
 **What**: Move to `packages/ui-v2`, export, update apps, add `primitives/input.mdx` + `meta.json`.
 
@@ -336,7 +454,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 9: Standardize Badge in prototype
+### Commit 13: Standardize Badge in prototype
 
 **Verification**:
 
@@ -356,7 +474,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 10: Graduate Badge + MDX + consumers
+### Commit 14: Graduate Badge + MDX + consumers
 
 **Commit message**: `feat(ui-v2): graduate Badge to package and document`
 
@@ -366,7 +484,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 11: Standardize Select in prototype
+### Commit 15: Standardize Select in prototype
 
 **Verification**:
 
@@ -386,7 +504,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 12: Graduate Select + MDX + consumers
+### Commit 16: Graduate Select + MDX + consumers
 
 **Commit message**: `feat(ui-v2): graduate Select to package and document`
 
@@ -396,7 +514,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 13: Standardize Dialog in prototype
+### Commit 17: Standardize Dialog in prototype
 
 **Verification**:
 
@@ -416,7 +534,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 14: Graduate Dialog + MDX + consumers
+### Commit 18: Graduate Dialog + MDX + consumers
 
 **Commit message**: `feat(ui-v2): graduate Dialog to package and document`
 
@@ -426,7 +544,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 15: Standardize Sheet in prototype
+### Commit 19: Standardize Sheet in prototype
 
 **Verification**:
 
@@ -446,7 +564,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 16: Graduate Sheet + MDX + consumers
+### Commit 20: Graduate Sheet + MDX + consumers
 
 **Commit message**: `feat(ui-v2): graduate Sheet to package and document`
 
@@ -456,7 +574,11 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 17: Deprecate legacy briicks/ui exports (Batch 1)
+### Sub-batch 1D — Deprecations (Commit 21)
+
+---
+
+### Commit 21: Deprecate legacy briicks/ui exports (Batch 1)
 
 **What**: Add `/** @deprecated Use … from @sndq/ui-v2/components instead. */` above each relevant re-export in the briicks/ui barrel files listed in [Legacy deprecation mapping](#legacy-deprecation-mapping-batch-1). Do not change implementation bodies.
 
@@ -470,6 +592,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 - `sndq-fe/src/components/ui/dialog.tsx`
 - `sndq-fe/src/components/ui/sheet.tsx`
 - Any central `briicks/index.ts` that re-exports these — prefer deprecating at the **canonical export** the app uses (avoid double warnings)
+- **If** legacy `Container` / `Section` (or equivalent names) exist after inspection, deprecate those barrels too with the same message pattern
 
 **Risks**:
 
@@ -490,7 +613,7 @@ pnpm --filter sndq-fe run type-check
 
 **Status**:
 
-- [ ] Every mapping row has matching JSDoc on export
+- [ ] Every mapping row has matching JSDoc on export (skip rows with no legacy export)
 - [ ] `sndq-fe` still builds (no behavior change)
 - [ ] Committed
 
@@ -503,7 +626,7 @@ git push -u origin feature/phase-3-batch-1-standardize-graduate
 # Open PR targeting dev; wait for CI
 ```
 
-**This validates**: Workspace resolution for `@sndq/ui-v2`, docs MDX pipeline, prototype + package builds, and that deprecation comments do not break TypeScript.
+**This validates**: Workspace resolution for `@sndq/ui-v2`, docs MDX pipeline (primitives + foundations layout pages), prototype + package builds, and that deprecation comments do not break TypeScript.
 
 **Status**:
 
@@ -531,13 +654,13 @@ pnpm --filter @sndq/ui-v2-dev run test
 
 Compare builds to baselines (same commands as §2 with `-final` suffix).
 
-**Expected result**: All apps and packages build; `Text`, `Heading`, and the six interactive primitives importable from `@sndq/ui-v2/components`; docs Primitives list `text`, `heading`, and Button through Sheet; legacy exports show deprecation in IDE.
+**Expected result**: All apps and packages build; `Text`, `Heading`, `Container`, `Section`, and the six interactive primitives importable from `@sndq/ui-v2/components`; docs **Primitives** list `text`, `heading`, Button through Sheet; docs **Foundations** list `container` and `section`; layout semantic tokens present in `semantic-tokens.css` as introduced in Commits 5–8; legacy exports show deprecation in IDE.
 
 **Final status**:
 
-- [ ] All 17 commits complete
+- [ ] All 21 commits complete
 - [ ] Root build / lint / type-check pass
-- [ ] Manual: docs `/primitives/...` pages render
+- [ ] Manual: docs `/primitives/...` and `/foundations/container`, `/foundations/section` render
 - [ ] Manual: ui-v2-dev playground still exercises graduated components
 - [ ] PR merged
 
@@ -547,7 +670,7 @@ Compare builds to baselines (same commands as §2 with `-final` suffix).
 
 > **Heads up: first `@sndq/ui-v2` component graduation (Batch 1)**
 >
-> PR [link] graduates **typography first** (`Text`, `Heading`), then Button, Input, Badge, Select, Dialog, and Sheet from the prototype into `packages/ui-v2/`. Typography uses `semantic-tokens.css` and incremental `@sndq/config` `@theme` aliases; see [typography-system-reference.md](./typography-system-reference.md). The main app is **not** bulk-migrated yet — you will see `@deprecated` JSDoc on legacy briicks/ui exports (including **briicks text**). New feature work should import from `@sndq/ui-v2/components` where possible.
+> PR [link] follows **sub-batches**: **1A** typography (`Text`, `Heading`), **1B** layout shell (`Container`, `Section` — CVA + SNDQ semantic tokens, **not** Radix Themes), **1C** Button through Sheet, **1D** legacy JSDoc deprecations. Typography uses `semantic-tokens.css` and incremental `@sndq/config` `@theme` aliases; see [typography-system-reference.md](./typography-system-reference.md). Layout shell tokens and variant rules: [layout-system-reference.md](./layout-system-reference.md). The main app is **not** bulk-migrated yet — you will see `@deprecated` JSDoc on legacy briicks/ui exports (including **briicks text**). New feature work should import from `@sndq/ui-v2/components` where possible.
 >
 > After pulling:
 >
@@ -557,8 +680,9 @@ Compare builds to baselines (same commands as §2 with `-final` suffix).
 > Touch points:
 > - `packages/ui-v2/src/components/*`, `packages/ui-v2/src/lib/utils.ts`
 > - `packages/config/tailwind/tokens.css` (incremental `@theme` aliases)
+> - `packages/config/tailwind/semantic-tokens.css` (typography + **layout shell** tokens)
 > - `apps/ui-v2-dev/` imports
-> - `apps/docs/content/docs/primitives/*`
+> - `apps/docs/content/docs/primitives/*`, `apps/docs/content/docs/foundations/{container,section}.mdx`
 > - `sndq-fe/src/components/briicks/{text,button,input,badge,select}/`, `sndq-fe/src/components/ui/{dialog,sheet}.tsx`
 
 ---
@@ -570,8 +694,10 @@ After Batch 1 merges, open [phase-3-batch-2-execution.md](./phase-3-batch-2-exec
 ### Lessons to carry forward
 
 - **Vertical slices** per component keep bisect/revert sane.
+- **Sub-batches** (1A–1D) keep review focus: foundations vs interactive vs deprecations.
 - **Deprecate only after the export exists** in the package — avoids warning fatigue.
 - **Typography + gradual `@theme`** reduces token drift before scaling interactive primitives.
+- **Layout shell (1B)** documents page width and section rhythm in **Foundations** while components still export from `@sndq/ui-v2/components`.
 
 ### Known lessons from prior phases
 
@@ -600,3 +726,7 @@ After Batch 1 merges, open [phase-3-batch-2-execution.md](./phase-3-batch-2-exec
 |      | 15     |       |
 |      | 16     |       |
 |      | 17     |       |
+|      | 18     |       |
+|      | 19     |       |
+|      | 20     |       |
+|      | 21     |       |

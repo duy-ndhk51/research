@@ -10,7 +10,7 @@ Gradual, five-phase migration from legacy component libraries (`briicks/`, `ui/`
 **Phase 1b execution**: [phase-1b-execution.md](./phase-1b-execution.md) — Briicks token extraction (folded into Phase 2)
 **Phase 2 execution**: [phase-2-execution.md](./phase-2-execution.md) — prototype integration, token/CSS extraction, package scaffolding, deprecation
 **Phase 3, Batch 0 execution**: [phase-3-batch-0-execution.md](./phase-3-batch-0-execution.md) — Fumadocs at site root (`baseUrl: '/'`), Orama search, IA stubs in `apps/docs`
-**Phase 3, Batch 1 execution**: [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md) — Typography (`Text`, `Heading`) first, then Button, Input, Badge, Select, Dialog, Sheet; incremental `@theme` aliases; package graduation + MDX + `sndq-fe` deprecations · [typography-system-reference.md](./typography-system-reference.md)
+**Phase 3, Batch 1 execution**: [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md) — Sub-batches: typography (`Text`, `Heading`), CVA layout shell (`Container`, `Section` — docs under Foundations), then Button, Input, Badge, Select, Dialog, Sheet; incremental `@theme` aliases; package graduation + MDX + `sndq-fe` deprecations · [typography-system-reference.md](./typography-system-reference.md) · [layout-system-reference.md](./layout-system-reference.md)
 **Phase 3, Batch 2 execution**: [phase-3-batch-2-execution.md](./phase-3-batch-2-execution.md) — Card, Tabs, Tooltip, EmptyState, Skeleton
 **Phase 3, Batch 3 execution**: [phase-3-batch-3-execution.md](./phase-3-batch-3-execution.md) — Remaining primitives + blocks (waves); final legacy deprecation pass
 
@@ -311,13 +311,13 @@ Before any component graduation, set up Fumadocs in `apps/docs`:
 - Set Fumadocs `loader()` **baseUrl** to `/` so the public site home and all doc pages live at the site root (no `/docs` URL prefix). On disk, MDX still lives under `apps/docs/content/docs/`. Remove the placeholder `app/page.tsx` so an optional catch-all `app/[[...slug]]/` can serve `/`
 - Add `/api/search` route using built-in Orama (client-side, free, swappable later to Algolia/Inkeep)
 - Seed three top-level categories with stub MDX:
-  - **Foundations** (tokens, colors, typography, spacing — placeholders; **typography** content is implemented in Batch 1 and documented in [typography-system-reference.md](./typography-system-reference.md))
+  - **Foundations** (tokens, colors, typography, spacing — placeholders; Batch 1 adds **typography** docs per [typography-system-reference.md](./typography-system-reference.md) and **layout shell** (`container`, `section` MDX) per [layout-system-reference.md](./layout-system-reference.md))
   - **Primitives** (components catalog — placeholder until Batch 1)
   - **Blocks** (compositions catalog — placeholder)
 
 **Why before Batch 1**: The per-batch workflow already lists tests + storybook pages + graduation steps. Adding "set up MDX/sidebar/search" inside Batch 1 would entangle infra plumbing with the first component doc and make that PR much larger than subsequent ones.
 
-**Why category stubs**: With three empty-but-real pages, the IA is visible from day one. Each later batch only adds component MDX into Primitives/Blocks — no information-architecture decisions need to repeat per batch.
+**Why category stubs**: With three empty-but-real pages, the IA is visible from day one. Later batches primarily add component MDX under Primitives/Blocks; Batch 1 also lands **Foundations** MDX for the CVA layout shell (`container`, `section`) alongside Primitives typography — no repeated IA decisions per component.
 
 **Decision rationale**: see [fumadocs-decision.md](./fumadocs-decision.md) for the framework / layout / search / routing choices and tradeoffs. Background library research lives at [04-frontend/nextjs/fumadocs/](../../../../04-frontend/nextjs/fumadocs/).
 
@@ -521,7 +521,7 @@ export { Button } from './button';
 | Phase | What gets deprecated | Method |
 |-------|---------------------|--------|
 | Phase 2 | `@sndq/ui`, `@sndq/ui/*` | ESLint `no-restricted-imports` |
-| Phase 3, Batch 1 | `Text`, `Heading`, Button, Input, Badge, Select, Dialog, Sheet in briicks/ui | JSDoc `@deprecated` |
+| Phase 3, Batch 1 | `Text`, `Heading`, `Container`/`Section` (if legacy exports exist), Button, Input, Badge, Select, Dialog, Sheet in briicks/ui | JSDoc `@deprecated` |
 | Phase 3, Batch 2 | Card, Tabs, Tooltip, EmptyState, Skeleton in briicks/ui | JSDoc `@deprecated` |
 | Phase 3, Batch 3 | Remaining briicks/ui exports | JSDoc `@deprecated` |
 | Phase 5 | All removed | Directories deleted |
@@ -569,7 +569,7 @@ The briicks and ui-v2 component APIs are **not drop-in compatible**. Direct migr
 | `Heading` sizes | `large`, `medium`, `small` (CVA) | Define stable ui-v2 `size` / variant API in Batch 1 | Align names or map per call site in Phase 4 |
 | `Paragraph` variants | `label`, `default`, `label-link`, `inline-link`, `mono`, `inherit` | `Text` variant axis | Map each briicks variant to closest ui-v2 `Text` variant |
 | `Caption` variants | `default`, `inline-link`, `mono`, `inherit` | `Text` (caption-style variants) | Same as paragraph mapping |
-| Token / CSS | Hardcoded Tailwind in CVA | `semantic-tokens.css` (`--sndq-text-*`, `--sndq-text`, …); optional short utilities via **gradual** `@theme` aliases in `tokens.css` | Batch 1 standardizes package; see [typography-system-reference.md](./typography-system-reference.md) |
+| Token / CSS | Hardcoded Tailwind in CVA | `semantic-tokens.css` (`--sndq-text-*`, `--sndq-text`, layout shell vars for `Container`/`Section`, …); optional short utilities via **gradual** `@theme` aliases in `tokens.css` | Batch 1 standardizes package; see [typography-system-reference.md](./typography-system-reference.md), [layout-system-reference.md](./layout-system-reference.md) |
 | Overrides | `className` + `cn` in briicks | `cn(variantClasses, className)`; `packages/ui-v2/src/lib/utils.ts` mirrors submodule `cn` | Phase 4 swap import; adjust props |
 
 ---
@@ -621,11 +621,11 @@ Full SNDQ-specific rationale (framework, layout, search, routing) and alternativ
 
 ### Why an infra batch (Batch 0) instead of folding into Batch 1
 
-Batch 1 graduates typography plus six interactive primitives — already a substantial PR set with tests, deprecation, and prop migration. Coupling Fumadocs install + layout + search + IA seeding with that batch would make it un-reviewable and create false sequencing (you cannot verify "search works" until Batch 1 is half-done). Batch 0 is infra-only and ships with placeholder content.
+Batch 1 graduates typography, CVA **layout shell** (`Container`, `Section`), and six interactive primitives — already a substantial PR set with tests, deprecation, and prop migration. Coupling Fumadocs install + layout + search + IA seeding with that batch would make it un-reviewable and create false sequencing (you cannot verify "search works" until Batch 1 is half-done). Batch 0 is infra-only and ships with placeholder content.
 
 ### Why typography is first in Batch 1 (with gradual `@theme`)
 
-Foundations-adjacent work (`Text`, `Heading`) ships **before** Button–Sheet so token usage, `cn()` merging, and optional Tailwind `@theme` aliases are established early. Variant styles must reference `packages/config/tailwind/semantic-tokens.css`; short utilities are added **incrementally** in `tokens.css` only when a shipped variant needs them — avoiding a one-shot full palette mapping. `@sndq/ui-v2` uses `packages/ui-v2/src/lib/utils.ts` (`clsx` + `tailwind-merge`) matching `sndq-fe/packages/ui/src/lib/utils.ts`, without depending on the submodule. Full rationale: [typography-system-reference.md](./typography-system-reference.md).
+Foundations-adjacent work (`Text`, `Heading`) ships **before** layout shell and Button–Sheet so token usage, `cn()` merging, and optional Tailwind `@theme` aliases are established early. **Sub-batch 1B** then adds layout semantic tokens and CVA `Container` / `Section` (SNDQ-only; not Radix Themes). Variant styles must reference `packages/config/tailwind/semantic-tokens.css`; short utilities are added **incrementally** in `tokens.css` only when a shipped variant needs them — avoiding a one-shot full palette mapping. `@sndq/ui-v2` uses `packages/ui-v2/src/lib/utils.ts` (`clsx` + `tailwind-merge`) matching `sndq-fe/packages/ui/src/lib/utils.ts`, without depending on the submodule. Full rationale: [typography-system-reference.md](./typography-system-reference.md), [layout-system-reference.md](./layout-system-reference.md).
 
 ---
 
