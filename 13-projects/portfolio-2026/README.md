@@ -47,6 +47,7 @@ Full pinned baseline: [snapshot.md](./snapshot.md).
 | Code repository | `/Users/admin/projects/private/portfolio-2026/` |
 | Baseline snapshot | [snapshot.md](./snapshot.md) |
 | MVP roadmap | [mvp-roadmap.md](./mvp-roadmap.md) |
+| Notion publishing workflow | [notion-publishing-workflow.md](./notion-publishing-workflow.md) |
 | Progress tracker | [tracking.md](./tracking.md) |
 | Current focus (read first each session) | [current-focus.md](./current-focus.md) |
 | Decision log | [decisions.md](./decisions.md) |

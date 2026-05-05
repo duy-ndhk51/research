@@ -31,10 +31,10 @@ Check off steps in order within each phase. After completing a phase, run the li
 
 **Goal:** Reliable Notion publishing workflow; navigation matches intent (`navigationStyle` default vs `custom` + `navigationLinks` in `site.config.ts`).
 
-- [ ] Document which Notion pages are public vs draft (workflow for yourself)
-- [ ] Confirm blog index lists expected posts only
-- [ ] Decide default vs custom navigation; implement in `site.config.ts` if custom
-- [ ] Add or trim footer/header links for legal or contact if needed
+- [x] Document which Notion pages are public vs draft (workflow for yourself) — see [notion-publishing-workflow.md](./notion-publishing-workflow.md); fill the tables for your workspace
+- [ ] Confirm blog index lists expected posts only — run `/blogs` locally and complete the verification table in [notion-publishing-workflow.md](./notion-publishing-workflow.md)
+- [x] Decide default vs custom navigation; implement in `site.config.ts` if custom — **default** retained; see [decisions.md](./decisions.md)
+- [x] Add or trim footer/header links for legal or contact if needed — **none** for MVP; optional trim: remove debug `test` button in portfolio `Footer.tsx` before launch; see [decisions.md](./decisions.md)
 
 **Commit hints:** `feat: add custom notion nav links`, `docs: notion publish checklist`
 

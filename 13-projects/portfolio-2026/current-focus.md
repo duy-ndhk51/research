@@ -8,9 +8,8 @@ Phase B — Content and IA
 
 ## Next steps (unchecked)
 
-1. Document which Notion pages are public vs draft (workflow for yourself)
-2. Confirm blog index lists expected posts only
-3. Decide default vs custom navigation; implement in `site.config.ts` if custom
+1. With `pnpm dev` and Notion env set, open `/blogs` and complete the verification table in [notion-publishing-workflow.md](./notion-publishing-workflow.md)
+2. When the table shows every expected post as visible, check off the remaining Phase B item in [tracking.md](./tracking.md) and run [manual-tests/phase-b-notion-content.md](./manual-tests/phase-b-notion-content.md)
 
 ## Blockers
 
