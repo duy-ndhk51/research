@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 3, Batch 0. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-05-04
-**Status**: Not started
+**Status**: Updated for **Next.js 16 + Tailwind CSS 4 + Fumadocs 16** (manual install baseline per [Fumadocs Next.js guide](https://www.fumadocs.dev/docs/manual-installation/next))
 **Architecture**: [README.md](./README.md)
 **Migration plan**: [migration-plan.md](./migration-plan.md)
 **Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md)
@@ -42,9 +42,11 @@ Step-by-step execution guide for Phase 3, Batch 0. Each commit is independently 
 ### Prerequisites
 
 - Phase 2 is merged to dev
-- `apps/docs/` exists as a placeholder Next 15 App Router app (`apps/docs/src/app/page.tsx` placeholder at `/` — removed in Commit 3 when the catch-all owns `/`, plus `apps/docs/next.config.ts`, `apps/docs/tsconfig.json`)
-- `@sndq/ui-v2` workspace dependency is already wired in `apps/docs/package.json`
-- `apps/docs/next.config.ts` already declares `transpilePackages: ['@sndq/ui-v2']`
+- `apps/docs/` is a **Next.js 16** App Router app (`apps/docs/src/app/page.tsx` placeholder at `/` until Commit 3 removes it in favor of the catch-all), plus `apps/docs/next.config.ts`, `apps/docs/tsconfig.json`
+- **Tailwind CSS 4** (pinned to **4.2.4+** in this repo so Fumadocs UI presets compile; older 4.0.x can error on `@source` paths during `next build`)
+- `@sndq/ui-v2` workspace dependency is wired in `apps/docs/package.json`
+- `apps/docs/next.config.ts` declares `transpilePackages: ['@sndq/ui-v2']`
+- **Fumadocs manual install** reference: [Fumadocs — Next.js](https://www.fumadocs.dev/docs/manual-installation/next) (Root provider, global CSS imports, optional `collections/*` path alias)
 
 ---
 
@@ -86,17 +88,27 @@ Install Fumadocs into the placeholder docs app, wire layout, search, and seed em
 
 ### Commit 1: Install Fumadocs and add source config
 
-**What**: Add Fumadocs dependencies and the MDX content source config so subsequent commits can render and index content.
+**What**: Add Fumadocs dependencies (aligned with **Next 16**), MDX source config, Tailwind 4 + PostCSS wiring, TypeScript path alias for generated `.source`, and scripts so CI can type-check before `.source` exists.
 
 **Files to edit**:
 
-- `apps/docs/package.json` — add `fumadocs-ui`, `fumadocs-core`, `fumadocs-mdx` dependencies
+- `apps/docs/package.json` — dependencies: `next` **16.x**, `fumadocs-ui`, `fumadocs-core`, `fumadocs-mdx`, `zod` **4.x** (peer of `fumadocs-core`), `react` / `react-dom` **19.2.x**; devDependencies: `eslint-config-next` (same minor as `next`), `@types/mdx`, `tailwindcss` **^4.2.4**, `@tailwindcss/postcss` **^4.2.4**, `postcss`
 - `apps/docs/next.config.ts` — wrap with `withMDX()` from `fumadocs-mdx/next` while preserving `transpilePackages: ['@sndq/ui-v2']`
+- `apps/docs/tsconfig.json` — add `"collections/*": ["./.source/*"]` under `compilerOptions.paths` (requires `./` prefix when `baseUrl` is unset)
+- `apps/docs/.gitignore` — ignore `/.source/`
+- `apps/docs/eslint.config.mjs` — ignore `.source/**` in generated MDX output
 
 **Files to create**:
 
+- `apps/docs/postcss.config.mjs` — `plugins: { '@tailwindcss/postcss': {} }` (Tailwind v4)
 - `apps/docs/source.config.ts` — declare the docs content collection (path, schema)
 - `apps/docs/src/lib/source.ts` — load the collection via `loader()` so layout and search routes share one source instance
+- `apps/docs/src/app/global.css` — `@import 'tailwindcss'`, `@import 'fumadocs-ui/css/neutral.css'`, `@import 'fumadocs-ui/css/preset.css'` (Fumadocs manual install)
+
+**Scripts** (in `package.json`):
+
+- `"generate:source": "fumadocs-mdx"`
+- `"type-check": "pnpm run generate:source && tsc --noEmit"`
 
 **Before** (`apps/docs/next.config.ts`):
 
@@ -128,7 +140,7 @@ export default withMDX(nextConfig);
 **Target `apps/docs/source.config.ts`**:
 
 ```typescript
-import { defineDocs, defineConfig } from 'fumadocs-mdx/config';
+import { defineConfig, defineDocs } from 'fumadocs-mdx/config';
 
 export const docs = defineDocs({
   dir: 'content/docs',
@@ -140,14 +152,18 @@ export default defineConfig();
 **Target `apps/docs/src/lib/source.ts`**:
 
 ```typescript
+import { docs } from 'collections/server';
 import { loader } from 'fumadocs-core/source';
-import { docs } from '../../.source';
 
 export const source = loader({
   baseUrl: '/',
   source: docs.toFumadocsSource(),
 });
 ```
+
+**Note**: `collections/server` maps to `./.source/server` via `tsconfig` paths after `pnpm run generate:source` (or `next dev` / `next build`). Do not import `../../.source` without `/server` — there is no package entry on the folder alone.
+
+**Shared ESLint (`@sndq/config`)**: `packages/config/eslint.mjs` loads **flat** configs from `eslint-config-next` when the resolved package is **16+** (Next 16 + `eslint-config-next` 16 no longer works with `FlatCompat` for `next/core-web-vitals`). Apps on **Next 15** keep the legacy `FlatCompat.extends(...)` path.
 
 **Risks**:
 
@@ -167,7 +183,7 @@ NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/docs run build
 
 **If it fails**:
 
-- **`Cannot find module '../../.source'`**: Run `pnpm --filter @sndq/docs run dev` once; the source directory is generated on first MDX scan. Then re-run build.
+- **`Cannot find module 'collections/server'`** (or `../../.source/server`): Run `pnpm --filter @sndq/docs run generate:source` or `dev`/`build` once so `.source/` exists. Ensure `tsconfig` path is `"collections/*": ["./.source/*"]`.
 - **`Module not found: Can't resolve 'fumadocs-mdx/next'`**: Confirm the package landed in `apps/docs/node_modules/fumadocs-mdx/`. If not, re-run `pnpm install` from the monorepo root.
 - **Peer dep warning for React**: Pin a Fumadocs version that lists `react@^19` as peer. Check the latest minor on npm.
 
@@ -186,11 +202,11 @@ NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/docs run build
 
 ### Commit 2: Wire Fumadocs root provider in layout
 
-**What**: Replace the bare HTML body in the root layout with Fumadocs `RootProvider` and import its base styles, so all docs pages share theme + search context.
+**What**: Replace the bare HTML body in the root layout with Fumadocs `RootProvider`, import **`global.css`** (Tailwind + Fumadocs theme presets from Commit 1 — not the legacy single-file `fumadocs-ui/style.css`), so all docs pages share theme + search context.
 
 **Files to edit**:
 
-- `apps/docs/src/app/layout.tsx` — wrap children in `<RootProvider>` and import `fumadocs-ui/style.css`
+- `apps/docs/src/app/layout.tsx` — `import './global.css'`, wrap children in `<RootProvider>` from **`fumadocs-ui/provider/next`**, add Fumadocs’ recommended `body` layout classes
 
 **Before** (`apps/docs/src/app/layout.tsx`):
 
@@ -218,10 +234,10 @@ export default function RootLayout({
 **After** (`apps/docs/src/app/layout.tsx`):
 
 ```typescript
-import 'fumadocs-ui/style.css';
+import './global.css';
 
 import type { Metadata } from 'next';
-import { RootProvider } from 'fumadocs-ui/provider';
+import { RootProvider } from 'fumadocs-ui/provider/next';
 
 export const metadata: Metadata = {
   title: 'SNDQ Component Docs',
@@ -235,7 +251,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className="flex min-h-screen flex-col">
         <RootProvider>{children}</RootProvider>
       </body>
     </html>
@@ -262,18 +278,19 @@ pnpm --filter @sndq/docs run dev
 
 **If it fails**:
 
-- **`Module not found: 'fumadocs-ui/style.css'`**: Confirm `fumadocs-ui` was installed in Commit 1 and re-check `apps/docs/node_modules/fumadocs-ui/`.
+- **Tailwind / `@source` error during `next build`**: Pin `tailwindcss` and `@tailwindcss/postcss` to **4.2.4+** (Fumadocs UI 16 presets assume a recent Tailwind 4).
+- **`Module not found` for `fumadocs-ui/css/*.css`**: Confirm `fumadocs-ui` is installed and paths match [Fumadocs — Styles](https://www.fumadocs.dev/docs/manual-installation/next).
 - **Hydration warning persists**: Confirm `suppressHydrationWarning` is on the `<html>` tag, not `<body>`.
 
 **Commit message**: `feat(docs): wire fumadocs root provider in layout`
 
 **Status**:
 
-- [ ] `fumadocs-ui/style.css` imported
-- [ ] `RootProvider` wraps children
-- [ ] `suppressHydrationWarning` set on `<html>`
-- [ ] Build passes
-- [ ] Committed
+- [x] `global.css` imported from root layout (Tailwind + Fumadocs neutral + preset)
+- [x] `RootProvider` from `fumadocs-ui/provider/next` wraps children
+- [x] `suppressHydrationWarning` set on `<html>`
+- [x] Build passes
+- [x] Committed (when you land the slice)
 
 ---
 
@@ -590,7 +607,7 @@ git push -u origin <your-branch>
 # Wait for CI to complete successfully
 ```
 
-**This validates**: Workspace install resolves the new Fumadocs deps, the docs app builds in CI with the generated `.source` directory, and the search API route is recognized by Next 15's app router in a CI environment.
+**This validates**: Workspace install resolves the new Fumadocs deps, the docs app builds in CI with the generated `.source` directory, and the search API route is recognized by the Next.js App Router in a CI environment.
 
 **Status**:
 
@@ -714,8 +731,9 @@ Record notes, issues, and deviations here as you go.
 
 | Date | Commit | Notes |
 |------|--------|-------|
-|      | 1      |       |
-|      | 2      |       |
+| 2026-05-04 | Platform | Next **16.2.4**, `eslint-config-next` **16.2.4**, Fumadocs **16.8.7** / MDX **14.3.2**, **zod 4**, Tailwind **4.2.4**, `postcss.config.mjs`, `global.css`, `collections/server` path, `@sndq/config` ESLint flat path for Next 16 |
+|      | 1      | (Historical) Fumadocs install + source — superseded by platform row if applied in one step |
+|      | 2      | Root layout + `RootProvider` + global CSS |
 |      | 3      |       |
 |      | 4      |       |
 |      | 5      |       |
