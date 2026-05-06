@@ -103,7 +103,7 @@ Install Fumadocs into the placeholder docs app, wire layout, search, and seed em
 - `apps/docs/postcss.config.mjs` — `plugins: { '@tailwindcss/postcss': {} }` (Tailwind v4)
 - `apps/docs/source.config.ts` — declare the docs content collection (path, schema)
 - `apps/docs/src/lib/source.ts` — load the collection via `loader()` so layout and search routes share one source instance
-- `apps/docs/src/app/global.css` — `@import 'tailwindcss'`, `@import 'fumadocs-ui/css/neutral.css'`, `@import 'fumadocs-ui/css/preset.css'` (Fumadocs manual install)
+- `apps/docs/src/app/global.css` — `@import 'tailwindcss'`, then SNDQ token CSS (`@sndq/config/tailwind/tokens.css`, `@sndq/config/tailwind/semantic-tokens.css`), then `@import 'fumadocs-ui/css/neutral.css'`, `@import 'fumadocs-ui/css/preset.css'` (Fumadocs manual install)
 
 **Scripts** (in `package.json`):
 
@@ -442,10 +442,10 @@ curl 'http://localhost:3002/api/search?query=test'
 
 **Status**:
 
-- [ ] `api/search/route.ts` created
-- [ ] `curl` to `/api/search?query=test` returns 200
-- [ ] Build passes
-- [ ] Committed
+- [x] `api/search/route.ts` created
+- [x] `curl` to `/api/search?query=test` returns 200
+- [x] Build passes
+- [x] Committed
 
 ---
 
@@ -499,14 +499,12 @@ title: Foundations
 description: Design tokens, color, typography, spacing — the primitives that every component is built on.
 ---
 
-This section will cover:
+Foundations define the shared language of the SNDQ UI: color, type, spacing, and the token rules that components must follow.
 
-- Color palette (`brand`, `neutral`, `success`, `warning`, `error`)
-- Typography scale and font families
-- Spacing and radius tokens
-- Shadow and elevation
+Start here:
 
-Pages will be added as the foundations are documented from `@sndq/config/tailwind/`.
+- [Identity](/foundations/identity): the UI-V2 identity spec (tokens, sizing rules, spacing, shadows).
+- [Foundation](/foundations/foundation): the token scales and rule tables used to build components.
 ```
 
 **Target `apps/docs/content/docs/foundations/meta.json`**:
@@ -514,9 +512,14 @@ Pages will be added as the foundations are documented from `@sndq/config/tailwin
 ```json
 {
   "title": "Foundations",
-  "pages": ["index"]
+  "pages": ["index", "identity", "foundation"]
 }
 ```
+
+**MVP pages (Batch 0)**:
+
+- `apps/docs/content/docs/foundations/identity.mdx` — derived from the UI-V2 Identity spec content used in `apps/ui-v2-dev` (`IdentityTab`).
+- `apps/docs/content/docs/foundations/foundation.mdx` — derived from the token/rule/scales used in `apps/ui-v2-dev` (`FoundationTab`).
 
 **Target `apps/docs/content/docs/primitives/index.mdx`**:
 
@@ -527,8 +530,7 @@ description: Base components from @sndq/ui-v2 — Button, Input, Badge, Select, 
 ---
 
 Component pages arrive in **Phase 3, Batch 1** as components graduate from the
-prototype into `@sndq/ui-v2`. See the
-[migration plan](./migration-plan.md) for the batch schedule.
+prototype into `@sndq/ui-v2`. See the migration plan in the monorepo research docs for the batch schedule.
 ```
 
 **Target `apps/docs/content/docs/primitives/meta.json`**:
@@ -588,13 +590,13 @@ curl 'http://localhost:3002/api/search?query=foundations'
 
 **Status**:
 
-- [ ] Root `index.mdx` + `meta.json` created
-- [ ] Foundations folder seeded
-- [ ] Primitives folder seeded
-- [ ] Blocks folder seeded
-- [ ] Sidebar shows three categories in order
-- [ ] Search returns results
-- [ ] Build passes
+- [x] Root `index.mdx` + `meta.json` created
+- [x] Foundations folder seeded
+- [x] Primitives folder seeded
+- [x] Blocks folder seeded
+- [x] Sidebar shows three categories in order
+- [x] Search returns results
+- [x] Build passes
 - [ ] Committed
 
 ---
@@ -654,13 +656,13 @@ diff /tmp/phase3-b0-fe-build-before.txt /tmp/phase3-b0-fe-build-final.txt
 
 **Final status**:
 
-- [ ] All 5 commits complete
-- [ ] Docs build passes from root
-- [ ] Lint passes from root
-- [ ] Type-check passes from root
-- [ ] `sndq-fe` build output unchanged from baseline
-- [ ] Visual check — home at `/`, sidebar, search all functional
-- [ ] PR created and merged
+- [x] All 5 commits complete
+- [x] Docs build passes from root
+- [x] Lint passes from root
+- [x] Type-check passes from root
+- [x] `sndq-fe` build output unchanged from baseline
+- [x] Visual check — home at `/`, sidebar, search all functional
+- [x] PR created and merged
 
 ---
 
@@ -694,6 +696,12 @@ Send to the team before merging:
 ## 6. What's Next
 
 After Batch 0 is merged to dev, proceed to **Phase 3, Batch 1 — Button, Input, Badge, Select, Dialog, Sheet**. Each component graduating in Batch 1 now adds one MDX file under `apps/docs/content/docs/primitives/<component>.mdx` alongside its move into `packages/ui-v2/src/components/`. No docs-infrastructure work should be needed in Batch 1.
+
+### Docs app reference (Cursor / Claude)
+
+- **`apps/docs/AGENTS.md`** — canonical map for the docs app: content paths, `meta.json`, commands, token CSS import order, MDX tags vs shared building blocks, and how to register MDX-exposed components.
+- **`src/components/mdx/` vs `src/components/shared/`** — MDX tag components live under `mdx/`; reusable internals used to compose them live under `shared/`. Only MDX-exposed components are listed in `custom-mdx-components.ts` (unless you intentionally expose a shared piece as a tag).
+- **`apps/docs/src/mdx/custom-mdx-components.ts`** — typed registry (`satisfies MDXComponents`) merged into `get-mdx-components.tsx`; add new MDX components here instead of growing inline lists in `get-mdx-components.tsx`.
 
 ### Lessons to carry forward
 

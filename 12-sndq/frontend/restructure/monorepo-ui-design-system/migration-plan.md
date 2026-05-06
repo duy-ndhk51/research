@@ -311,9 +311,10 @@ Before any component graduation, set up Fumadocs in `apps/docs`:
 - Set Fumadocs `loader()` **baseUrl** to `/` so the public site home and all doc pages live at the site root (no `/docs` URL prefix). On disk, MDX still lives under `apps/docs/content/docs/`. Remove the placeholder `app/page.tsx` so an optional catch-all `app/[[...slug]]/` can serve `/`
 - Add `/api/search` route using built-in Orama (client-side, free, swappable later to Algolia/Inkeep)
 - Seed three top-level categories with stub MDX:
-  - **Foundations** (tokens, colors, typography, spacing — placeholders; Batch 1 adds **typography** docs per [typography-system-reference.md](./typography-system-reference.md) and **layout shell** (`container`, `section` MDX) per [layout-system-reference.md](./layout-system-reference.md))
+  - **Foundations** (MVP includes **Identity** + **Foundation** pages; Batch 1 still adds **typography** docs per [typography-system-reference.md](./typography-system-reference.md) and **layout shell** (`container`, `section` MDX) per [layout-system-reference.md](./layout-system-reference.md))
   - **Primitives** (components catalog — placeholder until Batch 1)
   - **Blocks** (compositions catalog — placeholder)
+- **Docs app agent guide** (Cursor, Claude Code): `apps/docs/AGENTS.md` — folder roles, commands, MDX navigation, token CSS, **`src/components/mdx/` + `src/components/shared/`** for docs presentation composition (still no shared docs package between apps), and the MDX component registry in `apps/docs/src/mdx/custom-mdx-components.ts` (merged in `get-mdx-components.tsx`).
 
 **Why before Batch 1**: The per-batch workflow already lists tests + storybook pages + graduation steps. Adding "set up MDX/sidebar/search" inside Batch 1 would entangle infra plumbing with the first component doc and make that PR much larger than subsequent ones.
 
