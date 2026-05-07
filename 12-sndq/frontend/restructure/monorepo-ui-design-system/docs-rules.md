@@ -118,6 +118,14 @@ Use the templates in `docs-templates.md`.
 - Write in **English**, concise and technical.
 - Prefer **bullets** over long paragraphs.
 - Always answer:
+
+### 6.1 Code comments vs docs pages (important)
+
+This rule applies to **component implementation files only** (e.g. `packages/ui-v2/src/components/**`, `apps/ui-v2-dev/src/components/ui-v2/**`):
+
+- Keep in-code JSDoc **minimal**: API essentials only (prop intent, constraints/invariants, defaults, and `@deprecated` notices).
+- Avoid long block comments that duplicate docs content (usage guides, variant tables, design rationale, migration notes).
+- The **canonical docs** live in `apps/docs` as MDX pages under `apps/docs/content/docs/`. If a component is exported from `@sndq/ui-v2/components`, it should have an MDX page (Tier 1 primitive) and the code should not try to be the documentation.
   - **What problem does it solve?**
   - **What are the invariants?** (what must always remain true)
   - **What are the foot-guns?** (common misuse)

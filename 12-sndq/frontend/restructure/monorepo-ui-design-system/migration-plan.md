@@ -382,12 +382,17 @@ export { Dialog, DialogContent, DialogHeader, DialogFooter, ... };
 
 A component is ready to graduate when it has:
 
-- [ ] Stable prop interface with JSDoc documentation
+- [ ] Stable prop interface with **minimal** JSDoc on public props (API essentials only)
 - [ ] `className` forwarding via `cn()` for style overrides
 - [ ] `ref` forwarding where applicable
 - [ ] Unit tests covering all variants and key interactions
 - [ ] No imports from app-specific code (hooks, services, translations)
 - [ ] Uses `@sndq/config/tailwind` tokens and component CSS classes
+
+**JSDoc policy (component files only)**:
+
+- Keep implementation-file JSDoc short and focused. Avoid long explanations and duplicate documentation in code.
+- Put full usage docs, variant tables, and rationale in `apps/docs` (Fumadocs MDX). Graduation is not complete until the MDX page exists.
 
 ---
 

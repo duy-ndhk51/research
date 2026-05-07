@@ -121,7 +121,7 @@ See [migration-plan.md §10](./migration-plan.md#10-api-compatibility-matrix). b
 
 A component may graduate only when:
 
-- [ ] Stable prop interface with JSDoc on public props
+- [ ] Stable prop interface with **minimal** JSDoc on public props (see below)
 - [ ] `className` forwarding via `cn()` where applicable, **strict ordering `cn(variantClasses, className)`** so consumer `className` wins on conflicts (`className` override-wins guarantee — see [Layout tokens and CVA (gradual)](#layout-tokens-and-cva-gradual))
 - [ ] **Override-wins test**: at least one unit test asserts that `<Component variantProp className="conflicting-utility" />` resolves to the consumer value (e.g. `gap-2` vs `gap-8` for layout primitives; equivalent text/size/color conflict for typography and interactives)
 - [ ] `ref` forwarding where applicable (and `asChild` if the design requires it)
@@ -132,6 +132,13 @@ A component may graduate only when:
 - [ ] **Typography (`Text`, `Heading`)**: variant styles reference `semantic-tokens.css` variables; any new **`@theme`** alias is added **incrementally** in the same change that introduces the variant needing it (see [Typography and `@theme` utilities (gradual)](#typography-and-theme-utilities-gradual))
 - [ ] **Layout shell (`Container`, `Section`)**: `cva` maps reference only layout semantic tokens from `semantic-tokens.css`; default elements documented (`Container` → `div`, `Section` → `section` for document outline unless design specifies otherwise); **v1** uses discrete `size` presets only (see [Layout tokens and CVA (gradual)](#layout-tokens-and-cva-gradual))
 - [ ] **Layout primitives (`Flex`, `Grid`)**: `cva` recipes use only `--sndq-space-*` for `gap*` and the agreed `columns` enum for `Grid`; **strict** — no prop accepts both numeric and semantic; no `padding`/`margin`/`width`/`height`/responsive-object props in v1
+
+**JSDoc policy (component files only)**:
+
+- **Keep JSDoc minimal** in component implementation files (`packages/ui-v2/src/components/**`, `apps/ui-v2-dev/src/components/ui-v2/**`).
+- JSDoc is for **API essentials only**: prop intent, constraints/invariants, defaults, and `@deprecated` notices.
+- Do **not** duplicate full usage docs, variant tables, design rationale, or migration notes in code comments.
+- The **canonical documentation** for every graduated component lives in `apps/docs` (Fumadocs MDX under `apps/docs/content/docs/`).
 
 ### Inspect prototype tree (once)
 
