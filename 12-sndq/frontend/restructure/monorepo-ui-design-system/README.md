@@ -470,6 +470,8 @@ Apps extend and add local paths, `include`, and `exclude`:
 
 ## 5. Component Classification
 
+> **System-wide rules for every Tier 1 / Tier 2 component**: see [layout-system-reference.md](./layout-system-reference.md) for (1) the **strict semantic-vs-numeric prop typing** rule (each prop is either semantic OR numeric, never both — applies to all primitives, not just layout) and (2) the **`className` override-wins** guarantee (every root composes as `cn(variantClasses, className)`).
+
 ### Tier 1 — Primitives (`@sndq/ui-v2/components`)
 
 Well-known UI atoms. Zero business logic, fully controlled via props. 70 components from `apps/ui-v2-dev/src/components/ui-v2/`:
@@ -480,7 +482,7 @@ Well-known UI atoms. Zero business logic, fully controlled via props. 70 compone
 | **Buttons** | Button, ComboButton, Toggle, ToggleGroup |
 | **Display** | Badge, MoreBadge, Chip, ChipGroup, Avatar, AvatarGroup, Card, Skeleton, Spinner, Kbd |
 | **Feedback** | Alert, Callout, EmptyState, ProgressBar, ProgressCircle, Toast, Toaster, Tracker, CategoryBar |
-| **Layout** | Separator, Divider, Row, Frame, Group, ScrollArea |
+| **Layout** | Container, Section, Flex, Grid, Separator, Divider, Row, Frame, Group, ScrollArea |
 | **Overlays** | Dialog, Drawer, Sheet, FloatingSheet, Popover, Tooltip, DropdownMenu, Command |
 | **Navigation** | Tabs, TabNavigation, SegmentedControl, Breadcrumb, Pagination, Toolbar |
 | **Data** | Table |

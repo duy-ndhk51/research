@@ -10,7 +10,7 @@ Gradual, five-phase migration from legacy component libraries (`briicks/`, `ui/`
 **Phase 1b execution**: [phase-1b-execution.md](./phase-1b-execution.md) — Briicks token extraction (folded into Phase 2)
 **Phase 2 execution**: [phase-2-execution.md](./phase-2-execution.md) — prototype integration, token/CSS extraction, package scaffolding, deprecation
 **Phase 3, Batch 0 execution**: [phase-3-batch-0-execution.md](./phase-3-batch-0-execution.md) — Fumadocs at site root (`baseUrl: '/'`), Orama search, IA stubs in `apps/docs`
-**Phase 3, Batch 1 execution**: [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md) — Sub-batches: typography (`Text`, `Heading`), CVA layout shell (`Container`, `Section` — docs under Foundations), then Button, Input, Badge, Select, Dialog, Sheet; incremental `@theme` aliases; package graduation + MDX + `sndq-fe` deprecations · [typography-system-reference.md](./typography-system-reference.md) · [layout-system-reference.md](./layout-system-reference.md)
+**Phase 3, Batch 1 execution**: [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md) — Sub-batches: typography (`Text`, `Heading`), CVA layout shell (`Container`, `Section`, `Flex`, `Grid` — docs under Foundations; **strict semantic-vs-numeric prop typing**; canonical **`className` override-wins** via `cn(variantClasses, className)`), then Button, Input, Badge, Select, Dialog, Sheet; incremental `@theme` aliases; package graduation + MDX + `sndq-fe` deprecations · [typography-system-reference.md](./typography-system-reference.md) · [layout-system-reference.md](./layout-system-reference.md)
 **Phase 3, Batch 2 execution**: [phase-3-batch-2-execution.md](./phase-3-batch-2-execution.md) — Card, Tabs, Tooltip, EmptyState, Skeleton
 **Phase 3, Batch 3 execution**: [phase-3-batch-3-execution.md](./phase-3-batch-3-execution.md) — Remaining primitives + blocks (waves); final legacy deprecation pass
 
@@ -355,7 +355,7 @@ See [phase-3-batch-0-execution.md](./phase-3-batch-0-execution.md) for step-by-s
 
 | Batch | Components | Legacy counterparts to deprecate |
 |-------|-----------|----------------------------------|
-| **1** | `Text`, `Heading`, then Button, Input, Badge, Select, Dialog, Sheet | `briicks/text`, `briicks/button`, `briicks/input`, `briicks/badge`, `briicks/select`, `ui/dialog`, `ui/sheet` |
+| **1** | `Text`, `Heading`, `Container`, `Section`, `Flex`, `Grid`, then Button, Input, Badge, Select, Dialog, Sheet | `briicks/text`, `briicks/button`, `briicks/input`, `briicks/badge`, `briicks/select`, `ui/dialog`, `ui/sheet` (no legacy mapping for `Container` / `Section` / `Flex` / `Grid` by default) |
 | **2** | Card, Tabs, Tooltip, EmptyState, Skeleton | `briicks/empty-state`, `ui/card`, `ui/tabs`, `ui/tooltip`, `ui/skeleton` |
 | **3** | Remaining components | Remaining counterparts |
 
@@ -522,7 +522,7 @@ export { Button } from './button';
 | Phase | What gets deprecated | Method |
 |-------|---------------------|--------|
 | Phase 2 | `@sndq/ui`, `@sndq/ui/*` | ESLint `no-restricted-imports` |
-| Phase 3, Batch 1 | `Text`, `Heading`, `Container`/`Section` (if legacy exports exist), Button, Input, Badge, Select, Dialog, Sheet in briicks/ui | JSDoc `@deprecated` |
+| Phase 3, Batch 1 | `Text`, `Heading`, `Container`/`Section`/`Flex`/`Grid` (if legacy exports exist — none expected), Button, Input, Badge, Select, Dialog, Sheet in briicks/ui | JSDoc `@deprecated` |
 | Phase 3, Batch 2 | Card, Tabs, Tooltip, EmptyState, Skeleton in briicks/ui | JSDoc `@deprecated` |
 | Phase 3, Batch 3 | Remaining briicks/ui exports | JSDoc `@deprecated` |
 | Phase 5 | All removed | Directories deleted |
@@ -532,6 +532,8 @@ export { Button } from './button';
 ## 10. API Compatibility Matrix
 
 The briicks and ui-v2 component APIs are **not drop-in compatible**. Direct migration requires changing prop usage at every call site.
+
+> **Layout primitives note**: `Container`, `Section`, `Flex`, and `Grid` are **new** ui-v2 primitives without a briicks counterpart, so they are not listed in the matrix below. See [layout-system-reference.md](./layout-system-reference.md) for the v1 prop surface, the **strict semantic-vs-numeric prop typing** rule, and the **`className` override-wins** guarantee (`cn(variantClasses, className)`) that all four — and every other ui-v2 component — must satisfy.
 
 ### Button
 
@@ -626,7 +628,37 @@ Batch 1 graduates typography, CVA **layout shell** (`Container`, `Section`), and
 
 ### Why typography is first in Batch 1 (with gradual `@theme`)
 
-Foundations-adjacent work (`Text`, `Heading`) ships **before** layout shell and Button–Sheet so token usage, `cn()` merging, and optional Tailwind `@theme` aliases are established early. **Sub-batch 1B** then adds layout semantic tokens and CVA `Container` / `Section` (SNDQ-only; not Radix Themes). Variant styles must reference `packages/config/tailwind/semantic-tokens.css`; short utilities are added **incrementally** in `tokens.css` only when a shipped variant needs them — avoiding a one-shot full palette mapping. `@sndq/ui-v2` uses `packages/ui-v2/src/lib/utils.ts` (`clsx` + `tailwind-merge`) matching `sndq-fe/packages/ui/src/lib/utils.ts`, without depending on the submodule. Full rationale: [typography-system-reference.md](./typography-system-reference.md), [layout-system-reference.md](./layout-system-reference.md).
+Foundations-adjacent work (`Text`, `Heading`) ships **before** layout shell and Button–Sheet so token usage, `cn()` merging, and optional Tailwind `@theme` aliases are established early. **Sub-batch 1B** then adds layout semantic tokens and CVA `Container` / `Section` / `Flex` / `Grid` (SNDQ-only; not Radix Themes). Variant styles must reference `packages/config/tailwind/semantic-tokens.css`; short utilities are added **incrementally** in `tokens.css` only when a shipped variant needs them — avoiding a one-shot full palette mapping. `@sndq/ui-v2` uses `packages/ui-v2/src/lib/utils.ts` (`clsx` + `tailwind-merge`) matching `sndq-fe/packages/ui/src/lib/utils.ts`, without depending on the submodule. Full rationale: [typography-system-reference.md](./typography-system-reference.md), [layout-system-reference.md](./layout-system-reference.md).
+
+### Why fork `Flex` / `Grid` (not use Radix Themes)
+
+`Flex` and `Grid` ship as forked CVA primitives in `@sndq/ui-v2`, not as `@radix-ui/themes` re-exports. Reasons:
+
+- **Token discipline**: SNDQ owns the spacing scale via `--sndq-space-*` (and other semantic tokens). Adopting Radix Themes would import its own theme provider, scale, and CSS — fragmenting governance and making "change one place, update everywhere" impossible.
+- **Consistency with `Container` / `Section`**: those already use the SNDQ-only CVA approach; `Flex` / `Grid` follow the same precedent so all four layout components share one mental model and one token source.
+- **Fit for our v1 constraints**: Radix Themes layout encourages responsive object props (`gap={{ initial, md }}`) and tokens in its own scale; we explicitly defer responsive props to a later batch and require `--sndq-space-*` for numeric `gap*`.
+
+The trade-off (more code to maintain) is acceptable for the small surface area defined in [layout-system-reference.md §4–§5](./layout-system-reference.md#4-flex-api-v1).
+
+### Why strict semantic-vs-numeric prop typing (no mixing on a single prop)
+
+Every ui-v2 prop is **either** semantic (e.g. `Container.size = "sm" | "md" | "lg"`) **or** numeric (e.g. `Flex.gap = "0" | "1" | "2" | …`), but never both. Reasons:
+
+- **Semantic** for low-step "design decision" props that retune rarely and in large jumps (radius, shadow, layout sizes). Names carry intent; the team thinks in meaning.
+- **Numeric** for fine-grained tuning props that iterate constantly during build-out (gap, columns, future padding). Names match the scale; the team thinks in increments.
+- **Mixing modes on a single prop** ("you can write `gap="md"` *or* `gap="3"`") fragments usage across teams, erodes the "change one place, update everywhere" lever, and makes future migrations harder. If both expressivity and governance are needed for one axis, ship two distinct, non-overlapping props instead.
+
+Canonical statement: [layout-system-reference.md §3-bis](./layout-system-reference.md#3-bis-prop-typing-rule-strict-never-both). Enforced via the standardization gate in [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md).
+
+### Why `className` override-wins is a system-wide guarantee
+
+Every ui-v2 component root composes as `cn(variantClasses, className)` so a consumer `className` always beats a conflicting variant utility (e.g. `<Flex gap="2" className="gap-8" />` resolves to `gap-8`). Backed by `tailwind-merge` in the shared `cn()` helper. Reasons:
+
+- **Predictable escape hatch**: when designs hit the edges of the strict prop API, consumers always have a deterministic way to override without forking the component.
+- **Composes cleanly with the strict prop-typing rule**: prop API stays minimal; overrides go through one predictable channel (`className`) instead of multiplying prop combinations.
+- **Tested per component**: the standardization gate requires at least one unit test asserting the override behavior, so the guarantee can't silently regress.
+
+Canonical statement: [layout-system-reference.md §3-ter](./layout-system-reference.md#3-ter-classname-override-wins-guarantee).
 
 ---
 

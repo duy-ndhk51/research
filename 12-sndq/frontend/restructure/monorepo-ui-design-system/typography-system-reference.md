@@ -42,7 +42,7 @@ Add **`@theme` entries only when a typography variant (or docs) actually needs t
 ## 4. `cn()` and overrides
 
 - **`@sndq/ui-v2` must not import** from `sndq-fe/packages/ui` (submodule). Add **`packages/ui-v2/src/lib/utils.ts`** in the SNDQ monorepo with the same implementation as `sndq-fe/packages/ui/src/lib/utils.ts` (`clsx` + `tailwind-merge`).
-- Components compose styles as **`cn(variantClasses, className)`** on the root element so **consumer `className` overrides win** on Tailwind conflicts.
+- Components compose styles as **`cn(variantClasses, className)`** on the root element so **consumer `className` overrides win** on Tailwind conflicts. This is the canonical override-wins ordering — see [layout-system-reference.md §3-ter](./layout-system-reference.md#3-ter-classname-override-wins-guarantee) for the system-wide rule, the `gap-2` vs `gap-8` example, and the test gate that enforces it.
 
 ---
 
@@ -63,5 +63,5 @@ APIs are **not** drop-in compatible; call sites change in Phase 4 per [migration
 ## 6. Related documents
 
 - [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md) — commit order, verification, deprecations.
-- [layout-system-reference.md](./layout-system-reference.md) — CVA `Container` / `Section` (Batch 1 sub-batch 1B).
+- [layout-system-reference.md](./layout-system-reference.md) — CVA `Container` / `Section` / `Flex` / `Grid` (Batch 1 sub-batch 1B). Hosts two system-wide rules that also apply to `Text` / `Heading`: (1) **strict semantic-vs-numeric prop typing** (each prop is either semantic OR numeric, never both), and (2) **`className` override-wins** (`cn(variantClasses, className)`).
 - [migration-plan.md](./migration-plan.md) — phases, API matrix, deprecation strategy.

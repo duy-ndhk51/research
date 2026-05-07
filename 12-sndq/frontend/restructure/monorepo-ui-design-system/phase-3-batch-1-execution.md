@@ -29,43 +29,64 @@ Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently 
 
 ## 1. Overview
 
-**Goal**: Standardize and graduate, in order: **`Text`** and **`Heading`** (typography); **`Container`** and **`Section`** (CVA-based layout shell — SNDQ semantic tokens only, **not** `@radix-ui/themes`); then the six highest-leverage interactive primitives (Button, Input, Badge, Select, Dialog, Sheet). Each graduate moves into `packages/ui-v2/`, with MDX in `apps/docs` (typography + interactive under **Primitives**; layout shell under **Foundations**). Finish with one JSDoc `@deprecated` pass on matching `sndq-fe` briicks/ui barrel exports — without rewriting `sndq-fe` call sites (Phase 4).
+**Goal**: Standardize and graduate, in order: **`Text`** and **`Heading`** (typography); **`Container`**, **`Section`**, **`Flex`**, and **`Grid`** (CVA-based layout shell — SNDQ semantic tokens only, **not** `@radix-ui/themes`); then the six highest-leverage interactive primitives (Button, Input, Badge, Select, Dialog, Sheet). Each graduate moves into `packages/ui-v2/`, with MDX in `apps/docs` (typography + interactive under **Primitives**; layout shell under **Foundations**). Finish with one JSDoc `@deprecated` pass on matching `sndq-fe` briicks/ui barrel exports — without rewriting `sndq-fe` call sites (Phase 4).
 
-**Structure**: **21 commits** across **1 PR** (default), grouped into **sub-batches** for review and narrative:
+**Structure**: **25 commits** across **1 PR** (default), grouped into **sub-batches** for review and narrative:
 
 | Sub-batch | Commits | Scope |
 |-----------|---------|--------|
 | **1A — Typography** | 1–4 | `Text` then `Heading` (standardize + graduate each) |
-| **1B — Layout shell** | 5–8 | `Container` then `Section` (standardize + graduate each); CVA + `semantic-tokens.css` layout variables |
-| **1C — Interactive** | 9–20 | Button (+ co-located exports), Input, Badge, Select, Dialog, Sheet (standardize + graduate each) |
-| **1D — Deprecations** | 21 | Single `sndq-fe` JSDoc pass |
+| **1B — Layout shell** | 5–12 | `Container`, `Section`, `Flex`, `Grid` (standardize + graduate each); CVA + `semantic-tokens.css` layout variables (incl. `--sndq-space-*`) |
+| **1C — Interactive** | 13–24 | Button (+ co-located exports), Input, Badge, Select, Dialog, Sheet (standardize + graduate each) |
+| **1D — Deprecations** | 25 | Single `sndq-fe` JSDoc pass |
 
 | PR | Scope | Risk level | Commits |
 |----|-------|------------|---------|
-| **PR 1** | Sub-batches 1A–1D: typography, CVA `Container`/`Section`, six interactives, docs (primitives + foundations layout MDX), incremental `@sndq/config` `@theme` aliases as needed, `sndq-fe` deprecations | Medium | 1–21 |
+| **PR 1** | Sub-batches 1A–1D: typography, CVA `Container`/`Section`/`Flex`/`Grid`, six interactives, docs (primitives + foundations layout MDX), incremental `@sndq/config` `@theme` aliases as needed, `sndq-fe` deprecations | Medium | 1–25 |
 
 **Why typography first (1A)**: Establishes token usage, `cn()` pattern, and optional short Tailwind utilities before layout and the larger interactive set. See [typography-system-reference.md](./typography-system-reference.md).
 
-**Why layout shell next (1B)**: Introduces **page-level** width and vertical rhythm via a small, strict API (`size` presets on `Container` / `Section`) backed by the same token discipline; inner flex/grid remains Tailwind at call sites. See [layout-system-reference.md](./layout-system-reference.md).
+**Why layout shell next (1B)**: Introduces **page-level** width and vertical rhythm via a small, strict API (`size` presets on `Container` / `Section`) **plus** inner-layout primitives (`Flex` / `Grid`) with token-backed numeric `gap*`. All four share the same CVA + token discipline and the strict semantic-vs-numeric prop-typing rule. See [layout-system-reference.md](./layout-system-reference.md).
 
-**Why 1 PR**: Keeps one reviewable narrative for the first graduation batch. Commits stay ordered so you can split later (e.g. commits **1–20** merged first, commit **21** as follow-up) if CI or policy requires it.
+**Why 1 PR**: Keeps one reviewable narrative for the first graduation batch. Commits stay ordered so you can split later (e.g. commits **1–24** merged first, commit **25** as follow-up) if CI or policy requires it.
 
 ### Typography and `@theme` utilities (gradual)
 
 - **Canonical values** live in `packages/config/tailwind/semantic-tokens.css` (`--sndq-text`, `--sndq-text-secondary`, `--sndq-text-xs` … `--sndq-text-7xl`, font stacks). Variant `cva` strings must use these variables (for example `text-[var(--sndq-text-secondary)]` or `text-[length:var(--sndq-text-sm)]`) until a shorter utility exists.
 - **Short utilities** (`text-*` from `@theme`): extend `packages/config/tailwind/tokens.css` (or a small file imported alongside it, matching the existing `@theme inline` pattern) **only for variables that shipped typography variants actually reference** in that commit. Add aliases in the **same commit** as the variant that first needs them (optional **Commit 0** theme-only is allowed if the team prefers theme before components — default is co-locate with **Commit 1** `Text` standardize).
+  - Recommended mapping for text color utilities (so components can use `text-sndq-text-primary` instead of arbitrary values):
+    - `--color-sndq-text-primary: var(--sndq-text);`
+    - `--color-sndq-text-secondary: var(--sndq-text-secondary);`
+    - `--color-sndq-text-tertiary: var(--sndq-text-tertiary);`
+    - This yields Tailwind utilities: `text-sndq-text-primary`, `text-sndq-text-secondary`, `text-sndq-text-tertiary`.
 - **Do not** map the entire semantic palette in one commit.
 - **`cn`**: `packages/ui-v2/src/lib/utils.ts` mirrors `sndq-fe/packages/ui/src/lib/utils.ts` (`clsx` + `tailwind-merge`). Components use `cn(variantClasses, className)` on the root. `@sndq/ui-v2` must not import the submodule.
 
 ### Layout tokens and CVA (gradual)
 
-- **Not Radix Themes**: Do **not** add `@radix-ui/themes`, its `Theme` provider for spacing, or its layout CSS. Implement **`Container`** and **`Section`** with [`cva`](https://cva.style/docs) + `cn()` only, same spirit as typography.
+- **Not Radix Themes**: Do **not** add `@radix-ui/themes`, its `Theme` provider for spacing, or its layout CSS. Implement **`Container`**, **`Section`**, **`Flex`**, and **`Grid`** with [`cva`](https://cva.style/docs) + `cn()` only, same spirit as typography.
 - **Canonical layout values** live in `packages/config/tailwind/semantic-tokens.css`. Add variables **incrementally** in the same commit that first uses them in a `cva` recipe, for example:
   - **Container**: max width and horizontal inset — e.g. `--sndq-container-max-sm`, `--sndq-container-max-md`, `--sndq-container-gutter` (exact set is defined in [layout-system-reference.md](./layout-system-reference.md) and implemented alongside Commits 5–6).
   - **Section**: vertical padding / band rhythm — e.g. `--sndq-section-py-sm`, `--sndq-section-py-md`, `--sndq-section-py-lg` (alongside Commits 7–8).
-- **`cva` recipes** must reference only those `var(--sndq-…)` values (or existing primitives they compose). No ad-hoc pixel literals in component files.
-- **Optional `@theme` aliases** in `packages/config/tailwind/tokens.css`: only when a shipped `Container`/`Section` variant needs a shorter utility in the **same** commit.
-- **v1 API**: Prefer a single **`size`** enum per component (e.g. `sm | md | lg` — exact names in layout reference). **No** Radix-style responsive object props (`gap={{ sm: '2', lg: '4' }}`) in Batch 1 unless explicitly deferred to a later batch.
+  - **Numeric spacing scale** (used by `Flex` / `Grid` `gap*`): `--sndq-space-0` … `--sndq-space-5` (alongside Commits 9–12; extend the range only when a recipe needs a new step).
+- **`cva` recipes** must reference only those `var(--sndq-…)` values (or existing primitives they compose). No ad-hoc pixel literals in component files. Numeric `gap*` must resolve to `--sndq-space-*` only.
+- **Optional `@theme` aliases** in `packages/config/tailwind/tokens.css`: only when a shipped layout variant needs a shorter utility in the **same** commit.
+- **v1 API**:
+  - `Container` / `Section`: a single **`size`** enum per component (e.g. `sm | md | lg` — exact names in layout reference).
+  - `Flex` / `Grid`: layout enums (`direction`, `align`, `justify`, `wrap`, `flow`) + **numeric** `gap` / `gapX` / `gapY`; `Grid` also takes **numeric** `columns`. Full prop tables in [layout-system-reference.md §4–§5](./layout-system-reference.md#4-flex-api-v1).
+  - **No** Radix-style responsive object props (`gap={{ sm: '2', lg: '4' }}`) in Batch 1 — wrap with Tailwind utilities at call sites.
+
+### Strict prop-typing rule (semantic vs numeric — never both)
+
+System-wide rule for every ui-v2 component: **each prop is either semantic OR numeric, never both**. See [layout-system-reference.md §3-bis](./layout-system-reference.md#3-bis-prop-typing-rule-strict-never-both) for the canonical statement, rationale, and examples.
+
+- **Semantic** for low-step "design decision" props: `Container.size`, `Section.size`, future `radius`, `shadow`.
+- **Numeric** for fine-grained tuning props: `Flex.gap` / `Grid.gap` / `gapX` / `gapY`, `Grid.columns`.
+- **Forbidden**: a single prop accepting both modes (e.g. `gap: "md" | "3"`). If both expressivity and governance are needed for one axis, ship two distinct, non-overlapping props — never collapse them.
+
+### `className` override-wins guarantee (canonical)
+
+Every component root must compose as **`cn(variantClasses, className)`** so consumer `className` wins on conflicting Tailwind utilities (e.g. `<Flex gap="2" className="gap-8" />` resolves to `gap-8`). Backed by `tailwind-merge` in the shared `cn()` helper. Canonical statement in [layout-system-reference.md §3-ter](./layout-system-reference.md#3-ter-classname-override-wins-guarantee). Tested per the standardization gate below.
 
 ### Prerequisites
 
@@ -80,8 +101,8 @@ Apply JSDoc `@deprecated` on barrel exports only **after** the replacement exist
 |-------------------|---------------------------|--------|
 | `Text`, related types / variant helpers | `sndq-fe/src/components/briicks/text/` (and briicks barrel) | `Paragraph` / `Caption` map to `Text` variants in Phase 4; deprecate after package exports exist |
 | `Heading`, related types / variant helpers | same folder / barrel | Align briicks `Heading` with ui-v2 `Heading` API |
-| `Container`, `Section` | *(none by default)* | **Inspect** `sndq-fe` before **Commit 21**: add a table row and JSDoc only if a matching barrel export exists (e.g. a legacy layout helper). If none, skip. |
-| `Button`, `buttonVariants`, `ButtonProps`, and any co-located exports (e.g. `ComboButton`) | `sndq-fe/src/components/briicks/button/` (or barrel `briicks/button/index.ts`) | Inspect actual folder layout before Commit 21 |
+| `Container`, `Section`, `Flex`, `Grid` | *(none by default)* | **Inspect** `sndq-fe` before **Commit 25**: add a table row and JSDoc only if a matching barrel export exists (e.g. a legacy layout helper). If none, skip. `Flex` / `Grid` have no expected legacy mapping. |
+| `Button`, `buttonVariants`, `ButtonProps`, and any co-located exports (e.g. `ComboButton`) | `sndq-fe/src/components/briicks/button/` (or barrel `briicks/button/index.ts`) | Inspect actual folder layout before Commit 25 |
 | `Input` and related types | `sndq-fe/src/components/briicks/input/` | briicks may expose `InputV2` — deprecate the exported surface that maps to ui-v2 `Input` |
 | `Badge` | `sndq-fe/src/components/briicks/badge/` | |
 | `Select` and subcomponents | `sndq-fe/src/components/briicks/select/` | Match export names to ui-v2 Select API |
@@ -101,17 +122,20 @@ See [migration-plan.md §10](./migration-plan.md#10-api-compatibility-matrix). b
 A component may graduate only when:
 
 - [ ] Stable prop interface with JSDoc on public props
-- [ ] `className` forwarding via `cn()` where applicable (`cn(variantClasses, className)` so overrides merge correctly)
+- [ ] `className` forwarding via `cn()` where applicable, **strict ordering `cn(variantClasses, className)`** so consumer `className` wins on conflicts (`className` override-wins guarantee — see [Layout tokens and CVA (gradual)](#layout-tokens-and-cva-gradual))
+- [ ] **Override-wins test**: at least one unit test asserts that `<Component variantProp className="conflicting-utility" />` resolves to the consumer value (e.g. `gap-2` vs `gap-8` for layout primitives; equivalent text/size/color conflict for typography and interactives)
 - [ ] `ref` forwarding where applicable (and `asChild` if the design requires it)
 - [ ] Unit tests: variants, a11y basics, keyboard interaction as relevant (keyboard/a11y depth varies by component; layout primitives: render + variant class coverage)
 - [ ] No imports from app-specific code (hooks, services, `next-intl`, `@/modules`, etc.)
 - [ ] Uses `@sndq/config/tailwind` tokens / shared component CSS (no hardcoded one-off theme in the component file)
+- [ ] **Strict prop-typing rule satisfied**: every prop is either semantic OR numeric — never both (see [Strict prop-typing rule](#strict-prop-typing-rule-semantic-vs-numeric--never-both))
 - [ ] **Typography (`Text`, `Heading`)**: variant styles reference `semantic-tokens.css` variables; any new **`@theme`** alias is added **incrementally** in the same change that introduces the variant needing it (see [Typography and `@theme` utilities (gradual)](#typography-and-theme-utilities-gradual))
-- [ ] **Layout (`Container`, `Section`)**: `cva` maps reference only layout semantic tokens from `semantic-tokens.css`; default elements documented (`Container` → `div`, `Section` → `section` for document outline unless design specifies otherwise); **v1** uses discrete `size` presets only (see [Layout tokens and CVA (gradual)](#layout-tokens-and-cva-gradual))
+- [ ] **Layout shell (`Container`, `Section`)**: `cva` maps reference only layout semantic tokens from `semantic-tokens.css`; default elements documented (`Container` → `div`, `Section` → `section` for document outline unless design specifies otherwise); **v1** uses discrete `size` presets only (see [Layout tokens and CVA (gradual)](#layout-tokens-and-cva-gradual))
+- [ ] **Layout primitives (`Flex`, `Grid`)**: `cva` recipes use only `--sndq-space-*` for `gap*` and the agreed `columns` enum for `Grid`; **strict** — no prop accepts both numeric and semantic; no `padding`/`margin`/`width`/`height`/responsive-object props in v1
 
 ### Inspect prototype tree (once)
 
-Before **Commit 9**, list `apps/ui-v2-dev/src/components/ui-v2/` for `Text`, `Heading`, `Container`, `Section`, and (separately) any `button/` subfolder. If `ComboButton`, `buttonVariants`, or other exports live beside `Button`, include them in the **Button** vertical slice (commits **9–10**) so the briicks barrel deprecation stays truthful. If `Container` / `Section` are missing in the prototype, implement them during **Commits 5** and **7** per [layout-system-reference.md](./layout-system-reference.md).
+Before **Commit 13**, list `apps/ui-v2-dev/src/components/ui-v2/` for `Text`, `Heading`, `Container`, `Section`, `Flex`, `Grid`, and (separately) any `button/` subfolder. If `ComboButton`, `buttonVariants`, or other exports live beside `Button`, include them in the **Button** vertical slice (commits **13–14**) so the briicks barrel deprecation stays truthful. If `Container` / `Section` / `Flex` / `Grid` are missing in the prototype, implement them during **Commits 5**, **7**, **9**, and **11** per [layout-system-reference.md](./layout-system-reference.md). The same rule applies to typography: `Text` and `Heading` were also missing in the prototype at the start of Batch 1 — they are **created from scratch** during **Commits 1** and **3** (the prototype's `index.ts` barrel already exports both names, so creation is required to keep `lint`/`type-check`/`build` green).
 
 ### Capture baselines
 
@@ -145,9 +169,9 @@ git checkout -b feature/phase-3-batch-1-standardize-graduate
 
 ## 3. PR 1 — Standardize, graduate, deprecate (Batch 1)
 
-**Scope**: Sub-batches **1A** (typography) → **1B** (`Container`, `Section`) → **1C** (Button … Sheet) → **1D** (deprecations). Package exports for all components live on `@sndq/ui-v2/components`. Docs: **Primitives** for `text`, `heading`, and interactives; **Foundations** for `container`, `section` MDX and `foundations/meta.json` updates.
+**Scope**: Sub-batches **1A** (typography) → **1B** (`Container`, `Section`, `Flex`, `Grid`) → **1C** (Button … Sheet) → **1D** (deprecations). Package exports for all components live on `@sndq/ui-v2/components`. Docs: **Primitives** for `text`, `heading`, and interactives; **Foundations** for `container`, `section`, `flex`, `grid` MDX and `foundations/meta.json` updates.
 
-**PR split note**: If review load is high, merge through **Commit 20** first (all moves + docs), then **Commit 21** (deprecations only) as a tiny follow-up PR.
+**PR split note**: If review load is high, merge through **Commit 24** first (all moves + docs), then **Commit 25** (deprecations only) as a tiny follow-up PR.
 
 ### Sub-batch 1A — Typography (Commits 1–4)
 
@@ -155,30 +179,41 @@ git checkout -b feature/phase-3-batch-1-standardize-graduate
 
 ### Commit 1: Standardize `Text` in prototype
 
-**What**: Finalize props, JSDoc, `cn`/`ref`/variants, tests, and playground references for `Text` (body, caption, label-style variants as designed). Variant classes must use `semantic-tokens.css` variables; add **minimal** `@theme` aliases in `tokens.css` (or agreed import) **only** for tokens this commit introduces into variant strings.
+**What**: **Create** `Text` in the prototype (it was missing — see [Inspect prototype tree (once)](#inspect-prototype-tree-once)). API forked from Cloudflare Kumo `Text` (one-component, conditional types, `truncate`) and Radix Themes `Text` (split with future `Heading`, default `as='span'`, `Slot` for `asChild`). Strict semantic-only props: `variant` (`body | secondary | tertiary | mono | success | warning | error`), `size` (`xs | sm | md | lg | xl | 2xl | 3xl`), `weight` (`normal | medium`), `align` (`start | center | end`), `truncate` (boolean), `as` (semantic element from a fixed enum), `asChild`. Variant classes use the **already-shipped** short utilities (`text-sndq-text-primary` / `secondary` / `tertiary`, `text-sndq-xs` … `3xl`, `font-sndq-mono`, `text-sndq-success-text` / `warning-text` / `error-text`) — these aliases were prepped earlier in `packages/config/tailwind/tokens.css` so this commit adds **no** new aliases. Composition is strictly `cn(textVariants({...}), className)` to enforce the override-wins guarantee. JSDoc on every public prop plus three `@example` blocks (body, secondary helper, monetary mono).
 
 **Files to edit** (adjust paths to match repo):
 
-- `apps/ui-v2-dev/src/components/ui-v2/**/text*.tsx` — prop stability, a11y, `as` unions if applicable
-- Colocated tests covering variants
+- `apps/ui-v2-dev/src/components/ui-v2/Text.tsx` — **new** file (one component, ~140 LOC including JSDoc).
+- `apps/ui-v2-dev/src/components/ui-v2/index.ts` — already exports `./Text`; no change.
+- `packages/config/tailwind/tokens.css` — already contains the `--color-sndq-text-*` / `--text-sndq-*` / `--font-sndq-*` aliases used; no change.
+- Colocated tests — **deferred** (see Deviations below).
 
 **Verification**:
 
 ```bash
-pnpm --filter @sndq/ui-v2-dev run test -- --testPathPattern=text
-NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
-pnpm --filter @sndq/ui-v2-dev run lint
+# Tests deferred for Commit 1 — see Deviations below.
+pnpm --filter @sndq/ui-v2-dev exec eslint src/components/ui-v2/Text.tsx
 pnpm --filter @sndq/ui-v2-dev run type-check
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
 ```
+
+The full-project `pnpm --filter @sndq/ui-v2-dev run lint` will still report **7 pre-existing errors** in unrelated files (`chart-composition-07.tsx`, `chart-composition-11.tsx`, `tracker-08.tsx`, `tracker-09.tsx`, `tracker-10.tsx`, `tabs/FilterTab.tsx`). Lint `Text.tsx` directly (as above) to confirm this commit introduces none.
 
 **Commit message**: `refactor(ui-v2-dev): standardize Text for package graduation`
 
+**Deviations from the standardization gate**:
+
+- **Tests deferred** — `apps/ui-v2-dev` has no `test` script (only `dev` / `build` / `lint` / `type-check`). The override-wins unit test and variant render tests are deferred to a later commit (target: before package graduation in **Commit 2**, after a small Vitest setup commit lands).
+- **Mono auto-downsize not implemented** — Kumo's `Text` auto-clamps mono variants to `sm` to optically match body. Skipped in v1 because SNDQ's `xs` token is `13px`, below the SNDQ "minimum 14px for mono" rule. To be revisited with a SNDQ-specific decision (likely "do nothing" since the scale already starts at 14px = `sm`).
+- **No new `tokens.css` aliases** — the recommended `--color-sndq-text-primary|secondary|tertiary`, `--text-sndq-*`, and `--font-sndq-mono` aliases were prepped in an earlier change (already present in `tokens.css` at the time of this commit), so the recipe uses short utilities directly with no diff to the config package.
+- **Strict-prop axes are richer than the briicks legacy** — briicks `Paragraph` had a single `variant` axis (label / default / link / mono). The new ui-v2 `Text` splits that into independent `variant` (semantic role + color) × `size` × `weight` × `align` × `truncate` axes per the Kumo + Radix references. Phase 4 mapping for briicks `Paragraph` / `Caption` will collapse to specific combinations of these axes (documented during Commit 2 MDX).
+
 **Status**:
 
-- [ ] Standardization gate checklist satisfied for `Text`
-- [ ] Tests green
-- [ ] Build / lint / type-check green
-- [ ] Committed
+- [ ] Standardization gate checklist satisfied for `Text` *(except test items — see Deviations)*
+- [ ] Tests green *(deferred — see Deviations)*
+- [ ] Build / lint (`Text.tsx` only) / type-check green
+- [ ] Committed *(manual)*
 
 ---
 
@@ -241,7 +276,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Sub-batch 1B — Layout shell (Commits 5–8)
+### Sub-batch 1B — Layout shell (Commits 5–12)
 
 ---
 
@@ -331,11 +366,107 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Sub-batch 1C — Interactive primitives (Commits 9–20)
+### Commit 9: Standardize `Flex` in prototype
+
+**What**: Finalize `Flex` with **cva** `flexVariants` covering enum props (`direction`, `align`, `justify`, `wrap`) and **numeric** `gap` / `gapX` / `gapY` resolved through `--sndq-space-*` (add the spacing scale variables in this commit if not already present from prior layout commits). JSDoc on every public prop, `ref` forwarding, default element `div`. Tests cover variant class output and the **override-wins** assertion (e.g. `<Flex gap="2" className="gap-8" />` → resolves to `gap-8`). See [layout-system-reference.md §4](./layout-system-reference.md#4-flex-api-v1).
+
+**Files to edit** (adjust paths to match repo):
+
+- `apps/ui-v2-dev/src/components/ui-v2/**/flex*.tsx` — or create if missing
+- `packages/config/tailwind/semantic-tokens.css` — add `--sndq-space-0` … `--sndq-space-5` (if not already present)
+- Colocated tests (variant class coverage + override-wins)
+
+**Verification**:
+
+```bash
+pnpm --filter @sndq/ui-v2-dev run test -- --testPathPattern=flex
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
+pnpm --filter @sndq/ui-v2-dev run lint
+pnpm --filter @sndq/ui-v2-dev run type-check
+```
+
+**Commit message**: `refactor(ui-v2-dev): standardize Flex for package graduation`
+
+**Status**:
+
+- [ ] Layout gate checklist satisfied for `Flex` (incl. strict typing rule + override-wins test)
+- [ ] Committed
 
 ---
 
-### Commit 9: Standardize Button (+ co-located exports) in prototype
+### Commit 10: Graduate `Flex` to package + foundations MDX + update consumers
+
+**What**: Move `Flex` to `packages/ui-v2`, export from `src/components/index.ts`, add **`apps/docs/content/docs/foundations/flex.mdx`** (covering when to use, allowed props per §4 of the layout reference, the `gap → --sndq-space-*` mapping, and the override-wins example), update **`apps/docs/content/docs/foundations/meta.json`**. Fix imports in `apps/ui-v2-dev` / `apps/docs` / any consumer.
+
+**Files to create**:
+
+- `packages/ui-v2/src/components/flex.tsx` (or folder per convention)
+- `apps/docs/content/docs/foundations/flex.mdx`
+
+**Files to edit**:
+
+- `packages/ui-v2/src/components/index.ts` — export `Flex` (+ types)
+- `apps/docs/content/docs/foundations/meta.json`
+
+**Commit message**: `feat(ui-v2): graduate Flex to package and document`
+
+**Status**:
+
+- [ ] Docs: `/foundations/flex` renders
+- [ ] Committed
+
+---
+
+### Commit 11: Standardize `Grid` in prototype
+
+**What**: Finalize `Grid` with **cva** `gridVariants` covering enum props (`align`, `justify`, `flow`), **numeric** `columns` (e.g. `"1" | "2" | "3" | "4" | "6" | "12"`), and **numeric** `gap` / `gapX` / `gapY` resolved through `--sndq-space-*`. JSDoc, `ref` forwarding, default element `div`. Tests cover variant class output and the **override-wins** assertion. `rows` and `areas` deferred. See [layout-system-reference.md §5](./layout-system-reference.md#5-grid-api-v1).
+
+**Verification**:
+
+```bash
+pnpm --filter @sndq/ui-v2-dev run test -- --testPathPattern=grid
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
+pnpm --filter @sndq/ui-v2-dev run lint
+pnpm --filter @sndq/ui-v2-dev run type-check
+```
+
+**Commit message**: `refactor(ui-v2-dev): standardize Grid for package graduation`
+
+**Status**:
+
+- [ ] Layout gate checklist satisfied for `Grid` (incl. strict typing rule + override-wins test)
+- [ ] Committed
+
+---
+
+### Commit 12: Graduate `Grid` to package + foundations MDX + update consumers
+
+**What**: Move `Grid` to `packages/ui-v2`, export from `src/components/index.ts`, add **`apps/docs/content/docs/foundations/grid.mdx`** (covering when to use, allowed props per §5 of the layout reference, the `columns` and `gap → --sndq-space-*` mappings, and the override-wins example), update **`apps/docs/content/docs/foundations/meta.json`**. Fix imports in `apps/ui-v2-dev` / `apps/docs` / any consumer.
+
+**Files to create**:
+
+- `packages/ui-v2/src/components/grid.tsx` (or folder per convention)
+- `apps/docs/content/docs/foundations/grid.mdx`
+
+**Files to edit**:
+
+- `packages/ui-v2/src/components/index.ts` — export `Grid` (+ types)
+- `apps/docs/content/docs/foundations/meta.json`
+
+**Commit message**: `feat(ui-v2): graduate Grid to package and document`
+
+**Status**:
+
+- [ ] Docs: `/foundations/grid` renders
+- [ ] Committed
+
+---
+
+### Sub-batch 1C — Interactive primitives (Commits 13–24)
+
+---
+
+### Commit 13: Standardize Button (+ co-located exports) in prototype
 
 **What**: Finalize props, JSDoc, `cn`/`ref`/variants, tests, and Storybook/playground references for `Button` (and any co-located button primitives in the same directory).
 
@@ -376,7 +507,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 10: Graduate Button to package + MDX + update consumers
+### Commit 14: Graduate Button to package + MDX + update consumers
 
 **What**: Move Button implementation into `packages/ui-v2`, export from `src/components/index.ts`, fix imports in `apps/ui-v2-dev` and `apps/docs`, add `apps/docs/content/docs/primitives/button.mdx` (and update `primitives/meta.json` `pages` if required).
 
@@ -420,7 +551,7 @@ pnpm --filter @sndq/ui-v2 run test -- --testPathPattern=button
 
 ---
 
-### Commit 11: Standardize Input in prototype
+### Commit 15: Standardize Input in prototype
 
 **What**: Same as prior batch pattern for `Input` (label, `error` as string, `helperText`, icons as `ReactNode`, etc. per migration plan matrix).
 
@@ -442,7 +573,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 12: Graduate Input + MDX + consumers
+### Commit 16: Graduate Input + MDX + consumers
 
 **What**: Move to `packages/ui-v2`, export, update apps, add `primitives/input.mdx` + `meta.json`.
 
@@ -454,7 +585,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 13: Standardize Badge in prototype
+### Commit 17: Standardize Badge in prototype
 
 **Verification**:
 
@@ -474,7 +605,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 14: Graduate Badge + MDX + consumers
+### Commit 18: Graduate Badge + MDX + consumers
 
 **Commit message**: `feat(ui-v2): graduate Badge to package and document`
 
@@ -484,7 +615,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 15: Standardize Select in prototype
+### Commit 19: Standardize Select in prototype
 
 **Verification**:
 
@@ -504,7 +635,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 16: Graduate Select + MDX + consumers
+### Commit 20: Graduate Select + MDX + consumers
 
 **Commit message**: `feat(ui-v2): graduate Select to package and document`
 
@@ -514,7 +645,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 17: Standardize Dialog in prototype
+### Commit 21: Standardize Dialog in prototype
 
 **Verification**:
 
@@ -534,7 +665,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 18: Graduate Dialog + MDX + consumers
+### Commit 22: Graduate Dialog + MDX + consumers
 
 **Commit message**: `feat(ui-v2): graduate Dialog to package and document`
 
@@ -544,7 +675,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 19: Standardize Sheet in prototype
+### Commit 23: Standardize Sheet in prototype
 
 **Verification**:
 
@@ -564,7 +695,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 20: Graduate Sheet + MDX + consumers
+### Commit 24: Graduate Sheet + MDX + consumers
 
 **Commit message**: `feat(ui-v2): graduate Sheet to package and document`
 
@@ -574,11 +705,11 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Sub-batch 1D — Deprecations (Commit 21)
+### Sub-batch 1D — Deprecations (Commit 25)
 
 ---
 
-### Commit 21: Deprecate legacy briicks/ui exports (Batch 1)
+### Commit 25: Deprecate legacy briicks/ui exports (Batch 1)
 
 **What**: Add `/** @deprecated Use … from @sndq/ui-v2/components instead. */` above each relevant re-export in the briicks/ui barrel files listed in [Legacy deprecation mapping](#legacy-deprecation-mapping-batch-1). Do not change implementation bodies.
 
@@ -654,13 +785,13 @@ pnpm --filter @sndq/ui-v2-dev run test
 
 Compare builds to baselines (same commands as §2 with `-final` suffix).
 
-**Expected result**: All apps and packages build; `Text`, `Heading`, `Container`, `Section`, and the six interactive primitives importable from `@sndq/ui-v2/components`; docs **Primitives** list `text`, `heading`, Button through Sheet; docs **Foundations** list `container` and `section`; layout semantic tokens present in `semantic-tokens.css` as introduced in Commits 5–8; legacy exports show deprecation in IDE.
+**Expected result**: All apps and packages build; `Text`, `Heading`, `Container`, `Section`, `Flex`, `Grid`, and the six interactive primitives importable from `@sndq/ui-v2/components`; docs **Primitives** list `text`, `heading`, Button through Sheet; docs **Foundations** list `container`, `section`, `flex`, `grid`; layout semantic tokens (incl. `--sndq-space-*`) present in `semantic-tokens.css` as introduced in Commits 5–12; legacy exports show deprecation in IDE.
 
 **Final status**:
 
-- [ ] All 21 commits complete
+- [ ] All 25 commits complete
 - [ ] Root build / lint / type-check pass
-- [ ] Manual: docs `/primitives/...` and `/foundations/container`, `/foundations/section` render
+- [ ] Manual: docs `/primitives/...` and `/foundations/container`, `/foundations/section`, `/foundations/flex`, `/foundations/grid` render
 - [ ] Manual: ui-v2-dev playground still exercises graduated components
 - [ ] PR merged
 
@@ -670,7 +801,7 @@ Compare builds to baselines (same commands as §2 with `-final` suffix).
 
 > **Heads up: first `@sndq/ui-v2` component graduation (Batch 1)**
 >
-> PR [link] follows **sub-batches**: **1A** typography (`Text`, `Heading`), **1B** layout shell (`Container`, `Section` — CVA + SNDQ semantic tokens, **not** Radix Themes), **1C** Button through Sheet, **1D** legacy JSDoc deprecations. Typography uses `semantic-tokens.css` and incremental `@sndq/config` `@theme` aliases; see [typography-system-reference.md](./typography-system-reference.md). Layout shell tokens and variant rules: [layout-system-reference.md](./layout-system-reference.md). The main app is **not** bulk-migrated yet — you will see `@deprecated` JSDoc on legacy briicks/ui exports (including **briicks text**). New feature work should import from `@sndq/ui-v2/components` where possible.
+> PR [link] follows **sub-batches**: **1A** typography (`Text`, `Heading`), **1B** layout shell (`Container`, `Section`, `Flex`, `Grid` — CVA + SNDQ semantic tokens, **not** Radix Themes; **strict semantic-vs-numeric prop typing**; canonical **`className` override-wins** rule via `cn(variantClasses, className)`), **1C** Button through Sheet, **1D** legacy JSDoc deprecations. Typography uses `semantic-tokens.css` and incremental `@sndq/config` `@theme` aliases; see [typography-system-reference.md](./typography-system-reference.md). Layout shell tokens, prop-typing rule, and override-wins guarantee: [layout-system-reference.md](./layout-system-reference.md). The main app is **not** bulk-migrated yet — you will see `@deprecated` JSDoc on legacy briicks/ui exports (including **briicks text**). New feature work should import from `@sndq/ui-v2/components` where possible.
 >
 > After pulling:
 >
@@ -680,9 +811,9 @@ Compare builds to baselines (same commands as §2 with `-final` suffix).
 > Touch points:
 > - `packages/ui-v2/src/components/*`, `packages/ui-v2/src/lib/utils.ts`
 > - `packages/config/tailwind/tokens.css` (incremental `@theme` aliases)
-> - `packages/config/tailwind/semantic-tokens.css` (typography + **layout shell** tokens)
+> - `packages/config/tailwind/semantic-tokens.css` (typography + **layout shell** tokens, incl. `--sndq-space-*`)
 > - `apps/ui-v2-dev/` imports
-> - `apps/docs/content/docs/primitives/*`, `apps/docs/content/docs/foundations/{container,section}.mdx`
+> - `apps/docs/content/docs/primitives/*`, `apps/docs/content/docs/foundations/{container,section,flex,grid}.mdx`
 > - `sndq-fe/src/components/briicks/{text,button,input,badge,select}/`, `sndq-fe/src/components/ui/{dialog,sheet}.tsx`
 
 ---
@@ -697,7 +828,8 @@ After Batch 1 merges, open [phase-3-batch-2-execution.md](./phase-3-batch-2-exec
 - **Sub-batches** (1A–1D) keep review focus: foundations vs interactive vs deprecations.
 - **Deprecate only after the export exists** in the package — avoids warning fatigue.
 - **Typography + gradual `@theme`** reduces token drift before scaling interactive primitives.
-- **Layout shell (1B)** documents page width and section rhythm in **Foundations** while components still export from `@sndq/ui-v2/components`.
+- **Layout shell (1B)** documents page width, section rhythm, and inner-layout primitives (`Flex`, `Grid`) in **Foundations** while components still export from `@sndq/ui-v2/components`.
+- **Strict prop-typing rule** (semantic OR numeric, never both) and **`className` override-wins** are gated on every graduating component — landing them in Batch 1 sets the precedent for every future batch.
 
 ### Known lessons from prior phases
 
@@ -709,7 +841,7 @@ After Batch 1 merges, open [phase-3-batch-2-execution.md](./phase-3-batch-2-exec
 
 | Date | Commit | Notes |
 |------|--------|-------|
-|      | 1      |       |
+| 2026-05-07 | 1 | Created `apps/ui-v2-dev/src/components/ui-v2/Text.tsx` (component was missing; barrel already exported it). API forked from Kumo + Radix Themes per Commit 1 *What*. Used the existing `text-sndq-text-*` / `text-sndq-*` / `font-sndq-mono` aliases — no `tokens.css` change. Type-check + build + targeted lint on `Text.tsx` all green; full-project lint still has 7 pre-existing errors in unrelated files (chart-compositions, trackers, FilterTab) untouched by this commit. Tests deferred — see [Commit 1 Deviations](#commit-1-standardize-text-in-prototype). SHA: _to fill in after manual commit_. |
 |      | 2      |       |
 |      | 3      |       |
 |      | 4      |       |
@@ -730,3 +862,7 @@ After Batch 1 merges, open [phase-3-batch-2-execution.md](./phase-3-batch-2-exec
 |      | 19     |       |
 |      | 20     |       |
 |      | 21     |       |
+|      | 22     |       |
+|      | 23     |       |
+|      | 24     |       |
+|      | 25     |       |
