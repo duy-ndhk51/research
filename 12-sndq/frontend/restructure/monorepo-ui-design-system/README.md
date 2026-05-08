@@ -10,6 +10,8 @@ Full architecture specification for reorganizing the `sndq` monorepo into a hybr
 **Lifting process**: [component-lifting-process.md](./component-lifting-process.md) — four-tier promotion model, signals, waves, detection script
 **Lifting ticket**: [ticket-component-lifting.md](./ticket-component-lifting.md) — copy-paste-ready for Linear (lifting process)
 **Migration plan**: [migration-plan.md](./migration-plan.md) — five-phase gradual migration, deprecation strategy, API compatibility
+**Docs templates & rules**: [templates/README.md](./templates/README.md) — Fumadocs MDX templates ([`docs-templates.md`](./templates/docs-templates.md)), authoring rules ([`docs-rules.md`](./templates/docs-rules.md)), and test templates.
+**Test templates**: [templates/tests/ui-v2-test-templates.md](./templates/tests/ui-v2-test-templates.md) — low-maintenance contract/interaction/visual templates for `@sndq/ui-v2`
 **Migration ticket**: [ticket-migration.md](./ticket-migration.md) — copy-paste-ready for Linear (migration phases)
 **Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md) — step-by-step commits, risk checklists, verification commands
 **Phase 1b execution**: [phase-1b-execution.md](./phase-1b-execution.md) — Briicks token extraction commits, radius conflict resolution, verification commands

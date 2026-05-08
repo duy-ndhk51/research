@@ -84,7 +84,7 @@ Rule: **Do not add fields unless we will actually use them** (search filters, ba
 
 ## 5. Page content standard (required sections)
 
-Use the templates in `docs-templates.md`.
+Use the templates in [`docs-templates.md`](./docs-templates.md).
 
 ### 5.1 Component pages must include
 
@@ -252,7 +252,7 @@ A component/block doc is “done” when:
 
 When creating docs:
 
-- Start from `docs-templates.md`
+- Start from [`docs-templates.md`](./docs-templates.md)
 - Keep content consistent with existing doc patterns (Preview → Install → Usage → Composition → Examples → RTL → API)
 - Prefer updating these rules over inventing one-off patterns
 

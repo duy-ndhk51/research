@@ -146,6 +146,20 @@ Use the following composition to build `{ComponentName}`:
 
 <ComponentPreview name="{component-in-form-id}" />
 
+## Playground
+
+> **Required** for Tier 1 primitives.
+>
+> - This is a **usage sandbox**, not an a11y harness or exhaustive-attribute test bed.
+> - Controls MUST be curated to the **main props only** (`pickProps` from `apps/docs/src/lib/story-pick-props.ts`; see `apps/docs/AGENTS.md`).
+> - **One playground per page**.
+
+import { story } from '@/stories/{component-slug}.story';
+
+<div className="border-sndq-border rounded-md border p-4">
+  <story.WithControl />
+</div>
+
 ## Edge cases
 
 - **Case**: {description}
@@ -250,6 +264,19 @@ export function Example() {
 
 <ComponentPreview name="{block-empty-id}" />
 
+## Playground (optional)
+
+> Optional for Tier 2 blocks.
+>
+> Only add a playground if the block has a small, meaningful set of props to tweak.
+> Controls MUST be curated to the **main props only**. **One playground per page**.
+
+import { story } from '@/stories/{block-slug}.story';
+
+<div className="border-sndq-border rounded-md border p-4">
+  <story.WithControl />
+</div>
+
 ## Accessibility
 
 {Only what differs from the underlying primitives; link to primitives otherwise.}
@@ -306,4 +333,62 @@ description: {What this category covers.}
 
 </Callout>
 ```
+
+---
+
+## Template E — Story-based Playground (Fumadocs)
+
+This template defines the backing story for a docs page `<story.WithControl />` playground.
+
+**Purpose**: quick usage exploration of the **main props**, not exhaustive prop coverage, not a11y testing.
+
+### Files (standard locations)
+
+- `apps/docs/src/stories/{slug}.story.tsx`
+- `apps/docs/src/stories/components/{slug}.tsx` (client wrapper)
+
+### Story file
+
+```tsx
+import { defineStory } from '@/lib/story';
+import { pickProps } from '@/lib/story-pick-props';
+import { {ComponentName} } from './components/{slug}';
+
+const VISIBLE_PROPS = [
+  // Curate to the “main” props only. Keep this list short.
+  // Do NOT add every HTML attribute or a11y-related prop.
+  '{propA}',
+  '{propB}',
+  '{propC}',
+] as const;
+
+export const story = defineStory(import.meta.url, {
+  Component: {ComponentName},
+  args: {
+    initial: {
+      // Minimal, representative defaults (not a test matrix).
+    },
+    controls: {
+      transform: pickProps(VISIBLE_PROPS),
+    },
+  },
+});
+```
+
+### Client wrapper component
+
+```tsx
+'use client';
+
+export { {ComponentName}, type {ComponentName}Props } from '@sndq/ui-v2/components';
+```
+
+### Playground rules
+
+- **One playground per page**.
+- Controls must be **curated** (main props only).
+- The playground is for **usage**, not:
+  - a11y verification
+  - exhaustive prop validation
+  - integration testing
 

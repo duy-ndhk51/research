@@ -333,7 +333,7 @@ See [phase-3-batch-0-execution.md](./phase-3-batch-0-execution.md) for step-by-s
 1. Standardize in apps/ui-v2-dev/
    - Props audit: define stable interfaces, add JSDoc
    - Ensure extensibility (className forwarding, ref forwarding, asChild where appropriate)
-   - Unit tests: rendering, variant coverage, accessibility, keyboard interaction
+   - Unit tests: rendering, minimal variant coverage, accessibility, keyboard interaction (see [ui-v2 test templates](./templates/tests/ui-v2-test-templates.md))
    - Storybook/playground pages stay in apps/ui-v2-dev/
 
 2. Graduate to packages/ui-v2/
