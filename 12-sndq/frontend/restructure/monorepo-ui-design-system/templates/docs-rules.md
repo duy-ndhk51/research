@@ -52,8 +52,8 @@ No docs pages in the design-system docs for Tier 3. Business components live in 
 
 Keep a predictable IA so search and sidebar remain usable:
 
-- `components/{category}/{component}.mdx`
-- `blocks/{category}/{block}.mdx`
+- `primitives/{component}.mdx`
+- `blocks/{block}.mdx`
 - `foundations/{topic}.mdx`
 
 If a component exists in multiple “bases” (e.g. variants or implementations), prefer **one page** with an explicit “Implementation” section unless there is a strong reason to split pages.

@@ -13,7 +13,7 @@ This file is a **template pack**. Copy/paste one template per new doc page and r
 
 ## Template A — Component page (Tier 1 primitive)
 
-> **File location (example)**: `apps/docs/content/docs/components/{category}/{component-slug}.mdx`
+> **File location (example)**: `apps/docs/content/docs/primitives/{component-slug}.mdx`
 
 ```mdx
 ---
@@ -31,7 +31,10 @@ links:
   a11y: "{URL_OR_EMPTY}"
 ---
 
-<ComponentPreview name="{component-demo-id}" />
+{/* Prefer in-page previews (simple + explicit). `ComponentPreview` is not a standard component in `apps/docs` today. */}
+<div className="border-sndq-border rounded-md border p-4">
+  {preview}
+</div>
 
 ## Overview
 
@@ -83,6 +86,18 @@ export function Example() {
   return <{ComponentName} />;
 }
 ```
+
+## Playground (Story-based)
+
+> Optional but recommended for Tier 1 primitives.
+>
+> This is a usage sandbox with **curated controls**, not exhaustive testing.
+
+import { story } from '@/stories/{component-slug}.story';
+
+<div className="border-sndq-border rounded-md border p-4">
+  <story.WithControl />
+</div>
 
 ## Props
 
