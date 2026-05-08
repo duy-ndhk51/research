@@ -315,6 +315,7 @@ Before any component graduation, set up Fumadocs in `apps/docs`:
   - **Primitives** (components catalog — placeholder until Batch 1)
   - **Blocks** (compositions catalog — placeholder)
 - **Docs app agent guide** (Cursor, Claude Code): `apps/docs/AGENTS.md` — folder roles, commands, MDX navigation, token CSS, **`src/components/mdx/` + `src/components/shared/`** for docs presentation composition (still no shared docs package between apps), and the MDX component registry in `apps/docs/src/mdx/custom-mdx-components.ts` (merged in `get-mdx-components.tsx`).
+- **Fumadocs Story (`@fumadocs/story`)**: live, controllable component previews inside MDX. Set up the factory at `apps/docs/src/lib/story.ts`, add `@import '@fumadocs/story/css/preset.css';` to `global.css`, and ship a first story for `Text` so subsequent batches can author `*.story.tsx` siblings. Stories live in `apps/docs/src/stories/` (not co-located in `packages/ui-v2/`) so `@sndq/ui-v2` keeps a clean runtime surface for `sndq-fe`. The story `Component` must be a client component, so a thin `'use client'` re-export per primitive lives under `apps/docs/src/stories/components/`.
 
 **Why before Batch 1**: The per-batch workflow already lists tests + storybook pages + graduation steps. Adding "set up MDX/sidebar/search" inside Batch 1 would entangle infra plumbing with the first component doc and make that PR much larger than subsequent ones.
 
@@ -626,6 +627,17 @@ Both `apps/docs/` and `apps/ui-v2-dev/` import `@sndq/ui-v2` directly and manage
 Fumadocs provides a Next App Router-native docs framework with first-class MDX, sidebar generation, and a swappable search backend. Default Orama search is client-side, free, indexed at build time — ideal for an internal docs site whose content size is bounded. Algolia/Inkeep can replace Orama later by swapping the `/api/search` route without changing component pages. Authoring stays MDX, which matches how component teams already write Storybook descriptions.
 
 Full SNDQ-specific rationale (framework, layout, search, routing) and alternatives considered: [fumadocs-decision.md](./fumadocs-decision.md). Background library research: [04-frontend/nextjs/fumadocs/](../../../../04-frontend/nextjs/fumadocs/).
+
+### Why Fumadocs Story (over Storybook)
+
+`@fumadocs/story` ships live, controllable component previews **inside** Fumadocs MDX (`<story.WithControl />`). It is not a Storybook replacement — it is the docs-native counterpart.
+
+- **Docs-native**: one `import { story } from '@/stories/<name>.story';` per page, no separate dev server, no separate config tree, no separate URL. The control panel renders right next to prose, props tables, and inline JSX examples.
+- **Single source of truth for previews**: stories double as both the documented "default state" and an interactive playground for variants — without the MDX page maintaining its own props matrix.
+- **Storybook still has a place**: visual-regression, screenshot diffing, and isolated-state harnesses. We can adopt Storybook later without touching the docs MDX layer.
+- **Story files live in `apps/docs/`** (not `packages/ui-v2/`) so `@sndq/ui-v2` keeps a zero-`@fumadocs/story`-dep runtime surface for `sndq-fe`. The `Component` must be a client component, so each primitive gets a thin `'use client'` re-export at `apps/docs/src/stories/components/<name>.tsx` rather than mutating the package component.
+
+Setup steps and first story (`Text`): see [phase-3-batch-0-execution.md](./phase-3-batch-0-execution.md) PR 2 (Commits 6–7).
 
 ### Why an infra batch (Batch 0) instead of folding into Batch 1
 

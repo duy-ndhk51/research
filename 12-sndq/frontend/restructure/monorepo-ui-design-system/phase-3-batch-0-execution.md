@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 3, Batch 0. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-05-04
-**Status**: Updated for **Next.js 16 + Tailwind CSS 4 + Fumadocs 16** (manual install baseline per [Fumadocs Next.js guide](https://www.fumadocs.dev/docs/manual-installation/next))
+**Status**: PR 1 (Commits 1–5) shipped on **Next.js 16 + Tailwind CSS 4 + Fumadocs 16** baseline. PR 2 (Commits 6–7) adds **Fumadocs Story** integration — Commits 6–7 implemented; pending manual commit.
 **Architecture**: [README.md](./README.md)
 **Migration plan**: [migration-plan.md](./migration-plan.md)
 **Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md)
@@ -20,22 +20,24 @@ Step-by-step execution guide for Phase 3, Batch 0. Each commit is independently 
 1. [Overview](#1-overview)
 2. [Before You Start](#2-before-you-start)
 3. [PR 1 — Fumadocs Setup + IA Stubs](#3-pr-1--fumadocs-setup--ia-stubs)
-4. [Final Verification](#4-final-verification)
-5. [Team Communication](#5-team-communication)
-6. [What's Next](#6-whats-next)
-7. [Deferred: Usage Indexer Feature](#7-deferred-usage-indexer-feature)
+4. [PR 2 — Fumadocs Story Integration (follow-up)](#4-pr-2--fumadocs-story-integration-follow-up)
+5. [Final Verification](#5-final-verification)
+6. [Team Communication](#6-team-communication)
+7. [What's Next](#7-whats-next)
+8. [Deferred: Usage Indexer Feature](#8-deferred-usage-indexer-feature)
 
 ---
 
 ## 1. Overview
 
-**Goal**: Install Fumadocs in the existing `apps/docs/` placeholder, wire client-side Orama search, and seed an empty Foundations / Primitives / Blocks information architecture — so that Batch 1 onwards only needs to author component MDX, not docs infrastructure.
+**Goal**: Install Fumadocs in the existing `apps/docs/` placeholder, wire client-side Orama search, seed an empty Foundations / Primitives / Blocks information architecture — and follow up with **Fumadocs Story** so that Batch 1 onwards only needs to author component MDX (and an optional `*.story.tsx` sibling), not docs infrastructure.
 
-**Structure**: 5 commits across 1 PR.
+**Structure**: 5 commits across PR 1, then 2 commits across PR 2 (Fumadocs Story).
 
 | PR | Scope | Risk level | Commits |
 |----|-------|------------|---------|
 | **PR 1** | Fumadocs install + root provider + root catch-all layout + search API + IA stubs | Low | 1-5 |
+| **PR 2** | `@fumadocs/story` install + factory + CSS preset; first `Text` story wired into `text.mdx` | Low | 6-7 |
 
 **Why 1 PR**: The only consumer of `apps/docs/` is the docs app itself (a placeholder page at `/` until Commit 3 removes it in favor of an optional catch-all). No other workspace package or app reads from it, so the blast radius is contained. Each commit is still independently buildable so a partial revert remains an option during review.
 
@@ -621,9 +623,193 @@ git push -u origin <your-branch>
 
 ---
 
-## 4. Final Verification
+## 4. PR 2 — Fumadocs Story Integration (follow-up)
 
-After all 5 commits, run the full suite from the monorepo root:
+Add `@fumadocs/story` so component MDX pages can render live, controllable previews via `<story.WithControl />`. Two commits: a small infra commit (factory + CSS preset) and the first real story (`Text`) wired into `text.mdx`. See [migration-plan.md "Why Fumadocs Story (over Storybook)"](./migration-plan.md#why-fumadocs-story-over-storybook) for rationale.
+
+**Decisions**:
+
+- **Story files live in `apps/docs/src/stories/`**, not co-located in `packages/ui-v2/`. Keeps `@sndq/ui-v2` clean of `@fumadocs/story` deps for `sndq-fe`.
+- **Story `Component` must be a client component** ([Fumadocs Story — Next.js](https://www.fumadocs.dev/docs/integrations/story/next)). To preserve `Text` as RSC-compatible, each primitive gets a thin `'use client'` re-export at `apps/docs/src/stories/components/<name>.tsx` instead of marking the package component itself.
+- **`text.mdx` adopts ONE `<story.WithControl />` block** at the top of the page. All existing inline JSX previews and `## Examples` sections stay untouched — Story complements them, does not replace them.
+
+---
+
+### Commit 6: Install `@fumadocs/story` and add factory + CSS preset
+
+**What**: Install the package, create the story factory used by every future `*.story.tsx` file, and wire the Tailwind preset into `global.css`. No story files yet — this commit only lights up the infrastructure.
+
+**Files to edit**:
+
+- `apps/docs/package.json` — add `@fumadocs/story` (latest; this implementation pinned `^0.0.14`)
+- `apps/docs/src/app/global.css` — append `@import '@fumadocs/story/css/preset.css';` AFTER the existing Fumadocs UI presets so the Story panel inherits theme colors and Tailwind layer ordering survives:
+  ```css
+  @import 'tailwindcss';
+  @import '@sndq/config/tailwind/tokens.css';
+  @import '@sndq/config/tailwind/semantic-tokens.css';
+  @import 'fumadocs-ui/css/neutral.css';
+  @import 'fumadocs-ui/css/preset.css';
+  @import '@fumadocs/story/css/preset.css';
+  ```
+
+**Files to create**:
+
+- `apps/docs/src/lib/story.ts` — story factory shared by every `*.story.tsx`:
+  ```ts
+  import { createFileSystemCache, defineStoryFactory } from '@fumadocs/story';
+
+  export const { defineStory } = defineStoryFactory({
+    cache:
+      process.env.NODE_ENV === 'production'
+        ? createFileSystemCache('.next/fumadocs-story')
+        : undefined,
+    tsc: {},
+  });
+  ```
+
+**No tsconfig / next.config changes needed**:
+
+- `@/lib/story` resolves via the existing `"@/*": ["./src/*"]` alias in `apps/docs/tsconfig.json`.
+- `.gitignore` already ignores `/.next/`, which covers the `fumadocs-story` cache directory.
+- `next.config.mjs` needs no change: the factory is module-evaluation-only and uses `import.meta.url`; no MDX plugin to register.
+- `custom-mdx-components.ts` needs no change: `<story.WithControl />` is imported per-page, not registered globally.
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| `@fumadocs/story` is pre-1.0 (`0.0.x`) | LOW-MEDIUM | API may shift before 1.0. We pin via `^0.0.14` so patch updates flow but a major bump requires a deliberate update. Re-check the [installation page](https://www.fumadocs.dev/docs/integrations/story/next) before bumping. |
+| Tailwind preset clashes with `fumadocs-ui` preset | LOW | Story preset is appended **after** `fumadocs-ui/css/preset.css`, so its rules win on conflict. Verified in this commit's build. |
+
+**Verification**:
+
+```bash
+pnpm install
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/docs run build
+# Build still produces the same routes — no new pages yet, only infra.
+```
+
+**If it fails**:
+
+- **`Cannot find module '@fumadocs/story'`**: re-run `pnpm install` from the monorepo root; confirm `apps/docs/node_modules/@fumadocs/story/` exists.
+- **CSS rules from Story panel look broken**: the `@import '@fumadocs/story/css/preset.css';` line must come **after** `@import 'fumadocs-ui/css/preset.css';` in `global.css`.
+
+**Commit message**: `chore(docs): install @fumadocs/story and add factory + css preset`
+
+**Status**:
+
+- [x] `@fumadocs/story` added to `apps/docs/package.json` (pinned `^0.0.14`)
+- [x] `apps/docs/src/lib/story.ts` created
+- [x] `@import '@fumadocs/story/css/preset.css';` appended to `global.css`
+- [x] `pnpm --filter @sndq/docs run build` green
+- [ ] Committed *(manual)*
+
+---
+
+### Commit 7: Add first Story (`Text`) and wire into `text.mdx`
+
+**What**: Ship the first real story — a controllable `Text` preview rendered at the top of `apps/docs/content/docs/primitives/text.mdx`. All existing inline JSX preview blocks and `## Examples` sections remain unchanged.
+
+**Files to create**:
+
+- `apps/docs/src/stories/components/text.tsx` — `'use client'` re-export so the package `Text` keeps its RSC-friendly shape:
+  ```tsx
+  'use client';
+  export { Text, type TextProps } from '@sndq/ui-v2/components';
+  ```
+- `apps/docs/src/stories/text.story.tsx` — server component (no `'use client'`); imports the client wrapper and exports the canonical `story`:
+  ```tsx
+  import { defineStory } from '@/lib/story';
+  import { Text } from './components/text';
+
+  export const story = defineStory(import.meta.url, {
+    Component: Text,
+    args: {
+      initial: {
+        children: 'The quick brown fox jumps over the lazy dog.',
+        variant: 'body',
+        size: 'sm',
+      },
+    },
+  });
+  ```
+
+**Files to edit**:
+
+- `apps/docs/content/docs/primitives/text.mdx` — add the story import alongside the existing `Text` import, and render `<story.WithControl />` as the first interactive block. Diff is two added lines plus one block:
+  ```mdx
+  import { Text } from '@sndq/ui-v2/components';
+  import { story } from '@/stories/text.story';
+
+  <story.WithControl />
+
+  <div className="rounded-md border border-sndq-border p-4 grid gap-2">
+    {/* existing inline preview grid stays */}
+  </div>
+  ```
+  The four `## Examples` JSX blocks lower in the page are not touched.
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| Story renders without controls | LOW | Confirm `args.initial.children` is set so the panel has at least one editable prop. |
+| Hydration mismatch on the controllable preview | LOW | The wrapper is a `'use client'` re-export, so the boundary is explicit. The `<html suppressHydrationWarning>` from PR 1 Commit 2 covers any theme-related diffs. |
+| `Text` accidentally becomes a client component package-wide | LOW | The `'use client'` directive is in `apps/docs/src/stories/components/text.tsx`, **not** in `packages/ui-v2/src/components/Text.tsx`. Verify the package file does not gain `'use client'`. |
+
+**Verification**:
+
+```bash
+pnpm --filter @sndq/docs run generate:source
+pnpm --filter @sndq/docs run type-check
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/docs run build
+pnpm --filter @sndq/docs exec eslint src/lib/story.ts src/stories/components/text.tsx src/stories/text.story.tsx
+# Manual smoke: pnpm --filter @sndq/docs run dev → http://localhost:3002/primitives/text
+# Confirm the controls panel renders above the existing inline variant grid.
+```
+
+**If it fails**:
+
+- **`Component must be a client component`**: ensure `apps/docs/src/stories/components/text.tsx` has `'use client';` on its first line (above the export).
+- **`story is not exported`**: the named export must be `story` (or pass `name` in `defineStory` options). Default-exporting will not work.
+- **Controls show wrong props**: the factory's `tsc: {}` field gives default TypeScript options for type-driven control generation. Pass `tsc: { compilerOptions: { ... } }` if you need to constrain how types are read.
+
+**Commit message**: `feat(docs): add first fumadocs story (text) and wire into text.mdx`
+
+**Status**:
+
+- [x] `apps/docs/src/stories/components/text.tsx` created (`'use client'`)
+- [x] `apps/docs/src/stories/text.story.tsx` created (server component, exports `story`)
+- [x] `apps/docs/content/docs/primitives/text.mdx` imports `story` and renders `<story.WithControl />` above the existing inline preview
+- [x] Type-check + build green; `/primitives/text` in static export
+- [x] Lint clean on touched files
+- [ ] Committed *(manual)*
+
+---
+
+### PR 2 Checkpoint
+
+Push the PR 2 branch (separate from PR 1 if PR 1 already merged):
+
+```bash
+git push -u origin <your-branch>
+# Create PR targeting dev
+# Wait for CI to complete successfully
+```
+
+**This validates**: `@fumadocs/story` resolves under workspace install, the Story panel renders in production builds, and the new `*.story.tsx` files type-check across the monorepo.
+
+**Status**:
+
+- [ ] PR created
+- [ ] CI passes
+- [ ] Merged (or ready to continue)
+
+---
+
+## 5. Final Verification
+
+After all 7 commits (PR 1 = Commits 1–5, PR 2 = Commits 6–7), run the full suite from the monorepo root:
 
 ```bash
 pnpm install
@@ -666,7 +852,7 @@ diff /tmp/phase3-b0-fe-build-before.txt /tmp/phase3-b0-fe-build-final.txt
 
 ---
 
-## 5. Team Communication
+## 6. Team Communication
 
 Send to the team before merging:
 
@@ -693,7 +879,7 @@ Send to the team before merging:
 
 ---
 
-## 6. What's Next
+## 7. What's Next
 
 After Batch 0 is merged to dev, proceed to **Phase 3, Batch 1 — Button, Input, Badge, Select, Dialog, Sheet**. Each component graduating in Batch 1 now adds one MDX file under `apps/docs/content/docs/primitives/<component>.mdx` alongside its move into `packages/ui-v2/src/components/`. No docs-infrastructure work should be needed in Batch 1.
 
@@ -719,7 +905,7 @@ After Batch 0 is merged to dev, proceed to **Phase 3, Batch 1 — Button, Input,
 
 ---
 
-## 7. Deferred: Usage Indexer Feature
+## 8. Deferred: Usage Indexer Feature
 
 A separate idea was discussed during planning: indexing every `sndq-fe` source file that imports `@/components/ui-v2` (or `@sndq/ui-v2`) and surfacing the call sites under each component's docs page, categorized by `src/modules/` vs `src/components/`.
 
@@ -747,3 +933,5 @@ Record notes, issues, and deviations here as you go.
 | 2026-05-04 | 3      | Root `[[...slug]]` + `DocsLayout` / `DocsPage`; removed placeholder `page.tsx`; restored `@sndq/config` ESLint Next-16 branch if lint broke |
 |      | 4      |       |
 |      | 5      |       |
+| 2026-05-07 | 6      | Installed `@fumadocs/story@^0.0.14` in `apps/docs`. Created `src/lib/story.ts` factory (file-system cache in production via `.next/fumadocs-story`). Appended `@import '@fumadocs/story/css/preset.css';` after the existing Fumadocs UI presets in `global.css`. No tsconfig / next.config / MDX-registry changes needed. Build green. SHA: _to fill in after manual commit_. |
+| 2026-05-07 | 7      | First Story shipped for `Text`. Added `apps/docs/src/stories/components/text.tsx` (`'use client'` re-export — keeps the package `Text` RSC-compatible) and `apps/docs/src/stories/text.story.tsx` (server component, exports `story = defineStory(import.meta.url, { Component: Text, args: { initial: { children, variant: 'body', size: 'sm' } } })`). Edited `text.mdx` to add `import { story } from '@/stories/text.story';` and one `<story.WithControl />` block above the existing inline preview grid; all `## Examples` JSX blocks left intact. Verification: `generate:source`, `type-check`, `build`, and lint on touched files all green; `/primitives/text` still in static export. SHA: _to fill in after manual commit_. |

@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-05-04  
-**Status**: Not started  
+**Status**: In progress (Commits 1–2 implemented; pending manual commit)  
 **Architecture**: [README.md](./README.md)  
 **Migration plan**: [migration-plan.md](./migration-plan.md)  
 **Typography reference**: [typography-system-reference.md](./typography-system-reference.md)  
@@ -226,26 +226,55 @@ The full-project `pnpm --filter @sndq/ui-v2-dev run lint` will still report **7 
 
 ### Commit 2: Graduate `Text` to package + MDX + update consumers
 
-**What**: Move `Text` into `packages/ui-v2`, export from `src/components/index.ts`, fix imports in `apps/ui-v2-dev` and `apps/docs`, add `apps/docs/content/docs/primitives/text.mdx` and `primitives/meta.json` entry **above** Button in sidebar order if applicable.
+**What**: Bootstrap the `@sndq/ui-v2` runtime surface (local `cn` helper, runtime deps, `type-check` script), move `Text` from the prototype into the package, re-export from the prototype barrel so apps/ui-v2-dev keeps working, and ship the first full Template A docs page (`primitives/text.mdx`) with `meta.json` updated.
 
 **Files to create**:
 
-- `packages/ui-v2/src/lib/utils.ts` — same `cn` as `sndq-fe/packages/ui/src/lib/utils.ts` (if not created yet)
-- `packages/ui-v2/src/components/text.tsx` (or folder per convention)
-- `apps/docs/content/docs/primitives/text.mdx`
+- `packages/ui-v2/src/lib/utils.ts` — local `cn` (`twMerge` + `clsx`), mirrors `apps/ui-v2-dev/src/lib/utils.ts` so the package has its own override-safe class composer (no cross-app import).
+- `packages/ui-v2/src/components/Text.tsx` — copy of the standardized prototype `Text` from Commit 1; only the `cn` import path changes (`@/lib/utils` → `../lib/utils`).
+- `apps/docs/content/docs/primitives/text.mdx` — full Template A page minus `<ComponentPreview />`. Imports `Text` from `@sndq/ui-v2/components` for inline live JSX examples (preview, body copy, secondary helper, monetary mono, truncated-in-flex). Code blocks are plain fenced blocks (no `<CodeTabs>` — not in the default Fumadocs MDX registry).
 
 **Files to edit**:
 
-- `packages/ui-v2/src/components/index.ts` — export `Text` (+ types)
-- Consumers → `@sndq/ui-v2/components`
+- `packages/ui-v2/package.json` — add runtime deps `@radix-ui/react-slot ^1.1.2`, `class-variance-authority ^0.7.1`, `clsx ^2.1.1`, `tailwind-merge ^3.0.2`; dev deps `@types/react 19.2.2`, `typescript ^5`; `scripts.type-check = "tsc --noEmit"`. Versions match what `apps/ui-v2-dev` already pins.
+- `packages/ui-v2/src/components/index.ts` — first real export, `export * from './Text';`.
+- `apps/ui-v2-dev/src/components/ui-v2/index.ts` — replace the local `export * from './Text';` with a re-export from the package: `export { Text, textVariants, type TextProps, type TextElement } from '@sndq/ui-v2/components';` so existing prototype imports keep resolving.
+- `apps/docs/content/docs/primitives/meta.json` — `pages: ["index", "text"]`.
+
+**Files to delete**:
+
+- `apps/ui-v2-dev/src/components/ui-v2/Text.tsx` — single source of truth now lives in the package.
+
+**Verification** (run from repo root):
+
+```bash
+pnpm install
+pnpm --filter @sndq/ui-v2 run type-check
+pnpm --filter @sndq/ui-v2-dev exec eslint --fix src/components/ui-v2/index.ts
+pnpm --filter @sndq/ui-v2-dev run type-check
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
+pnpm --filter @sndq/docs run generate:source
+pnpm --filter @sndq/docs run type-check
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/docs run build
+```
+
+All eight commands exit `0` on `2026-05-07`. The new `/primitives/text` route is included in the docs static export.
+
+**Deviations from the standardization gate**:
+
+- **Tests still deferred** — Vitest harness for `apps/ui-v2-dev` (and a peer one for `packages/ui-v2`) still not configured; same gap as Commit 1. Will land in a small enabling commit before the override-wins regression tests on `Flex` / `Grid` / `Button`.
+- **Component file naming**: used **PascalCase `Text.tsx`** per `apps/docs/.cursor/rules/naming-conventions.mdc` and to match the prototype convention, instead of the lowercase `text.tsx` mentioned in this section's original spec. The doc spec is updated in this revision.
+- **Package becomes non-zero-dep**: `@sndq/ui-v2` previously declared only `@sndq/config`. We added `@radix-ui/react-slot`, `class-variance-authority`, `clsx`, `tailwind-merge` as runtime deps and `@types/react`, `typescript` as dev deps. This is the expected one-time cost of graduation.
+- **`<ComponentPreview />` widget**: not used in the MDX page — it's not registered in `apps/docs/src/mdx/custom-mdx-components.ts` yet. Live previews are inline JSX importing `Text` from `@sndq/ui-v2/components` directly. A real registry-backed `<ComponentPreview />` (with examples that lint/typecheck) is tracked as a separate doc-tooling improvement.
+- **`<CodeTabs />`**: same situation — not in the default Fumadocs MDX registry, so install/usage code is shown via plain fenced blocks.
 
 **Commit message**: `feat(ui-v2): graduate Text to package and document`
 
 **Status**:
 
-- [ ] `Text` lives in package; prototype updated
-- [ ] Docs page renders
-- [ ] Committed
+- [x] `Text` lives in package; prototype updated *(re-exports from `@sndq/ui-v2/components`)*
+- [x] Docs page renders *(static build green; `/primitives/text` in route table)*
+- [ ] Committed *(manual)*
 
 ---
 
@@ -849,7 +878,7 @@ After Batch 1 merges, open [phase-3-batch-2-execution.md](./phase-3-batch-2-exec
 | Date | Commit | Notes |
 |------|--------|-------|
 | 2026-05-07 | 1 | Created `apps/ui-v2-dev/src/components/ui-v2/Text.tsx` (component was missing; barrel already exported it). API forked from Kumo + Radix Themes per Commit 1 *What*. Used the existing `text-sndq-text-*` / `text-sndq-*` / `font-sndq-mono` aliases — no `tokens.css` change. Type-check + build + targeted lint on `Text.tsx` all green; full-project lint still has 7 pre-existing errors in unrelated files (chart-compositions, trackers, FilterTab) untouched by this commit. Tests deferred — see [Commit 1 Deviations](#commit-1-standardize-text-in-prototype). SHA: _to fill in after manual commit_. |
-|      | 2      |       |
+| 2026-05-07 | 2 | Bootstrapped `@sndq/ui-v2` runtime surface (`cn` helper, runtime + dev deps, `type-check` script). Moved `Text` into `packages/ui-v2/src/components/Text.tsx` (only the `cn` import path changed); added `export * from './Text';` to the package barrel. Deleted prototype `Text.tsx` and rewrote the `apps/ui-v2-dev` barrel line to re-export from `@sndq/ui-v2/components`. Shipped `apps/docs/content/docs/primitives/text.mdx` (full Template A minus `<ComponentPreview />`, inline live JSX) and updated `primitives/meta.json`. Verification: `@sndq/ui-v2` type-check, `@sndq/ui-v2-dev` type-check + build, `@sndq/docs` `generate:source` + type-check + build all green; `/primitives/text` is in the static export. Tests still deferred — see [Commit 2 Deviations](#commit-2-graduate-text-to-package--mdx--update-consumers). SHA: _to fill in after manual commit_. |
 |      | 3      |       |
 |      | 4      |       |
 |      | 5      |       |
