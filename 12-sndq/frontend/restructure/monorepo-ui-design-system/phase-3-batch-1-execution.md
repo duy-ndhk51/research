@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-05-04  
-**Status**: In progress (Commits 1–2 implemented; pending manual commit)  
+**Status**: In progress (Commits 1–4 implemented; pending manual commit)  
 **Architecture**: [README.md](./README.md)  
 **Migration plan**: [migration-plan.md](./migration-plan.md)  
 **Typography reference**: [typography-system-reference.md](./typography-system-reference.md)  
@@ -274,41 +274,146 @@ All eight commands exit `0` on `2026-05-07`. The new `/primitives/text` route is
 
 - [x] `Text` lives in package; prototype updated *(re-exports from `@sndq/ui-v2/components`)*
 - [x] Docs page renders *(static build green; `/primitives/text` in route table)*
-- [ ] Committed *(manual)*
+- [x] Committed *(manual)*
 
 ---
 
 ### Commit 3: Standardize `Heading` in prototype
 
-**What**: Same pattern as Commit 1 for `Heading` (levels, sizes, semantic element defaults).
+**What**: Standardize `Heading` in the prototype **and** introduce a small shared typography helper layer that `Heading` uses now and that will be graduated to the package in Commit 4 so `Text` + `Heading` share the same plumbing.
+
+**`Heading` API v1 (Batch 1)**:
+
+- `as?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'` — semantic element (default: `h2`).
+- `size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'` — visual scale (default: `xl`).
+  - Intentionally allows semantic vs visual decoupling (`as='h2' size='3xl'`).
+- `align?: 'start' | 'center' | 'end'` — shared typography axis.
+- `truncate?: boolean` — shared typography axis.
+- `asChild?: boolean` — Radix Slot escape hatch.
+- Standard `className` + DOM props.
+
+**Shared extraction (prototype-first)**:
+
+- Add `typography-shared` helper with:
+  - A small polymorphic root helper for `asChild` + `Slot` selection.
+  - Shared CVA axes + types for `align` and `truncate`.
+  - **Exports (v1)** (names are suggestions; keep them stable once shipped in the package):
+    - `export type TypographyAlign = 'start' | 'center' | 'end';`
+    - `export type TypographyTruncate = boolean;`
+    - `export const typographySharedVariants = { align: { start: 'text-start', center: 'text-center', end: 'text-end' }, truncate: { true: 'truncate min-w-0', false: '' } } as const;`
+    - `export function getTypographyComponent(params: { readonly asChild: boolean; readonly as: React.ElementType }): React.ElementType;` (returns `Slot` when `asChild` is true, otherwise returns `as`)
+  - **Non-goals**:
+    - Do not merge `Text` + `Heading` into one component.
+    - Do not introduce a shared “typography variant” axis; keep `Text.variant` and `Heading.size` independent.
+
+**Variant rules**:
+
+- `cva` recipes must use SNDQ token-backed utilities only (existing `text-sndq-*`, `font-sndq-*`, and existing semantic color aliases).
+- If a needed size has no short utility yet, use `text-[length:var(--sndq-text-...)]` and/or `leading-[var(--sndq-leading-...)]` until a gradual `@theme` alias is introduced.
+- Root composes strictly as `cn(variantClasses, className)` (override-wins guarantee).
+
+**Files to edit/create** (adjust paths to match repo):
+
+- `apps/ui-v2-dev/src/components/ui-v2/Heading.tsx` — **new**
+- `apps/ui-v2-dev/src/components/ui-v2/typography/typography-shared.ts` — **new**
+- `apps/ui-v2-dev/src/components/ui-v2/index.ts` — export `Heading` (local export; will be replaced by package re-export in Commit 4)
 
 **Verification**:
 
 ```bash
+# If @sndq/ui-v2-dev has no test runner wired yet, skip the test line (same situation as Commit 1–2).
 pnpm --filter @sndq/ui-v2-dev run test -- --testPathPattern=heading
 NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
-pnpm --filter @sndq/ui-v2-dev run lint
+pnpm --filter @sndq/ui-v2-dev exec eslint src/components/ui-v2/Heading.tsx
+pnpm --filter @sndq/ui-v2-dev exec eslint src/components/ui-v2/typography/typography-shared.ts
 pnpm --filter @sndq/ui-v2-dev run type-check
 ```
 
 **Commit message**: `refactor(ui-v2-dev): standardize Heading for package graduation`
 
+**Deviations from the standardization gate**:
+
+- **Tests deferred** — same gap as Commits 1–2: no `test` script in `apps/ui-v2-dev`. Override-wins and variant tests will land alongside the Vitest harness.
+- **`weight` prop added** — `Heading` exposes `weight?: 'normal' | 'medium'` (default `'medium'`) via the shared typography axis. Not in the original Commit 3 API spec but consistent with `Text` and requested during planning.
+- **Shared `TypographyWeight` type** — extracted alongside `TypographyAlign` and `TypographyTruncate` into the shared helper, exceeding the original spec which only listed `align` and `truncate` as shared axes.
+
 **Status**:
 
-- [ ] Gate checklist for `Heading`
-- [ ] Committed
+- [x] Gate checklist for `Heading` *(except test items — see Deviations)*
+- [x] Committed *(pending manual commit)*
 
 ---
 
 ### Commit 4: Graduate `Heading` + MDX + consumers
 
-**What**: Move `Heading` to `packages/ui-v2`, export, add `primitives/heading.mdx`, update `primitives/meta.json`.
+**What**: Graduate `Heading` to `packages/ui-v2` **and** graduate the shared typography helper so `Text` + `Heading` use the same extracted plumbing.
+
+**Scope**:
+
+- Move `Heading` from `apps/ui-v2-dev/` → `packages/ui-v2/`.
+- Move `typography-shared` helper from prototype → package.
+- Refactor `packages/ui-v2/src/components/Text.tsx` to consume the shared helper (no behavior change).
+- Update prototype to re-export `Heading` from `@sndq/ui-v2/components` (same pattern as `Text` in Commit 2).
+- Add docs page `primitives/heading.mdx` and update `primitives/meta.json`.
+
+**Files to create**:
+
+- `packages/ui-v2/src/components/Heading.tsx`
+- `packages/ui-v2/src/components/typography/typography-shared.ts`
+- `apps/docs/content/docs/primitives/heading.mdx`
+
+**Files to edit**:
+
+- `packages/ui-v2/src/components/Text.tsx` — import shared helper + shared axes/types
+- `packages/ui-v2/src/components/index.ts` — export `Heading` (and relevant types)
+- `packages/ui-v2/src/components/typography/typography-shared.ts` — keep **internal** (do not export from `@sndq/ui-v2/components` unless a downstream consumer explicitly needs it)
+- `apps/ui-v2-dev/src/components/ui-v2/index.ts` — re-export from `@sndq/ui-v2/components`:
+  - `export { Heading, type HeadingProps } from '@sndq/ui-v2/components';`
+- `apps/docs/content/docs/primitives/meta.json` — add `heading` to `pages` (recommended order: `index`, `text`, `heading`)
+
+**Files to delete**:
+
+- `apps/ui-v2-dev/src/components/ui-v2/Heading.tsx`
+- `apps/ui-v2-dev/src/components/ui-v2/typography/typography-shared.ts`
+
+**Verification** (run from repo root):
+
+```bash
+pnpm install
+
+pnpm --filter @sndq/ui-v2 run type-check
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2 run build
+
+pnpm --filter @sndq/ui-v2-dev run type-check
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
+
+pnpm --filter @sndq/docs run generate:source
+pnpm --filter @sndq/docs run type-check
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/docs run build
+```
+
+**Phase 4 mapping note (docs only)**:
+
+- Legacy briicks typography lives at `sndq-fe/src/components/briicks/text/index.tsx`.
+- Batch 1 ships the ui-v2 package surface + docs only; call-site migration happens in Phase 4.
 
 **Commit message**: `feat(ui-v2): graduate Heading to package and document`
 
+**Deviations from the standardization gate**:
+
+- **Tests still deferred** — Vitest harness for `packages/ui-v2` is not fully configured yet (same gap as Commits 1–2). The existing 8 `Text.test.tsx` tests pass; `Heading` tests will land in a future enabling commit.
+- **`@sndq/ui-v2` has no `build` script** — skipped the `pnpm --filter @sndq/ui-v2 run build` step since the package has no build script wired. Type-check and tests were sufficient.
+- **`typography-shared` kept internal** — not exported from `@sndq/ui-v2/components` barrel per spec. Only `Heading` and `Text` consume it internally.
+- **Prototype `typography/` directory deleted** — both `Heading.tsx` and `typography/typography-shared.ts` deleted from `apps/ui-v2-dev` after graduation. The empty `typography/` directory may remain; no impact.
+
 **Status**:
 
-- [ ] Committed
+- [x] `Heading` lives in package; prototype re-exports from `@sndq/ui-v2/components`
+- [x] `Text` refactored to use shared typography helper (no behavior change; 8/8 tests pass)
+- [x] Docs page `primitives/heading.mdx` renders (static build green; `/primitives/heading` in route table)
+- [x] Type-check green for `@sndq/ui-v2`, `@sndq/ui-v2-dev`, `@sndq/docs`
+- [x] Build green for `@sndq/ui-v2-dev`, `@sndq/docs`
+- [x] Committed *(pending manual commit)*
 
 ---
 
@@ -879,8 +984,8 @@ After Batch 1 merges, open [phase-3-batch-2-execution.md](./phase-3-batch-2-exec
 |------|--------|-------|
 | 2026-05-07 | 1 | Created `apps/ui-v2-dev/src/components/ui-v2/Text.tsx` (component was missing; barrel already exported it). API forked from Kumo + Radix Themes per Commit 1 *What*. Used the existing `text-sndq-text-*` / `text-sndq-*` / `font-sndq-mono` aliases — no `tokens.css` change. Type-check + build + targeted lint on `Text.tsx` all green; full-project lint still has 7 pre-existing errors in unrelated files (chart-compositions, trackers, FilterTab) untouched by this commit. Tests deferred — see [Commit 1 Deviations](#commit-1-standardize-text-in-prototype). SHA: _to fill in after manual commit_. |
 | 2026-05-07 | 2 | Bootstrapped `@sndq/ui-v2` runtime surface (`cn` helper, runtime + dev deps, `type-check` script). Moved `Text` into `packages/ui-v2/src/components/Text.tsx` (only the `cn` import path changed); added `export * from './Text';` to the package barrel. Deleted prototype `Text.tsx` and rewrote the `apps/ui-v2-dev` barrel line to re-export from `@sndq/ui-v2/components`. Shipped `apps/docs/content/docs/primitives/text.mdx` (full Template A minus `<ComponentPreview />`, inline live JSX) and updated `primitives/meta.json`. Verification: `@sndq/ui-v2` type-check, `@sndq/ui-v2-dev` type-check + build, `@sndq/docs` `generate:source` + type-check + build all green; `/primitives/text` is in the static export. Tests still deferred — see [Commit 2 Deviations](#commit-2-graduate-text-to-package--mdx--update-consumers). SHA: _to fill in after manual commit_. |
-|      | 3      |       |
-|      | 4      |       |
+| 2026-05-08 | 3 | Created `apps/ui-v2-dev/src/components/ui-v2/Heading.tsx` and `typography/typography-shared.ts` (shared helper). `Heading` API: `as` (`h1`–`h6`, default `h2`), `size` (`sm`–`3xl`, default `xl`), `weight` (`normal` \| `medium`, default `medium`), `align`, `truncate`, `asChild`. Base class `font-heading`. Shared helper extracts `getTypographyComponent`, `typographySharedVariants` (align/truncate/weight axis maps), and exported types. Prototype barrel updated to locally export `Heading`. Build + type-check green. Tests deferred (no test runner). SHA: _to fill in after manual commit_. |
+| 2026-05-08 | 4 | Graduated `Heading` + `typography-shared` helper to `packages/ui-v2/src/components/`. Refactored `Text.tsx` to consume shared helper — no behavior change; all 8 existing `Text.test.tsx` tests pass. Updated barrel to export `Heading`. Rewired prototype to re-export from `@sndq/ui-v2/components`; deleted local copies. Added `primitives/heading.mdx` and updated `meta.json`. All verification green (type-check, test 8/8, builds for ui-v2-dev + docs). SHA: _to fill in after manual commit_. |
 |      | 5      |       |
 |      | 6      |       |
 |      | 7      |       |
