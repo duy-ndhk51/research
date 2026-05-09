@@ -50,31 +50,6 @@ links:
 - {Anti-use-case 1}
 - {Anti-use-case 2}
 
-## Installation
-
-<CodeTabs>
-  <TabsList>
-    <TabsTrigger value="app">App usage</TabsTrigger>
-    <TabsTrigger value="manual">Manual</TabsTrigger>
-  </TabsList>
-
-  <TabsContent value="app">
-
-```tsx
-import { {ComponentName} } from "@sndq/ui-v2/components";
-```
-
-  </TabsContent>
-
-  <TabsContent value="manual">
-
-```txt
-packages/ui-v2/src/components/{ComponentName}.tsx
-```
-
-  </TabsContent>
-</CodeTabs>
-
 ## Usage
 
 ```tsx
