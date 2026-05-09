@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-05-04  
-**Status**: In progress (Commits 1–4 implemented; pending manual commit)  
+**Status**: In progress (Commits 1–6b implemented; pending manual commit)  
 **Architecture**: [README.md](./README.md)  
 **Migration plan**: [migration-plan.md](./migration-plan.md)  
 **Typography reference**: [typography-system-reference.md](./typography-system-reference.md)  
@@ -442,33 +442,72 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 **Commit message**: `refactor(ui-v2-dev): standardize Container for package graduation`
 
+**Deviations from the standardization gate**:
+
+- **Tests deferred to Commit 6** — `apps/ui-v2-dev` has no `test` script. Contract tests (4) ship with the package graduation in Commit 6.
+- **No `as` / `asChild`** — v1 uses a fixed `div` element per [layout-system-reference.md §2](./layout-system-reference.md). Polymorphism deferred.
+- **No JSDoc on props** — `ContainerProps` extends `React.HTMLAttributes<HTMLDivElement>` + `VariantProps<typeof containerVariants>`. The API is small enough that MDX docs (Commit 6) are the canonical reference.
+- **New layout tokens added** — `--sndq-container-max-sm` (640px), `--sndq-container-max-md` (1024px), `--sndq-container-max-lg` (1280px), `--sndq-container-gutter` (24px) added to `semantic-tokens.css` in this commit.
+
 **Status**:
 
-- [ ] Layout gate checklist satisfied for `Container`
-- [ ] Committed
+- [x] Layout gate checklist satisfied for `Container` *(except test items — see Deviations)*
+- [x] Build / lint (`Container.tsx` only) / type-check green
+- [ ] Committed *(manual)*
 
 ---
 
 ### Commit 6: Graduate `Container` to package + foundations MDX + update consumers
 
-**What**: Move `Container` to `packages/ui-v2`, export from `src/components/index.ts`, add **`apps/docs/content/docs/foundations/container.mdx`**, update **`apps/docs/content/docs/foundations/meta.json`** (`pages` includes `container`). Fix imports in `apps/ui-v2-dev` / `apps/docs` / any consumer.
+**What**: Move `Container` to `packages/ui-v2`, export from `src/components/index.ts`, add **`apps/docs/content/docs/foundations/container.mdx`**, update **`apps/docs/content/docs/foundations/meta.json`** (`pages` includes `container`). Fix imports in `apps/ui-v2-dev` / `apps/docs` / any consumer. Ship 4 contract tests and a Fumadocs Story playground.
 
 **Files to create**:
 
-- `packages/ui-v2/src/components/container.tsx` (or folder per convention)
-- `apps/docs/content/docs/foundations/container.mdx`
+- `packages/ui-v2/src/components/Container.tsx` — copy of the standardized prototype `Container`; only the `cn` import path changes (`@/lib/utils` → `../lib/utils`).
+- `packages/ui-v2/src/components/Container.test.tsx` — 4 contract tests (default element, size variant, override-wins, ref forwarding).
+- `apps/docs/content/docs/foundations/container.mdx` — full Template A page with inline live JSX, token reference, playground.
+- `apps/docs/src/stories/container.story.tsx` — Fumadocs Story with `pickProps(['size', 'children'])`.
+- `apps/docs/src/stories/components/container.tsx` — `'use client'` re-export wrapper.
 
 **Files to edit**:
 
-- `packages/ui-v2/src/components/index.ts` — export `Container` (+ types)
-- `apps/docs/content/docs/foundations/meta.json`
+- `packages/ui-v2/src/components/index.ts` — add `export * from './Container';`.
+- `apps/ui-v2-dev/src/components/ui-v2/index.ts` — replace local `export * from './Container';` with re-export from `@sndq/ui-v2/components`.
+- `apps/docs/content/docs/foundations/meta.json` — add `container` to `pages`.
+
+**Files to delete**:
+
+- `apps/ui-v2-dev/src/components/ui-v2/Container.tsx` — single source of truth now lives in the package.
+
+**Verification** (run from repo root):
+
+```bash
+pnpm --filter @sndq/ui-v2 run type-check
+pnpm --filter @sndq/ui-v2 run test -- --testPathPattern=Container
+pnpm --filter @sndq/ui-v2-dev run type-check
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
+pnpm --filter @sndq/docs run generate:source
+pnpm --filter @sndq/docs run type-check
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/docs run build
+```
+
+All seven commands exit `0` on `2026-05-08`. The new `/foundations/container` route is included in the docs static export. All 22 tests pass (4 Container + 8 Text + 10 Heading).
 
 **Commit message**: `feat(ui-v2): graduate Container to package and document`
 
+**Deviations from the standardization gate**:
+
+- **Component file naming**: used **PascalCase `Container.tsx`** per `apps/docs/.cursor/rules/naming-conventions.mdc` and to match the typography convention (`Text.tsx`, `Heading.tsx`).
+- **`@sndq/ui-v2` has no `build` script** — skipped the `pnpm --filter @sndq/ui-v2 run build` step since the package has no build script wired. Type-check and tests were sufficient.
+
 **Status**:
 
-- [ ] Docs: `/foundations/container` renders
-- [ ] Committed
+- [x] `Container` lives in package; prototype re-exports from `@sndq/ui-v2/components`
+- [x] Tests green (4/4 Container, 22/22 total)
+- [x] Docs page `foundations/container.mdx` renders (static build green; `/foundations/container` in route table)
+- [x] Type-check green for `@sndq/ui-v2`, `@sndq/ui-v2-dev`, `@sndq/docs`
+- [x] Build green for `@sndq/ui-v2-dev`, `@sndq/docs`
+- [ ] Committed *(manual)*
 
 ---
 
@@ -986,8 +1025,10 @@ After Batch 1 merges, open [phase-3-batch-2-execution.md](./phase-3-batch-2-exec
 | 2026-05-07 | 2 | Bootstrapped `@sndq/ui-v2` runtime surface (`cn` helper, runtime + dev deps, `type-check` script). Moved `Text` into `packages/ui-v2/src/components/Text.tsx` (only the `cn` import path changed); added `export * from './Text';` to the package barrel. Deleted prototype `Text.tsx` and rewrote the `apps/ui-v2-dev` barrel line to re-export from `@sndq/ui-v2/components`. Shipped `apps/docs/content/docs/primitives/text.mdx` (full Template A minus `<ComponentPreview />`, inline live JSX) and updated `primitives/meta.json`. Verification: `@sndq/ui-v2` type-check, `@sndq/ui-v2-dev` type-check + build, `@sndq/docs` `generate:source` + type-check + build all green; `/primitives/text` is in the static export. Tests still deferred — see [Commit 2 Deviations](#commit-2-graduate-text-to-package--mdx--update-consumers). SHA: _to fill in after manual commit_. |
 | 2026-05-08 | 3 | Created `apps/ui-v2-dev/src/components/ui-v2/Heading.tsx` and `typography/typography-shared.ts` (shared helper). `Heading` API: `as` (`h1`–`h6`, default `h2`), `size` (`sm`–`3xl`, default `xl`), `weight` (`normal` \| `medium`, default `medium`), `align`, `truncate`, `asChild`. Base class `font-heading`. Shared helper extracts `getTypographyComponent`, `typographySharedVariants` (align/truncate/weight axis maps), and exported types. Prototype barrel updated to locally export `Heading`. Build + type-check green. Tests deferred (no test runner). SHA: _to fill in after manual commit_. |
 | 2026-05-08 | 4 | Graduated `Heading` + `typography-shared` helper to `packages/ui-v2/src/components/`. Refactored `Text.tsx` to consume shared helper — no behavior change; all 8 existing `Text.test.tsx` tests pass. Updated barrel to export `Heading`. Rewired prototype to re-export from `@sndq/ui-v2/components`; deleted local copies. Added `primitives/heading.mdx` and updated `meta.json`. All verification green (type-check, test 8/8, builds for ui-v2-dev + docs). SHA: _to fill in after manual commit_. |
-|      | 5      |       |
-|      | 6      |       |
+| 2026-05-08 | 4b | Added `Heading.test.tsx` (10 tests: default element, `as`, styling contract, size/weight/truncate/align variants, override-wins, ref forwarding, asChild) and heading story + playground for docs (`heading.story.tsx`, `components/heading.tsx` client wrapper, Playground section in `heading.mdx`). Then refactored folder structure: moved `Text.tsx`, `Text.test.tsx`, `Heading.tsx`, `Heading.test.tsx` into `components/typography/` alongside `typography-shared.ts`. Updated barrel (`index.ts`) to `export * from './typography/Text'` and `'./typography/Heading'`. Fixed relative imports (`cn` path one level deeper, `typography-shared` now a sibling). Updated docs MDX path references and test template paths. All 18 tests pass, type-check + docs build green. SHA: _to fill in after manual commit_. |
+| 2026-05-08 | 5 | Created `apps/ui-v2-dev/src/components/ui-v2/Container.tsx` with CVA `size` variants (`sm` \| `md` \| `lg`), `forwardRef`, `cn(containerVariants({size}), className)` override-wins. Added layout tokens to `semantic-tokens.css`: `--sndq-container-max-sm` (640px), `--sndq-container-max-md` (1024px), `--sndq-container-max-lg` (1280px), `--sndq-container-gutter` (24px). Added `@theme` aliases in `tokens.css` (`--max-width-sndq-container-*`, `--spacing-sndq-container-gutter`) so CVA uses short utilities (`max-w-sndq-container-sm`, `px-sndq-container-gutter`) instead of raw `var()`. No `as`/`asChild` in v1 — fixed `div` per layout reference. Eslint + type-check + build green. Tests deferred to Commit 6. SHA: _to fill in after manual commit_. |
+| 2026-05-08 | 6 | Graduated `Container` to `packages/ui-v2/src/components/Container.tsx` (only `cn` import path changed; CVA uses `@theme`-backed short utilities). Added 4 contract tests (`Container.test.tsx`: default element, size variant, override-wins, ref forwarding) — all 22 tests pass (4 Container + 8 Text + 10 Heading). Deleted prototype copy; rewired barrel to re-export from `@sndq/ui-v2/components`. Added `foundations/container.mdx` (full Template A with inline live JSX, token reference, playground) and updated `meta.json`. Added `container.story.tsx` + `components/container.tsx` client wrapper. Type-check green for `@sndq/ui-v2`, `@sndq/ui-v2-dev`, `@sndq/docs`. Build green for `@sndq/ui-v2-dev`, `@sndq/docs`; `/foundations/container` in static export. SHA: _to fill in after manual commit_. |
+| 2026-05-08 | 6b | Rebuilt `Container` with responsive `size` prop and `asChild` support, following Radix Themes Container pattern adapted for Tailwind CSS. Created shared `packages/ui-v2/src/lib/responsive.ts` with `Responsive<T>` type and `getResponsiveClasses()` utility (static class map approach ensures Tailwind v4 scanner sees all breakpoint-prefixed classes). Dropped CVA from Container; replaced with static `SIZE_CLASS_MAP` (3 sizes x 5 breakpoints = 15 entries). Added `asChild` via `@radix-ui/react-slot` `Slot`. Removed `containerVariants` export (replaced by `asChild` pattern). Updated tests from 4 to 8 (added responsive size, responsive default fallback, asChild renders child, asChild merges className) — all 26 tests pass. Updated barrel exports in `packages/ui-v2` and `apps/ui-v2-dev` (removed `containerVariants`, added `ContainerSize` type). Rewrote `container.mdx` documentation for responsive API, `asChild`, `Responsive` type reference. Updated story to include `asChild` prop. Type-check, test (26/26), ui-v2-dev build, docs build all green. SHA: _to fill in after manual commit_. |
 |      | 7      |       |
 |      | 8      |       |
 |      | 9      |       |

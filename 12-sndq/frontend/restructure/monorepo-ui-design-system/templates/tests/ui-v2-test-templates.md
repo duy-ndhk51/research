@@ -400,8 +400,8 @@ Use during PR review. Each item maps back to the section that enforces it.
 
 `Text` is the canonical Tier 1 primitive. Use it as a reference when adapting Templates A and B.
 
-- **Source**: `packages/ui-v2/src/components/Text.tsx`
-- **Tests**: `packages/ui-v2/src/components/Text.test.tsx`
+- **Source**: `packages/ui-v2/src/components/typography/Text.tsx`
+- **Tests**: `packages/ui-v2/src/components/typography/Text.test.tsx`
 
 ### Decisions made
 
