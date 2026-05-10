@@ -123,7 +123,7 @@ Use the templates in [`docs-templates.md`](./docs-templates.md).
 
 ### 6.1 Code comments vs docs pages (important)
 
-This rule applies to **component implementation files only** (e.g. `packages/ui-v2/src/components/**`, `apps/ui-v2-dev/src/components/ui-v2/**`):
+This rule applies to **component implementation files only** (e.g. `packages/ui-v2/src/components/{component}/*.tsx`, `apps/ui-v2-dev/src/components/ui-v2/**`):
 
 - Keep in-code JSDoc **minimal**: API essentials only (prop intent, constraints/invariants, defaults, and `@deprecated` notices).
 - Avoid long block comments that duplicate docs content (usage guides, variant tables, design rationale, migration notes).

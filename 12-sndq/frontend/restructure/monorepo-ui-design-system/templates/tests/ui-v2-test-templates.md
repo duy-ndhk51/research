@@ -4,8 +4,8 @@ This file is a **template pack**. Copy/paste the relevant template per component
 
 **Scope**:
 
-- `packages/ui-v2/src/components/**` (Tier 1 primitives)
-- `packages/ui-v2/src/blocks/**` (Tier 2 blocks)
+- `packages/ui-v2/src/components/{component}/` (Tier 1 primitives — per-component folders)
+- `packages/ui-v2/src/blocks/{block}/` (Tier 2 blocks — same folder pattern)
 
 **Tooling**:
 
@@ -104,8 +104,9 @@ Pick the **highest row you qualify for**.
 
 ### File conventions
 
-- **Component**: `packages/ui-v2/src/components/{ComponentName}.tsx`
-- **Test**: `packages/ui-v2/src/components/{ComponentName}.test.tsx`
+- **Component**: `packages/ui-v2/src/components/{component-name}/{ComponentName}.tsx`
+- **Test**: `packages/ui-v2/src/components/{component-name}/{ComponentName}.test.tsx`
+- **Barrel**: `packages/ui-v2/src/components/{component-name}/index.ts`
 
 ### Checklist (copy/paste)
 
@@ -400,8 +401,8 @@ Use during PR review. Each item maps back to the section that enforces it.
 
 `Text` is the canonical Tier 1 primitive. Use it as a reference when adapting Templates A and B.
 
-- **Source**: `packages/ui-v2/src/components/typography/Text.tsx`
-- **Tests**: `packages/ui-v2/src/components/typography/Text.test.tsx`
+- **Source**: `packages/ui-v2/src/components/typography/text/Text.tsx`
+- **Tests**: `packages/ui-v2/src/components/typography/text/Text.test.tsx`
 
 ### Decisions made
 

@@ -21,6 +21,31 @@ Examples: Button, Input, Dialog, Table, Select, Tabs, Badge, Card, Avatar, Toast
 
 New components will be added here as the design system evolves.
 
+### Folder structure (per-component)
+
+Every primitive lives in a **kebab-case folder** with **PascalCase files** and an **`index.ts`** barrel, inspired by Cloudflare Kumo's `delete-resource` block:
+
+```
+components/
+  index.ts                          # top barrel
+  date-picker/                      # kebab-case folder
+    DatePicker.tsx                   # PascalCase component file
+    DatePicker.test.tsx              # co-located test
+    index.ts                        # export { DatePicker, type DatePickerProps } from './DatePicker'
+  typography/                       # group folder for related components
+    typography-shared.ts            # shared utility at group level
+    text/
+      Text.tsx
+      Text.test.tsx
+      index.ts
+    heading/
+      Heading.tsx
+      Heading.test.tsx
+      index.ts
+```
+
+**Rules**: kebab-case folders, PascalCase files, `index.ts` barrel per folder, tests co-located, shared utilities at group level.
+
 ## Blocks (`@sndq/ui-v2/blocks`)
 
 Reusable compositions that combine primitives into opinionated layouts. No business logic — no APIs, hooks, or translations. Any app can use them.

@@ -156,8 +156,20 @@ sndq/
 │   │   ├── package.json
 │   │   ├── tsconfig.json         # extends @sndq/tsconfig/library.json
 │   │   └── src/
-│   │       ├── components/       # Tier 1: primitives (70 components)
-│   │       ├── blocks/           # Tier 2: compositions (9+ blocks)
+│   │       ├── components/       # Tier 1: primitives — per-component folders
+│   │       │   ├── index.ts      # barrel re-exports all component folders
+│   │       │   ├── container/    # kebab-case folder, PascalCase files inside
+│   │       │   │   ├── Container.tsx
+│   │       │   │   ├── Container.test.tsx
+│   │       │   │   └── index.ts  # re-exports public API
+│   │       │   ├── flex/
+│   │       │   ├── grid/
+│   │       │   ├── section/
+│   │       │   └── typography/   # group folder for related components
+│   │       │       ├── typography-shared.ts  # shared utility at group level
+│   │       │       ├── text/
+│   │       │       └── heading/
+│   │       ├── blocks/           # Tier 2: compositions (same folder pattern)
 │   │       └── index.ts
 │   │
 │   ├── config/                   # @sndq/config
