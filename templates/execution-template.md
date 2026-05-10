@@ -39,9 +39,45 @@ Step-by-step execution guide for {PHASE_NAME}. Each commit should be independent
 - {Prerequisite 1}
 - {Prerequisite 2}
 
+### Known constraints
+
+- {Constraint, existing failure, migration rule, or compatibility requirement}
+- {Constraint, existing failure, migration rule, or compatibility requirement}
+
 ---
 
 ## 2. Before You Start
+
+### Quality gate before each implementation commit
+
+Use this gate for every implementation commit. If an item is intentionally skipped, record it under that commit's **Deviations from the gate** section.
+
+- [ ] Public API / behavior is stable for this commit scope
+- [ ] Public props, types, functions, or commands have minimal useful documentation where applicable
+- [ ] Existing project helpers and patterns are reused instead of introducing one-off abstractions
+- [ ] Tests or documented manual checks cover the main behavior and likely regressions
+- [ ] No unrelated files, app-specific imports, or ownership-boundary leaks are introduced
+- [ ] Security-sensitive values, credentials, generated secrets, and local env files are not committed
+- [ ] Build, lint, type-check, and any targeted verification commands are known before editing
+- [ ] Any skipped verification is recorded as a deviation with a follow-up owner or trigger
+
+### Documentation and comment policy
+
+- Keep code comments minimal and focused on intent, invariants, or non-obvious behavior.
+- Put usage examples, migration notes, variant tables, setup steps, and operational runbooks in docs, not inline code comments.
+- Add deprecation notices only on the public export or entry point that consumers actually use.
+- If docs and code disagree, update the docs in the same commit or record the gap as a deviation.
+
+### Inspect source tree before implementation
+
+Before the first implementation commit, inspect the actual repository state and record any differences from this plan.
+
+- [ ] Confirm files and folders in **Files to create**, **Files to edit**, and **Files to delete** are accurate
+- [ ] Confirm package scripts and verification commands exist
+- [ ] Confirm current lint, type-check, build, or test failures that predate this phase
+- [ ] Confirm existing exports, public entry points, routes, workflows, or generated files before changing them
+- [ ] Confirm whether dependencies or lockfiles will change
+- [ ] Confirm rollback path for side-effecting integrations, migrations, or external services
 
 ### Capture baselines
 
@@ -80,6 +116,18 @@ git checkout -b feature/{BRANCH_NAME}
 
 - `{path/to/existing-file}` — {what changes}
 
+**Files to delete**:
+
+- `{path/to/deleted-file}` — {why it is safe to remove}
+
+**Quality gate checklist**:
+
+- [ ] Public API / behavior for this commit is stable
+- [ ] Documentation or comments are updated where this commit changes behavior
+- [ ] Verification covers the main behavior and likely regression
+- [ ] No unrelated or secret-bearing files are included
+- [ ] Rollback path is clear
+
 **Risks**:
 
 | Risk | Severity | What to check |
@@ -96,12 +144,18 @@ git checkout -b feature/{BRANCH_NAME}
 
 - **"{error message or symptom}"**: {diagnosis steps and likely fix}
 
+**Deviations from the gate**:
+
+- **{Deviation or "None"}** — {why it is acceptable and when it will be resolved}
+
 **Commit message**: `{type}: {message}`
 
 **Status**:
 
-- [ ] Implementation complete
-- [ ] Verification passes
+- [ ] Quality gate checklist satisfied
+- [ ] Tests green or deviation documented
+- [ ] Build / lint / type-check green or deviation documented
+- [ ] Manual verification complete, if applicable
 - [ ] Committed
 
 ---
@@ -118,10 +172,18 @@ git push -u origin feature/{BRANCH_NAME}
 
 **This validates**: {what the CI run proves.}
 
+**Manual checkpoint**:
+
+- [ ] PR description matches the commit scope
+- [ ] CI passes or failures are explained
+- [ ] Risky behavior has a manual smoke test result
+- [ ] Rollback instructions are clear
+
 **Status**:
 
 - [ ] PR created
 - [ ] CI passes
+- [ ] Reviewed
 - [ ] Merged or approved to continue
 
 ---
@@ -143,6 +205,13 @@ diff /tmp/{phase-slug}-{check}-before.txt /tmp/{phase-slug}-{check}-final.txt
 diff /tmp/{phase-slug}-{check-2}-before.txt /tmp/{phase-slug}-{check-2}-final.txt
 ```
 
+**Manual verification**:
+
+- [ ] Key user-facing flows still work
+- [ ] New docs, routes, workflows, or generated outputs are visible where expected
+- [ ] External integrations are verified in dry-run or test mode before live mode
+- [ ] Any known deviations are recorded in the execution log
+
 **Expected result**: {Describe what success looks like.}
 
 **Final status**:
@@ -150,7 +219,10 @@ diff /tmp/{phase-slug}-{check-2}-before.txt /tmp/{phase-slug}-{check-2}-final.tx
 - [ ] All {COMMIT_COUNT} commits complete
 - [ ] Build passes
 - [ ] Lint passes
+- [ ] Type-check passes, if available
+- [ ] Tests pass or missing coverage is documented
 - [ ] Output matches expected baselines
+- [ ] Manual verification complete
 - [ ] All PRs created and merged, or ready for merge
 
 ---
@@ -169,6 +241,9 @@ Send to the team before merging the riskiest PR:
 > Files that changed and may conflict:
 > - `{file1}`
 > - `{file2}`
+>
+> Known deviations or follow-ups:
+> - `{deviation-or-follow-up}`
 
 ---
 
@@ -181,11 +256,16 @@ After {PHASE_NAME} is merged, proceed to **{NEXT_PHASE}**. See [{next-phase-link
 - {lesson 1}
 - {lesson 2}
 
+### Known lessons from prior phases
+
+- {prior lesson 1}
+- {prior lesson 2}
+
 ---
 
 ## Execution Log
 
-Record notes, issues, and deviations here as you go.
+Record notes, issues, verification results, and deviations here as you go.
 
 | Date | Commit | Notes |
 |------|--------|-------|
