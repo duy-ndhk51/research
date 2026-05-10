@@ -52,9 +52,11 @@ No docs pages in the design-system docs for Tier 3. Business components live in 
 
 Keep a predictable IA so search and sidebar remain usable:
 
-- `primitives/{component}.mdx`
+- `primitives/layout/{component}.mdx` — Container, Section, Flex, Grid
+- `primitives/typography/{component}.mdx` — Text, Heading
+- `primitives/{component}.mdx` — Button, Input, Select, etc.
 - `blocks/{block}.mdx`
-- `foundations/{topic}.mdx`
+- `foundations/{topic}.mdx` — identity, tokens, design principles (not components)
 
 If a component exists in multiple “bases” (e.g. variants or implementations), prefer **one page** with an explicit “Implementation” section unless there is a strong reason to split pages.
 

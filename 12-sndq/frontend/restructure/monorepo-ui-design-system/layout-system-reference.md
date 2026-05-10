@@ -153,19 +153,19 @@ Default element: `div`. CVA variants on the root with `cn(gridVariants(props), c
 
 ## 7. Documentation (Foundations)
 
-- MDX lives under **`apps/docs/content/docs/foundations/`**:
+- MDX lives under **`apps/docs/content/docs/primitives/layout/`**:
   - `container.mdx`
   - `section.mdx`
   - `flex.mdx`
   - `grid.mdx`
-- Update **`foundations/meta.json`** so the sidebar lists all four (alongside any other Foundations pages).
+- Update **`primitives/layout/meta.json`** so the sidebar lists all four.
 - Each page should state: **when to use**, **allowed prop values** (with the semantic-vs-numeric distinction explicit), **token mapping** (e.g. `gap="2"` → `--sndq-space-2`), the **override-wins guarantee** (with the `gap-2` vs `gap-8` example), and **anti-patterns** (e.g. do not nest five `Section`s for card padding — use `Flex`/`Grid` with `gap` on the card).
 
 ---
 
 ## 8. Package exports
 
-- **`Container`**, **`Section`**, **`Flex`**, **`Grid`** ship from **`@sndq/ui-v2/components`** (same barrel as other ui-v2 components). Only **docs URLs** use the Foundations path.
+- **`Container`**, **`Section`**, **`Flex`**, **`Grid`** ship from **`@sndq/ui-v2/components`** (same barrel as other ui-v2 components). Docs URLs use the **Primitives / Layout** path (`/primitives/layout/...`).
 
 ---
 
