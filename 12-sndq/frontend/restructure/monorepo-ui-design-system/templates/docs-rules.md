@@ -90,14 +90,16 @@ Use the templates in [`docs-templates.md`](./docs-templates.md).
 
 ### 5.1 Component pages must include
 
-- **Preview**: a visible demo near the top
+- **Preview**: a rendered visual demo near the top (not just a code fence — the reader must see the component rendered with styled placeholder content)
+- **Visual demos per section**: each major props section (variants, sizes, gaps, alignment, etc.) must include an **inline rendered demo** showing the actual component. Code fences alone are not sufficient. Use the `not-prose` wrapper pattern (see docs-templates.md Template A for the snippet).
 - **Overview**: what it is, when to use / not use
 - **Installation**: how to import in SNDQ (not npm install)
 - **Usage**: minimal example with correct imports
 - **Props**: at least the non-obvious props; do not document trivial `className` repeatedly unless it has special meaning
 - **Styling**: tokens and/or CSS variables + className contract
 - **Accessibility**: keyboard + SR notes, or explicitly “inherits X behavior from Y”
-- **Examples**: 2–6 examples showing real use cases
+- **Examples**: 2–6 examples showing real use cases, each with a rendered visual demo above the code fence
+- **Playground**: Fumadocs Story playground with curated controls (required for Tier 1 primitives)
 - **RTL**: only if supported; otherwise explicitly say “Not supported”
 - **Related**: cross-links reduce duplicate docs
 
@@ -240,7 +242,7 @@ Only add a “Changelog” entry when the change is user-visible and not obvious
 
 A component/block doc is “done” when:
 
-- The page renders with a working preview (or explicitly states why preview is unavailable)
+- The page renders with a working preview and inline visual demos for each major props section
 - Usage snippet compiles in a typical SNDQ app
 - Non-obvious props are documented
 - Styling contract is documented

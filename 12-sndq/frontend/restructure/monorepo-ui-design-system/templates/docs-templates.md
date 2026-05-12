@@ -32,9 +32,22 @@ links:
 ---
 
 {/* Prefer in-page previews (simple + explicit). `ComponentPreview` is not a standard component in `apps/docs` today. */}
-<div className="border-sndq-border rounded-md border p-4">
+<div className="not-prose border-sndq-border rounded-md border p-4">
   {preview}
 </div>
+
+{/* Visual demos: every major props section (variants, sizes, gaps) MUST include an inline rendered demo. Use the pattern below. */}
+{/* 
+<div className="not-prose border-sndq-border flex flex-col gap-6 rounded-md border p-4">
+  <div>
+    <p className="text-sndq-text-secondary mb-2 text-sm">variant="value"</p>
+    <{ComponentName} variant="value" gap="3">
+      <div className="bg-sndq-surface-subtle rounded-sndq p-4 text-center text-sm">1</div>
+      <div className="bg-sndq-surface-subtle rounded-sndq p-4 text-center text-sm">2</div>
+    </{ComponentName}>
+  </div>
+</div>
+*/}
 
 ## Overview
 
@@ -122,19 +135,39 @@ Use the following composition to build `{ComponentName}`:
 
 ## Examples
 
+{/* Each example MUST include a rendered visual demo above its code fence. */}
+
 ### Basic
 
-<ComponentPreview name="{component-basic-id}" />
+<div className="not-prose border-sndq-border rounded-md border p-4">
+  {/* rendered component with styled placeholder content */}
+</div>
+
+```tsx
+{/* code example */}
+```
 
 ### Variants
 
 {Explain the variation signal (prop, slots, CSS, etc.).}
 
-<ComponentPreview name="{component-variants-id}" />
+<div className="not-prose border-sndq-border flex flex-col gap-6 rounded-md border p-4">
+  {/* rendered demo for each variant, labelled */}
+</div>
+
+```tsx
+{/* code example */}
+```
 
 ### With form field
 
-<ComponentPreview name="{component-in-form-id}" />
+<div className="not-prose border-sndq-border rounded-md border p-4">
+  {/* rendered component in form context */}
+</div>
+
+```tsx
+{/* code example */}
+```
 
 ## Playground
 

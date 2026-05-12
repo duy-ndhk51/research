@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-05-04  
-**Status**: In progress (Commits 1–6b, 7+8, 9+10, 11+12 implemented; pending manual commit)  
+**Status**: In progress (Commits 1–6b, 7+8, 9+10, 11+12, 13+14 implemented; pending manual commit)  
 **Architecture**: [README.md](./README.md)  
 **Migration plan**: [migration-plan.md](./migration-plan.md)  
 **Typography reference**: [typography-system-reference.md](./typography-system-reference.md)  
@@ -528,8 +528,8 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 **Status**:
 
-- [ ] Layout gate checklist satisfied for `Section`
-- [ ] Committed
+- [x] Layout gate checklist satisfied for `Section`
+- [x] Committed
 
 ---
 
@@ -541,8 +541,8 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 **Status**:
 
-- [ ] Docs: `/primitives/layout/section` renders
-- [ ] Committed
+- [x] Docs: `/primitives/layout/section` renders
+- [x] Committed
 
 ---
 
@@ -569,8 +569,8 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 **Status**:
 
-- [ ] Layout gate checklist satisfied for `Flex` (incl. strict typing rule + override-wins test)
-- [ ] Committed
+- [x] Layout gate checklist satisfied for `Flex` (incl. strict typing rule + override-wins test)
+- [x] Committed
 
 ---
 
@@ -592,8 +592,8 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 **Status**:
 
-- [ ] Docs: `/primitives/layout/flex` renders
-- [ ] Committed
+- [x] Docs: `/primitives/layout/flex` renders
+- [x] Committed
 
 ---
 
@@ -614,8 +614,8 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 **Status**:
 
-- [ ] Layout gate checklist satisfied for `Grid` (incl. strict typing rule + override-wins test)
-- [ ] Committed
+- [x] Layout gate checklist satisfied for `Grid` (incl. strict typing rule + override-wins test)
+- [x] Committed
 
 ---
 
@@ -637,8 +637,8 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 **Status**:
 
-- [ ] Docs: `/primitives/layout/grid` renders
-- [ ] Committed
+- [x] Docs: `/primitives/layout/grid` renders
+- [x] Committed
 
 ---
 
@@ -680,10 +680,10 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 **Status**:
 
-- [ ] Standardization gate checklist satisfied for Button
-- [ ] Tests green
-- [ ] Build / lint / type-check green
-- [ ] Committed
+- [x] Standardization gate checklist satisfied for Button *(all CVA values decomposed into Tailwind utilities)*
+- [x] Tests green *(8 contract tests — see Commit 14)*
+- [x] Build / lint / type-check green
+- [ ] Committed *(manual)*
 
 ---
 
@@ -724,38 +724,296 @@ pnpm --filter @sndq/ui-v2 run test -- --testPathPattern=button
 
 **Status**:
 
-- [ ] Button lives only in `packages/ui-v2` (prototype re-exports removed or deleted)
-- [ ] Docs page renders
-- [ ] Consumers updated
+- [x] Button lives only in `packages/ui-v2` (prototype re-exports from `@sndq/ui-v2/components`)
+- [x] Docs page renders
+- [x] Consumers updated (ComboButton import, prototype barrel)
+- [x] Committed *(manual)*
+
+---
+
+### Commit 15: Standardize Input in prototype (initial)
+
+**What**: Initial standardization of Input, Textarea, and Field. Created composable `Field.tsx` (shadcn pattern). Refactored `Input.tsx` with `inputVariants()`, `size`/`variant` props. Refactored `Textarea.tsx` to reuse `inputVariants()`. Updated `FormField.tsx` to deprecated wrapper.
+
+**Status**:
+
+- [x] Gate checklist for Input (initial)
+- [x] Implemented (see execution log)
 - [ ] Committed
 
 ---
 
-### Commit 15: Standardize Input in prototype
+### Commit 15a: Create InputGroup (additive)
 
-**What**: Same as prior batch pattern for `Input` (label, `error` as string, `helperText`, icons as `ReactNode`, etc. per migration plan matrix).
+**What**: Create `InputGroup.tsx` in prototype with full radix-nova pattern adapted for SNDQ CSS. This is purely additive -- no existing files are changed except the barrel export.
+
+**Sub-components**:
+
+- **InputGroup** -- root `<div>`, `.sndq-input-wrap`, `data-slot="input-group"`, `role="group"`. Handles focus-within, error border, disabled state via `has-*` CSS.
+- **InputGroupAddon** -- CVA with `align` variants (`inline-start` / `inline-end` / `block-start` / `block-end`). Click-to-focus sibling input.
+- **InputGroupButton** -- styled Button wrapper for actions inside the group (small ghost button by default).
+- **InputGroupInput** -- wraps current `Input` with border/ring/bg stripped. Uses `React.ComponentProps<typeof Input>` to stay compatible at all stages.
+- **InputGroupTextarea** -- same for `Textarea`.
+- **InputGroupText** -- simple `<span>` for text/icon content.
+
+**Reference**: radix-nova `input-group.tsx` (`/Users/admin/projects/private/design-system/ui/apps/v4/styles/radix-nova/ui/input-group.tsx`), adapted to use `sndq-input-wrap` CSS class on root.
+
+**Files to create**:
+
+- `apps/ui-v2-dev/src/components/ui-v2/InputGroup.tsx`
+
+**Files to edit**:
+
+- `apps/ui-v2-dev/src/components/ui-v2/index.ts` -- add `export * from './InputGroup'`
 
 **Verification**:
 
 ```bash
-pnpm --filter @sndq/ui-v2-dev run test -- --testPathPattern=input
-NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
-pnpm --filter @sndq/ui-v2-dev run lint
 pnpm --filter @sndq/ui-v2-dev run type-check
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
 ```
 
-**Commit message**: `refactor(ui-v2-dev): standardize Input for package graduation`
+**Commit message**: `refactor(ui-v2-dev): add InputGroup component`
 
 **Status**:
 
-- [ ] Gate checklist for Input
+- [ ] InputGroup created with 6 sub-components
+- [ ] Barrel export updated
+- [ ] Type-check + build green
+- [ ] Committed
+
+---
+
+### Commit 15a-icon: Organize icons/ folder in packages/ui-v2
+
+**What**: Create a shared `icons/` folder in `packages/ui-v2` with a dual-mode `Icon` component. The `Icon` accepts either a pre-defined `IconName` string (mapped via `iconMap`) or a direct `LucideIcon` component. `Spinner` was removed as a standalone component -- consumers use `<Icon icon="spinner" className="animate-spin" />` directly. `Button` loading state uses `Icon` internally.
+
+**Convention**:
+
+- **`IconName` strings** are pre-defined for use inside `packages/ui-v2/` primitives and blocks (e.g., `Button` uses `icon="spinner"`). This keeps internal components free from direct Lucide imports and establishes a curated icon vocabulary.
+- **`LucideIcon` components** are passed directly by consumer projects (e.g., `sndq-fe`, `ui-v2-dev` particles) via `icon={Search}`. This preserves tree-shaking since only the imported icons are bundled. No registration in `iconMap` required.
+
+**Target structure**:
+
+```
+packages/ui-v2/src/components/
+  icons/
+    index.ts          # barrel: re-exports Icon, iconVariants, IconProps, iconMap, IconName, LucideIcon
+    Icon.tsx           # dual-mode Icon (icon: IconName | LucideIcon, CVA size: xs/sm/md/lg)
+    icon-map.ts        # pre-defined icon registry (spinner: Loader2)
+  button/
+    index.ts           # no Spinner export
+    Button.tsx         # uses <Icon icon="spinner" /> for loading state
+```
+
+**`Icon` API (dual-mode)**:
+
+- `icon: IconName | LucideIcon` -- either a pre-defined string key or a Lucide component
+- `size?: 'xs' | 'sm' | 'md' | 'lg'` -- token-backed via `size-sndq-icon-*` (12px / 16px / 20px / 24px, default: `md`)
+- Standard `className` + SVG props
+- `ref` forwarding
+- CVA: `iconVariants` with `shrink-0` base class
+- Runtime resolution: `typeof icon === 'string'` resolves from `iconMap`, otherwise uses the component directly
+
+**`iconMap` (pre-defined icons)**:
+
+| Key       | Lucide component | Purpose                          |
+|-----------|------------------|----------------------------------|
+| `spinner` | `Loader2`        | Loading states (with `animate-spin`) |
+
+**Design tokens** (added in `semantic-tokens.css` + `tokens.css`):
+
+- `--sndq-icon-xs` / `--spacing-sndq-icon-xs` = 12px
+- `--sndq-icon-sm` / `--spacing-sndq-icon-sm` = 16px
+- `--sndq-icon` / `--spacing-sndq-icon` = 20px
+- `--sndq-icon-lg` / `--spacing-sndq-icon-lg` = 24px
+
+**Files created**:
+
+- `packages/ui-v2/src/components/icons/Icon.tsx` -- dual-mode Icon with CVA size variants
+- `packages/ui-v2/src/components/icons/icon-map.ts` -- `iconMap = { spinner: Loader2 }`, `IconName` type
+- `packages/ui-v2/src/components/icons/index.ts` -- barrel exporting `Icon`, `iconVariants`, `IconProps`, `iconMap`, `IconName`, `LucideIcon`
+
+**Files edited**:
+
+- `packages/ui-v2/src/components/index.ts` -- added `export * from './icons';`
+- `packages/ui-v2/src/components/button/index.ts` -- removed `Spinner` export
+- `packages/ui-v2/src/components/button/Button.tsx` -- uses `<Icon icon="spinner" />` for loading state
+- `packages/ui-v2/package.json` -- added `"./components/icons"` subpath export
+- `packages/config/tailwind/semantic-tokens.css` -- added 4 icon size tokens
+- `packages/config/tailwind/tokens.css` -- added 4 `@theme` aliases for icon sizes
+- `apps/ui-v2-dev/src/components/ui-v2/index.ts` -- replaced `Spinner` with `Icon`, `iconVariants`, `IconProps`, `IconName`
+- `apps/ui-v2-dev/src/app/particles/examples/p-spinner-1.tsx` -- migrated to `<Icon icon="spinner" />`
+- `apps/ui-v2-dev/src/app/particles/examples/p-button-41.tsx` -- migrated to `<Icon icon="spinner" />`
+- `apps/ui-v2-dev/src/app/particles/examples/p-toast-13.tsx` -- migrated to `<Icon icon="spinner" />`
+- `apps/ui-v2-dev/src/app/particles/examples/p-input-group-16.tsx` -- migrated to `<Icon icon="spinner" />`
+
+**Files deleted**:
+
+- `packages/ui-v2/src/components/button/Spinner.tsx` -- replaced by `Icon`
+- `packages/ui-v2/src/components/icons/Spinner.tsx` -- removed; consumers use `<Icon icon="spinner" />` directly
+- `apps/ui-v2-dev/src/components/ui-v2/Spinner.tsx` -- local copy removed
+
+**Verification**:
+
+```bash
+pnpm --filter @sndq/ui-v2 run test
+pnpm --filter @sndq/ui-v2-dev run build
+```
+
+**Commit message**: `feat(ui-v2): dual-mode Icon API with IconName + LucideIcon support`
+
+**Status**:
+
+- [x] `Icon.tsx` created with dual-mode `icon` prop (IconName | LucideIcon) + CVA size variants
+- [x] `icon-map.ts` created with `spinner: Loader2`
+- [x] `Spinner.tsx` removed -- consumers use `<Icon icon="spinner" />` directly
+- [x] `button/index.ts` no longer exports Spinner
+- [x] `Button.tsx` uses `<Icon icon="spinner" />` for loading state
+- [x] Prototype `Spinner.tsx` copies deleted
+- [x] `package.json` subpath export added
+- [x] Design tokens added (icon sizes in semantic-tokens.css + tokens.css)
+- [x] icons/index.ts re-exports `LucideIcon` type for consumer convenience
+- [x] Type-check + test + build green
+- [ ] Committed
+
+---
+
+### Commit 15b: Create FormInput + FormTextarea blocks (additive)
+
+**What**: Create backward-compatible composed block components. These are purely additive -- existing consumer code continues to work unchanged.
+
+**`blocks/FormInput.tsx`**: Same props as the old `Input` API (`label`, `helperText`, `error`, `leadingIcon`, `trailingAction`, `size`, `type`, all native input attrs). Internally composes Field + InputGroup + Input. Keeps `DEFAULT_ICONS` map (auto-icons by type) and auto-error variant detection. Uses render helpers (no inline ternaries).
+
+**`blocks/FormTextarea.tsx`**: Same pattern for Textarea. Keeps `maxLength` counter, `label`/`helperText`/`error`. Composes Field + Textarea.
+
+**Files to create**:
+
+- `apps/ui-v2-dev/src/components/ui-v2/blocks/FormInput.tsx`
+- `apps/ui-v2-dev/src/components/ui-v2/blocks/FormTextarea.tsx`
+
+**Files to edit**:
+
+- `apps/ui-v2-dev/src/components/ui-v2/blocks/index.ts` -- add `export * from './FormInput'` and `export * from './FormTextarea'`
+
+**Verification**:
+
+```bash
+pnpm --filter @sndq/ui-v2-dev run type-check
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
+```
+
+**Commit message**: `refactor(ui-v2-dev): add FormInput and FormTextarea blocks`
+
+**Status**:
+
+- [ ] FormInput created with backward-compatible API
+- [ ] FormTextarea created with backward-compatible API
+- [ ] Barrel export updated
+- [ ] Type-check + build green
+- [ ] Committed
+
+---
+
+### Commit 15c: Consumer migration (~57 files)
+
+**What**: Migrate all consumer files that use convenience props (`label`, `helperText`, `error`, `leadingIcon`, `trailingAction`) on `Input` or `Textarea` to use `FormInput` or `FormTextarea` instead. Mechanical change: update import + JSX element name.
+
+**Three usage patterns**:
+
+- **Pattern A (Pure Input, no convenience props)** -- No change needed. ~115 files.
+- **Pattern B (FormField + Input, no convenience props on Input)** -- No change needed. ~45 files.
+- **Pattern C (Convenience props on Input)** -- Change `Input` to `FormInput`. **48 files.**
+- **Pattern D (Convenience props on Textarea)** -- Change `Textarea` to `FormTextarea`. **10 files.**
+
+**Files to update by directory (57 unique files)**:
+
+`app/particles/examples/` (50 files):
+- Pattern C (42): `p-autocomplete-13`, `p-dialog-2`, `p-field-1` through `p-field-16` (excl. 14), `p-fieldset-1`, `p-form-1`, `p-form-2`, `p-input-1` through `p-input-13` + `p-input-17..19`, `p-number-field-4..8`, `p-popover-1`, `p-sheet-3`
+- Pattern D (8): `p-textarea-1`, `p-textarea-4`, `p-textarea-6..9`, `p-textarea-14..15`
+
+`components/forms/` (2): `AddBuildingForm.tsx`, `AddContactForm.tsx`
+
+`components/sections/` (2): `InputSection.tsx` (C), `TextareaAlertSection.tsx` (D)
+
+`components/tabs/identity/` (1): `DesignCanvas.tsx` (C + D)
+
+`patterns/form/` (2): `AddBuildingForm.tsx`, `AddContactForm.tsx`
+
+**Verification**:
+
+```bash
+pnpm --filter @sndq/ui-v2-dev run type-check
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
+```
+
+**Commit message**: `refactor(ui-v2-dev): migrate consumers to FormInput/FormTextarea`
+
+**Status**:
+
+- [ ] All ~57 consumer files updated
+- [ ] Zero files use convenience props on `Input` or `Textarea` directly
+- [ ] Type-check + build green
+- [ ] Committed
+
+---
+
+### Commit 15d: Simplify Input + Textarea to pure primitives
+
+**What**: Rewrite `Input.tsx` and `Textarea.tsx` as pure, minimal primitives now that all convenience-prop consumers have been migrated to `FormInput`/`FormTextarea`. Each file goes from ~200+ lines to ~25 lines.
+
+**Rewrite `Input.tsx` (~25 lines)**:
+
+Remove: `DEFAULT_ICONS`, `SIZE_CLASSES`, `VARIANT_CLASSES`, all render helpers, `Field` imports, `label`/`helperText`/`error`/`leadingIcon`/`trailingAction` props.
+
+Keep: `inputVariants` (CVA with `@theme`-backed utilities), `InputSize`, `InputVariant`, `InputProps`, `forwardRef`, `data-slot="input"`.
+
+```tsx
+const inputVariants = cva('sndq-control', {
+  variants: {
+    size: {
+      sm: 'h-sndq-h-sm',
+      md: 'h-sndq-h',
+      lg: 'h-sndq-h-lg',
+    },
+  },
+  defaultVariants: { size: 'md' },
+});
+```
+
+Uses `@theme`-backed utilities (`h-sndq-h-sm`, `h-sndq-h`, `h-sndq-h-lg`) from `tokens.css` (`--spacing-sndq-h-*`), not raw `var()`. This ensures `className` override-wins with `tailwind-merge`.
+
+**Rewrite `Textarea.tsx` (~25 lines)**:
+
+Same simplification. Remove `label`/`helperText`/`error`/counter. The `maxLength` counter logic lives in `FormTextarea`. Keep: `textareaVariants` (CVA, same size scale), `TextareaProps`, `InputArea` alias, `forwardRef`, `data-slot="textarea"`.
+
+**Update `InputGroup.tsx` (if needed)**:
+
+After Input/Textarea are simplified, `InputGroupInput` and `InputGroupTextarea` may need minor type adjustments. Since they use `React.ComponentProps<typeof Input>`, they'll automatically pick up the new slimmer types.
+
+**Verification**:
+
+```bash
+pnpm --filter @sndq/ui-v2-dev run type-check
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
+pnpm --filter @sndq/ui-v2 run test
+```
+
+**Commit message**: `refactor(ui-v2-dev): simplify Input and Textarea to pure primitives`
+
+**Status**:
+
+- [ ] Input.tsx ~25 lines (pure CVA + `<input>`)
+- [ ] Textarea.tsx ~25 lines (pure CVA + `<textarea>`)
+- [ ] Uses `@theme`-backed height utilities (not `var()`)
+- [ ] Type-check + build + tests green
 - [ ] Committed
 
 ---
 
 ### Commit 16: Graduate Input + MDX + consumers
 
-**What**: Move to `packages/ui-v2`, export, update apps, add `primitives/input.mdx` + `meta.json`.
+**What**: Move to `packages/ui-v2`, export, update apps, add `primitives/input.mdx` + `meta.json`. Graduate the pure `Input`, `Textarea`, `InputGroup`, `Field` components and the `FormInput`/`FormTextarea` blocks.
 
 **Commit message**: `feat(ui-v2): graduate Input to package and document`
 
@@ -1033,9 +1291,13 @@ After Batch 1 merges, open [phase-3-batch-2-execution.md](./phase-3-batch-2-exec
 | 2026-05-10 | 9+10 | Standardized and graduated `Flex` to `packages/ui-v2/src/components/Flex.tsx`. Uses CVA (no responsive props or `asChild` in Flex v1 per layout reference). CVA recipe covers 7 variant axes: `direction` (row/column/row-reverse/column-reverse), `align` (start/center/end/baseline/stretch), `justify` (start/center/end/between), `wrap` (nowrap/wrap/wrap-reverse), `gap` (0–5), `gapX` (0–5), `gapY` (0–5). Gap scales extracted as `GAP_SCALE`, `GAP_X_SCALE`, `GAP_Y_SCALE` constants for readability. Default variants: `direction: 'row'`, `wrap: 'nowrap'`. Exports `Flex`, `FlexProps`, `flexVariants`. Added shared spacing scale tokens to `semantic-tokens.css`: `--sndq-space-0` (0px) through `--sndq-space-5` (24px). Added `@theme` aliases in `tokens.css` (`--spacing-sndq-space-*`) for short utilities (`gap-sndq-space-*`, `gap-x-sndq-space-*`, `gap-y-sndq-space-*`). Created 6 contract tests (`Flex.test.tsx`: default element, direction variant, gap variant, axis-specific gapX/gapY, override-wins, ref forwarding) — all 40 tests pass (6 Flex + 8 Section + 8 Container + 8 Text + 10 Heading). Updated barrel exports in `packages/ui-v2` and `apps/ui-v2-dev`. Created `primitives/layout/flex.mdx` (gap token mapping table, axis-specific gaps, flexVariants export, examples) and updated `meta.json`. Type-check green; ui-v2-dev build green; docs build green; `/primitives/layout/flex` in static export. SHA: _to fill in after manual commit_. |
 | 2026-05-11 | 11+12 | Standardized and graduated `Grid` to `packages/ui-v2/src/components/Grid.tsx`. **API deviation from layout reference**: adopted Kumo-style named column variants instead of numeric `columns` prop. CVA recipe covers: `variant` (9 named presets: 2up, side-by-side, 2-1, 1-2, 1-3up, 3up, 4up, 6up, 1-2-4up — each with responsive breakpoint classes baked in), `align` (start/center/end/stretch), `justify` (start/center/end/between), `flow` (row/column/dense), `gap` (0–5), `gapX` (0–5), `gapY` (0–5). Reuses same `--sndq-space-*` gap tokens as Flex (no new tokens needed). Default variants: `flow: 'row'`. Exports `Grid`, `GridProps`, `gridVariants`. Created 6 contract tests (`Grid.test.tsx`: default element, variant column classes, gap variant, axis-specific gapX/gapY, override-wins, ref forwarding) — all 46 tests pass (6 Grid + 6 Flex + 8 Section + 8 Container + 8 Text + 10 Heading). Updated barrel exports in `packages/ui-v2` and `apps/ui-v2-dev`. Created `primitives/layout/grid.mdx` following Kumo docs structure (Grid Variants, Asymmetric Layouts, Gap Sizes, All Variants reference table, Props, Behavior, Examples) and updated `meta.json`. Type-check green; ui-v2-dev build green; docs build green; `/primitives/layout/grid` in static export (16 pages total). SHA: _to fill in after manual commit_. |
 | 2026-05-11 | refactor | Restructured `packages/ui-v2/src/components/` from flat files to per-component kebab-case folders (inspired by Kumo `delete-resource` pattern). Each component now lives in its own folder with PascalCase files + `index.ts` barrel: `container/`, `flex/`, `grid/`, `section/`, `typography/text/`, `typography/heading/`. Shared `typography-shared.ts` stays at `typography/` level. Updated top-level barrel to import from folder indexes. Updated `package.json` exports (`"./components/*": "./src/components/*/index.ts"`). Consumer imports unchanged (all use `@sndq/ui-v2/components` barrel). All 46 tests pass; type-check green for `@sndq/ui-v2`, `@sndq/docs`. Updated docs AGENTS.md, naming-conventions.mdc, research README + ticket-component-structure, and templates. |
-| | 13     |       |
-|      | 14     |       |
-|      | 15     |       |
+| 2026-05-11 | 13+14 | Standardized and graduated `Button` + `Spinner` to `packages/ui-v2/src/components/button/`. Decomposed all CVA variant class names from opaque `.sndq-btn-*` CSS into individual Tailwind utility classes backed by `@theme` tokens for full `className` override-wins. Added 2 semantic tokens, 2 color aliases, 7 shadow aliases. Removed variant CSS from `components.css` (kept base+sizes for Alert). 8 core variants + 3 briicks aliases. 4 sizes. Co-located `Spinner.tsx` (`lucide-react`). 8 contract tests. Created `primitives/button.mdx`. SHA: _to fill in after manual commit_. |
+| 2026-05-11 | 15 | Standardized Input, Textarea, and Field in `apps/ui-v2-dev` prototype. Created composable `Field.tsx` (shadcn pattern: `Field`, `FieldLabel`, `FieldDescription`, `FieldError`, `FieldContent`, `FieldGroup`, `FieldSet`, `FieldLegend`, `FieldTitle`, `fieldVariants` with CVA orientation variants). No `@base-ui/react` dep -- pure native HTML + `@radix-ui/react-label`. Refactored `Input.tsx`: added `inputVariants()` function, `size` (sm/md/lg) and `variant` (default/error) props, a11y dev warnings, auto-error variant detection. Kept `.sndq-control` / `.sndq-input-wrap` CSS classes (no decomposition yet). Backward-compatible `label`/`helperText`/`error` props internally compose with Field. Refactored `Textarea.tsx`: reuses `inputVariants()` from Input, same size/variant/field-wrapping pattern, kept `maxLength` counter. Added `InputArea` alias. Updated `FormField.tsx` to deprecated wrapper using new Field components. Added `Spinner` re-export to `button/index.ts` barrel (was missing). Type-check + build green; 55 ui-v2 tests pass. SHA: _to fill in after manual commit_. |
+|      | 15a    | **Pending.** Create `InputGroup.tsx` with 6 sub-components (radix-nova pattern adapted for SNDQ). Additive only -- no existing files changed except barrel export. |
+|      | 15a-icon | **Done.** Organized `icons/` folder in `packages/ui-v2` with dual-mode `Icon` component (`icon: IconName \| LucideIcon`). Pre-defined `IconName` strings for ui-v2 internals, direct `LucideIcon` components for consumers. Token-backed CVA sizes (xs/sm/md/lg). Removed `Spinner` -- consumers use `<Icon icon="spinner" />`. Added `package.json` subpath export, re-exports `LucideIcon` type. |
+|      | 15b    | **Pending.** Create `blocks/FormInput.tsx` + `blocks/FormTextarea.tsx` (backward-compatible composed blocks). Additive only. |
+|      | 15c    | **Pending.** Migrate ~57 consumer files from `Input`/`Textarea` with convenience props to `FormInput`/`FormTextarea`. |
+|      | 15d    | **Pending.** Simplify `Input.tsx` (~25 lines) and `Textarea.tsx` (~25 lines) to pure primitives with CVA using `@theme`-backed utilities (`h-sndq-h-sm`, `h-sndq-h`, `h-sndq-h-lg`). |
 |      | 16     |       |
 |      | 17     |       |
 |      | 18     |       |
