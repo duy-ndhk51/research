@@ -50,6 +50,10 @@ Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently 
 
 **Why 1 PR**: Keeps one reviewable narrative for the first graduation batch. Commits stay ordered so you can split later (e.g. commits **1–24** merged first, commit **25** as follow-up) if CI or policy requires it.
 
+### Accessibility (a11y) — temporarily deferred
+
+A11y attributes (`aria-invalid`, `aria-describedby`, `aria-label`, id linking between controls and FieldError/FieldDescription) are **not included** in any current ui-v2 components. This is a deliberate deferral — a11y wiring will be addressed in a dedicated future pass across all primitives and blocks once the component APIs have stabilized.
+
 ### Typography and `@theme` utilities (gradual)
 
 - **Canonical values** live in `packages/config/tailwind/semantic-tokens.css` (`--sndq-text`, `--sndq-text-secondary`, `--sndq-text-xs` … `--sndq-text-7xl`, font stacks). Variant `cva` strings must use these variables (for example `text-[var(--sndq-text-secondary)]` or `text-[length:var(--sndq-text-sm)]`) until a shorter utility exists.
@@ -87,6 +91,18 @@ System-wide rule for every ui-v2 component: **each prop is either semantic OR nu
 ### `className` override-wins guarantee (canonical)
 
 Every component root must compose as **`cn(variantClasses, className)`** so consumer `className` wins on conflicting Tailwind utilities (e.g. `<Flex gap="2" className="gap-8" />` resolves to `gap-8`). Backed by `tailwind-merge` in the shared `cn()` helper. Canonical statement in [layout-system-reference.md §3-ter](./layout-system-reference.md#3-ter-classname-override-wins-guarantee). Tested per the standardization gate below.
+
+### Component group folders
+
+Related components are grouped into parent folders (mirroring the `typography/` pattern):
+
+| Group | Package path | Docs path | Contains |
+|-------|-------------|-----------|----------|
+| **typography** | `packages/ui-v2/src/components/typography/` | `primitives/typography/` | `text/`, `heading/` |
+| **forms** (primitives) | `packages/ui-v2/src/components/forms/` | `primitives/forms/` | `label/`, `field/`, `input/`, `textarea/`, `input-group/` |
+| **forms** (blocks) | `packages/ui-v2/src/components/blocks/forms/` _(future)_ | `blocks/forms/` _(future)_ | `form-input/`, `form-textarea/` |
+
+Each sub-folder has its own `index.ts` barrel. The group folder has a `index.ts` that re-exports all sub-folders. The top `components/index.ts` re-exports each group: `export * from './forms'`.
 
 ### Prerequisites
 
@@ -739,7 +755,7 @@ pnpm --filter @sndq/ui-v2 run test -- --testPathPattern=button
 
 - [x] Gate checklist for Input (initial)
 - [x] Implemented (see execution log)
-- [ ] Committed
+- [x] Committed
 
 ---
 
@@ -777,10 +793,10 @@ NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
 
 **Status**:
 
-- [ ] InputGroup created with 6 sub-components
-- [ ] Barrel export updated
-- [ ] Type-check + build green
-- [ ] Committed
+- [x] InputGroup created with 6 sub-components
+- [x] Barrel export updated
+- [x] Type-check + build green
+- [x] Committed
 
 ---
 
@@ -875,7 +891,7 @@ pnpm --filter @sndq/ui-v2-dev run build
 - [x] Design tokens added (icon sizes in semantic-tokens.css + tokens.css)
 - [x] icons/index.ts re-exports `LucideIcon` type for consumer convenience
 - [x] Type-check + test + build green
-- [ ] Committed
+- [x] Committed
 
 ---
 
@@ -907,11 +923,11 @@ NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
 
 **Status**:
 
-- [ ] FormInput created with backward-compatible API
-- [ ] FormTextarea created with backward-compatible API
-- [ ] Barrel export updated
-- [ ] Type-check + build green
-- [ ] Committed
+- [x] FormInput created with backward-compatible API
+- [x] FormTextarea created with backward-compatible API
+- [x] Barrel export updated
+- [x] Type-check + build green
+- [x] Committed
 
 ---
 
@@ -951,10 +967,10 @@ NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/ui-v2-dev run build
 
 **Status**:
 
-- [ ] All ~57 consumer files updated
-- [ ] Zero files use convenience props on `Input` or `Textarea` directly
-- [ ] Type-check + build green
-- [ ] Committed
+- [x] All ~78 consumer files updated (67 Input->FormInput, 11 Textarea->FormTextarea)
+- [x] Zero files use convenience props on `Input` or `Textarea` directly
+- [x] Type-check + build green
+- [x] Committed
 
 ---
 
@@ -1003,22 +1019,30 @@ pnpm --filter @sndq/ui-v2 run test
 
 **Status**:
 
-- [ ] Input.tsx ~25 lines (pure CVA + `<input>`)
-- [ ] Textarea.tsx ~25 lines (pure CVA + `<textarea>`)
-- [ ] Uses `@theme`-backed height utilities (not `var()`)
-- [ ] Type-check + build + tests green
-- [ ] Committed
+- [x] Input.tsx ~25 lines (pure CVA + `<input>`)
+- [x] Textarea.tsx ~25 lines (pure CVA + `<textarea>`)
+- [x] Uses `@theme`-backed height utilities (not `var()`)
+- [x] Type-check + build + tests green
+- [x] Committed
 
 ---
 
-### Commit 16: Graduate Input + MDX + consumers
+### Commit 16: Graduate Input primitives to package (forms/ group)
 
-**What**: Move to `packages/ui-v2`, export, update apps, add `primitives/input.mdx` + `meta.json`. Graduate the pure `Input`, `Textarea`, `InputGroup`, `Field` components and the `FormInput`/`FormTextarea` blocks.
+**What**: Graduate `Label`, `Field`, `Input`, `Textarea`, `InputGroup` primitives into `packages/ui-v2/src/components/forms/` group folder (mirroring `typography/`). Add contract tests, MDX docs under `primitives/forms/`, and update `ui-v2-dev` barrel to re-export from package. Blocks (FormInput, FormTextarea) deferred to separate commit.
 
-**Commit message**: `feat(ui-v2): graduate Input to package and document`
+**Commit message**: `feat(ui-v2): graduate Input primitives to package (forms/ group)`
 
 **Status**:
 
+- [x] `@radix-ui/react-label` added to `packages/ui-v2/package.json`
+- [x] `forms/` group created with sub-folders: `label/`, `field/`, `input/`, `textarea/`, `input-group/`
+- [x] Contract tests: `Input.test.tsx` (6), `Textarea.test.tsx` (5), `InputGroup.test.tsx` (5)
+- [x] Top barrel updated: `export * from './forms'`
+- [x] `ui-v2-dev` barrel switched to package re-exports
+- [x] MDX docs: `primitives/forms/input.mdx`, `textarea.mdx`, `field.mdx`, `input-group.mdx` + `meta.json`
+- [x] Story files: `input.story.tsx`, client wrappers for all form components
+- [x] Tests (71 pass), ui-v2-dev build, docs build all green
 - [ ] Committed
 
 ---
@@ -1295,10 +1319,10 @@ After Batch 1 merges, open [phase-3-batch-2-execution.md](./phase-3-batch-2-exec
 | 2026-05-11 | 15 | Standardized Input, Textarea, and Field in `apps/ui-v2-dev` prototype. Created composable `Field.tsx` (shadcn pattern: `Field`, `FieldLabel`, `FieldDescription`, `FieldError`, `FieldContent`, `FieldGroup`, `FieldSet`, `FieldLegend`, `FieldTitle`, `fieldVariants` with CVA orientation variants). No `@base-ui/react` dep -- pure native HTML + `@radix-ui/react-label`. Refactored `Input.tsx`: added `inputVariants()` function, `size` (sm/md/lg) and `variant` (default/error) props, a11y dev warnings, auto-error variant detection. Kept `.sndq-control` / `.sndq-input-wrap` CSS classes (no decomposition yet). Backward-compatible `label`/`helperText`/`error` props internally compose with Field. Refactored `Textarea.tsx`: reuses `inputVariants()` from Input, same size/variant/field-wrapping pattern, kept `maxLength` counter. Added `InputArea` alias. Updated `FormField.tsx` to deprecated wrapper using new Field components. Added `Spinner` re-export to `button/index.ts` barrel (was missing). Type-check + build green; 55 ui-v2 tests pass. SHA: _to fill in after manual commit_. |
 |      | 15a    | **Pending.** Create `InputGroup.tsx` with 6 sub-components (radix-nova pattern adapted for SNDQ). Additive only -- no existing files changed except barrel export. |
 |      | 15a-icon | **Done.** Organized `icons/` folder in `packages/ui-v2` with dual-mode `Icon` component (`icon: IconName \| LucideIcon`). Pre-defined `IconName` strings for ui-v2 internals, direct `LucideIcon` components for consumers. Token-backed CVA sizes (xs/sm/md/lg). Removed `Spinner` -- consumers use `<Icon icon="spinner" />`. Added `package.json` subpath export, re-exports `LucideIcon` type. |
-|      | 15b    | **Pending.** Create `blocks/FormInput.tsx` + `blocks/FormTextarea.tsx` (backward-compatible composed blocks). Additive only. |
-|      | 15c    | **Pending.** Migrate ~57 consumer files from `Input`/`Textarea` with convenience props to `FormInput`/`FormTextarea`. |
-|      | 15d    | **Pending.** Simplify `Input.tsx` (~25 lines) and `Textarea.tsx` (~25 lines) to pure primitives with CVA using `@theme`-backed utilities (`h-sndq-h-sm`, `h-sndq-h`, `h-sndq-h-lg`). |
-|      | 16     |       |
+|      | 15b    | **Done.** Created `blocks/FormInput.tsx` + `blocks/FormTextarea.tsx` (backward-compatible composed blocks). `FormInput` composes Field + InputGroup + Input with `DEFAULT_ICONS` map (auto-icons by type), auto-error variant detection, `resolveVariant()` helper, `renderControl()` / `renderBareControl()` / `renderGroupedControl()` render helpers (no inline ternaries). `FormTextarea` composes Field + Textarea with `maxLength` counter, `resolveVariant()` helper, `renderCounter()` helper. Both use `renderFieldFeedback()` for error/helper text rendering. A11y attributes deferred (see project-wide note in Overview). Barrel export updated. Build green. |
+|      | 15c    | **Done.** Migrated ~78 consumer files from `Input`/`Textarea` with convenience props to `FormInput`/`FormTextarea`. 67 files changed `Input` to `FormInput` (particles, forms, sections, tabs, blocks, patterns). 11 files changed `Textarea` to `FormTextarea` (particles, sections, DesignCanvas). Grep validates zero remaining convenience props on bare `Input`/`Textarea`. Build green. |
+|      | 15d    | **Done.** Simplified `Input.tsx` (228 → 40 lines) and `Textarea.tsx` (148 → 46 lines) to pure CVA primitives. Removed all field-wrapping logic, `DEFAULT_ICONS`, `SIZE_CLASSES`, `VARIANT_CLASSES`, render helpers, `Field` imports, and convenience props (`label`, `helperText`, `error`, `leadingIcon`, `trailingAction`, `maxLength` counter). `inputVariants` now a real CVA call with `@theme`-backed height utilities (`h-sndq-h-sm`, `h-sndq-h`, `h-sndq-h-lg`). New `textareaVariants` CVA with `h-auto min-h-[80px] resize-y py-2`. Cleaned up `InputGroup.tsx`: removed stale `Omit` types from `InputGroupInputProps` and `InputGroupTextareaProps`. Removed `leadingIcon={null}` pass-through in `FormInput.renderBareControl`. All exports preserved (`Input`, `inputVariants`, `InputSize`, `InputVariant`, `Textarea`, `InputArea`, `textareaVariants`, `TextareaProps`, `InputAreaProps`). Build green. |
+|      | 16     | **Done.** Graduated Input primitives to `packages/ui-v2/src/components/forms/` group folder (mirroring `typography/`). 5 sub-folders: `label/` (Label + @radix-ui/react-label), `field/` (Field, FieldLabel, FieldDescription, FieldError, FieldGroup, FieldSet, FieldContent, FieldTitle, FieldLegend, fieldVariants), `input/` (Input, inputVariants, InputSize, InputVariant), `textarea/` (Textarea, InputArea, textareaVariants), `input-group/` (InputGroup + 5 sub-components + 3 CVA variant sets). Group barrel `forms/index.ts` re-exports all. Top barrel: `export * from './forms'`. 16 contract tests (Input: 6, Textarea: 5, InputGroup: 5). `ui-v2-dev` barrel switched from `export * from './Field'` etc. to named re-exports from `@sndq/ui-v2/components`. 4 MDX pages under `primitives/forms/` (input, textarea, field, input-group) + `meta.json`. Story files with `'use client'` wrappers for SSR compatibility. 71 tests pass, ui-v2-dev build green, docs build green. Blocks graduation (FormInput, FormTextarea → `blocks/forms/`) deferred. |
 |      | 17     |       |
 |      | 18     |       |
 |      | 19     |       |
