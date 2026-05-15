@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-05-04  
-**Status**: In progress (Commits 1–6b, 7+8, 9+10, 11+12, 13+14 implemented; pending manual commit)  
+**Status**: In progress (Commits 1–6b, 7+8, 9+10, 11+12, 13+14, 15a-icon-docs implemented; pending manual commit)  
 **Architecture**: [README.md](./README.md)  
 **Migration plan**: [migration-plan.md](./migration-plan.md)  
 **Typography reference**: [typography-system-reference.md](./typography-system-reference.md)  
@@ -50,9 +50,11 @@ Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently 
 
 **Why 1 PR**: Keeps one reviewable narrative for the first graduation batch. Commits stay ordered so you can split later (e.g. commits **1–24** merged first, commit **25** as follow-up) if CI or policy requires it.
 
-### Accessibility (a11y) — temporarily deferred
+### Accessibility (a11y) — not currently supported
 
-A11y attributes (`aria-invalid`, `aria-describedby`, `aria-label`, id linking between controls and FieldError/FieldDescription) are **not included** in any current ui-v2 components. This is a deliberate deferral — a11y wiring will be addressed in a dedicated future pass across all primitives and blocks once the component APIs have stabilized.
+A11y is **not a supported feature** in ui-v2 at this time. Non-essential a11y attributes (`aria-label`, `aria-disabled`, `role="status"`) have been removed from components (Button spinner, Label). Functional roles (`role="group"`, `role="alert"`) and semantic HTML (`fieldset`, `legend`) are retained because they affect layout selectors and error behavior, not because they serve an a11y purpose.
+
+Full a11y wiring (`aria-invalid`, `aria-describedby`, id linking between controls and FieldError/FieldDescription) will be addressed in a dedicated future pass across all primitives and blocks once the component APIs have stabilized.
 
 ### Typography and `@theme` utilities (gradual)
 
@@ -102,7 +104,7 @@ Related components are grouped into parent folders (mirroring the `typography/` 
 | **forms** (primitives) | `packages/ui-v2/src/components/forms/` | `primitives/forms/` | `label/`, `field/`, `input/`, `textarea/`, `input-group/` |
 | **forms** (blocks) | `packages/ui-v2/src/components/blocks/forms/` _(future)_ | `blocks/forms/` _(future)_ | `form-input/`, `form-textarea/` |
 
-Each sub-folder has its own `index.ts` barrel. The group folder has a `index.ts` that re-exports all sub-folders. The top `components/index.ts` re-exports each group: `export * from './forms'`.
+Each sub-folder has its own `index.ts` barrel. The group folder has a `index.ts` that re-exports all sub-folders. The top `components/index.ts` re-exports each group: `export * from './forms'`. The **prop-export contract** (exported `*Props` types, compound modules) is defined in [templates/README.md](./templates/README.md) under **Component folder structure**.
 
 ### Prerequisites
 
@@ -895,6 +897,45 @@ pnpm --filter @sndq/ui-v2-dev run build
 
 ---
 
+### Commit 15a-icon-docs: Document Icon component (MDX + Story)
+
+**What**: Add MDX docs page, Fumadocs Story playground, and sidebar entry for the `Icon` component graduated in commit 15a-icon. Follows Template A from `docs-templates.md`. Covers dual-mode `icon` prop (`IconName | LucideIcon`), CVA size variants (xs/sm/md/lg), token reference, iconMap registry, override-wins guarantee, and accessibility guidance.
+
+**Files created**:
+
+- `apps/docs/content/docs/primitives/icon.mdx` — full Template A page with inline live JSX demos (sizes, dual-mode, colors, override-wins, spinner, flex row).
+- `apps/docs/src/stories/Icon.story.tsx` — Fumadocs Story with `pickProps(['icon', 'size'])`.
+- `apps/docs/src/stories/components/Icon.tsx` — `'use client'` re-export wrapper.
+
+**Files edited**:
+
+- `apps/docs/content/docs/primitives/meta.json` — added `icon` to `pages` (order: `index`, `layout`, `typography`, `button`, `icon`, `forms`).
+
+**Verification** (run from repo root):
+
+```bash
+pnpm --filter @sndq/docs run generate:source
+pnpm --filter @sndq/docs run type-check
+NODE_OPTIONS='--max-old-space-size=8192' pnpm --filter @sndq/docs run build
+pnpm --filter @sndq/ui-v2 run test -- --testPathPattern=Icon
+```
+
+All four commands exit `0` on `2026-05-14`. The new `/primitives/icon` route is included in the docs static export (22 pages total). All 101 tests pass (10 Icon).
+
+**Commit message**: `docs(ui-v2): add Icon component docs page and Story`
+
+**Status**:
+
+- [x] MDX docs page renders (`/primitives/icon` in route table)
+- [x] Story playground works with curated `icon` and `size` controls
+- [x] `meta.json` updated (sidebar shows Icon between Button and Forms)
+- [x] Type-check green for `@sndq/docs`
+- [x] Build green for `@sndq/docs` (22 pages)
+- [x] Tests green (101/101, 10 Icon)
+- [x] Committed *(manual)*
+
+---
+
 ### Commit 15b: Create FormInput + FormTextarea blocks (additive)
 
 **What**: Create backward-compatible composed block components. These are purely additive -- existing consumer code continues to work unchanged.
@@ -1043,7 +1084,9 @@ pnpm --filter @sndq/ui-v2 run test
 - [x] MDX docs: `primitives/forms/input.mdx`, `textarea.mdx`, `field.mdx`, `input-group.mdx` + `meta.json`
 - [x] Story files: `input.story.tsx`, client wrappers for all form components
 - [x] Tests (71 pass), ui-v2-dev build, docs build all green
-- [ ] Committed
+- [x] `Label` and `Field` folder barrels export all public `*Props` types from `Label.tsx` / `Field.tsx`
+- [x] `apps/ui-v2-dev` barrel re-exports `Label` / `Field` prop types alongside values (parity with `Input` / `Textarea`)
+- [x] Committed
 
 ---
 
@@ -1062,8 +1105,8 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 **Status**:
 
-- [ ] Gate checklist for Badge
-- [ ] Committed
+- [x] Gate checklist for Badge
+- [x] Committed
 
 ---
 
@@ -1073,7 +1116,15 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 **Status**:
 
-- [ ] Committed
+- [x] `Badge` lives in package; prototype re-exports from `@sndq/ui-v2/components`
+- [x] Contract tests (5/5 Badge, 106/106 total)
+- [x] MDX docs page `primitives/badge.mdx` renders (static build green; `/primitives/badge` in route table)
+- [x] Story playground with `variant` and `children` controls
+- [x] `meta.json` updated (sidebar shows Badge between Icon and Forms)
+- [x] `index.mdx` updated (Badge listed under Interactive section)
+- [x] Type-check green for `@sndq/ui-v2`, `@sndq/ui-v2-dev`, `@sndq/docs`
+- [x] Build green for `@sndq/ui-v2-dev`, `@sndq/docs`
+- [x] Committed
 
 ---
 
@@ -1319,12 +1370,13 @@ After Batch 1 merges, open [phase-3-batch-2-execution.md](./phase-3-batch-2-exec
 | 2026-05-11 | 15 | Standardized Input, Textarea, and Field in `apps/ui-v2-dev` prototype. Created composable `Field.tsx` (shadcn pattern: `Field`, `FieldLabel`, `FieldDescription`, `FieldError`, `FieldContent`, `FieldGroup`, `FieldSet`, `FieldLegend`, `FieldTitle`, `fieldVariants` with CVA orientation variants). No `@base-ui/react` dep -- pure native HTML + `@radix-ui/react-label`. Refactored `Input.tsx`: added `inputVariants()` function, `size` (sm/md/lg) and `variant` (default/error) props, a11y dev warnings, auto-error variant detection. Kept `.sndq-control` / `.sndq-input-wrap` CSS classes (no decomposition yet). Backward-compatible `label`/`helperText`/`error` props internally compose with Field. Refactored `Textarea.tsx`: reuses `inputVariants()` from Input, same size/variant/field-wrapping pattern, kept `maxLength` counter. Added `InputArea` alias. Updated `FormField.tsx` to deprecated wrapper using new Field components. Added `Spinner` re-export to `button/index.ts` barrel (was missing). Type-check + build green; 55 ui-v2 tests pass. SHA: _to fill in after manual commit_. |
 |      | 15a    | **Pending.** Create `InputGroup.tsx` with 6 sub-components (radix-nova pattern adapted for SNDQ). Additive only -- no existing files changed except barrel export. |
 |      | 15a-icon | **Done.** Organized `icons/` folder in `packages/ui-v2` with dual-mode `Icon` component (`icon: IconName \| LucideIcon`). Pre-defined `IconName` strings for ui-v2 internals, direct `LucideIcon` components for consumers. Token-backed CVA sizes (xs/sm/md/lg). Removed `Spinner` -- consumers use `<Icon icon="spinner" />`. Added `package.json` subpath export, re-exports `LucideIcon` type. |
+| 2026-05-14 | 15a-icon-docs | **Done.** Added MDX docs page `primitives/icon.mdx` (Template A with inline live JSX demos: sizes, dual-mode, colors, override-wins, spinner, flex row). Created `Icon.story.tsx` + `components/Icon.tsx` client wrapper for Fumadocs Story playground (curated controls: `icon`, `size`). Updated `primitives/meta.json` (added `icon` between `button` and `forms`). Docs type-check + build green (22 pages, `/primitives/icon` in static export). All 101 tests pass (10 Icon). |
 |      | 15b    | **Done.** Created `blocks/FormInput.tsx` + `blocks/FormTextarea.tsx` (backward-compatible composed blocks). `FormInput` composes Field + InputGroup + Input with `DEFAULT_ICONS` map (auto-icons by type), auto-error variant detection, `resolveVariant()` helper, `renderControl()` / `renderBareControl()` / `renderGroupedControl()` render helpers (no inline ternaries). `FormTextarea` composes Field + Textarea with `maxLength` counter, `resolveVariant()` helper, `renderCounter()` helper. Both use `renderFieldFeedback()` for error/helper text rendering. A11y attributes deferred (see project-wide note in Overview). Barrel export updated. Build green. |
 |      | 15c    | **Done.** Migrated ~78 consumer files from `Input`/`Textarea` with convenience props to `FormInput`/`FormTextarea`. 67 files changed `Input` to `FormInput` (particles, forms, sections, tabs, blocks, patterns). 11 files changed `Textarea` to `FormTextarea` (particles, sections, DesignCanvas). Grep validates zero remaining convenience props on bare `Input`/`Textarea`. Build green. |
 |      | 15d    | **Done.** Simplified `Input.tsx` (228 → 40 lines) and `Textarea.tsx` (148 → 46 lines) to pure CVA primitives. Removed all field-wrapping logic, `DEFAULT_ICONS`, `SIZE_CLASSES`, `VARIANT_CLASSES`, render helpers, `Field` imports, and convenience props (`label`, `helperText`, `error`, `leadingIcon`, `trailingAction`, `maxLength` counter). `inputVariants` now a real CVA call with `@theme`-backed height utilities (`h-sndq-h-sm`, `h-sndq-h`, `h-sndq-h-lg`). New `textareaVariants` CVA with `h-auto min-h-[80px] resize-y py-2`. Cleaned up `InputGroup.tsx`: removed stale `Omit` types from `InputGroupInputProps` and `InputGroupTextareaProps`. Removed `leadingIcon={null}` pass-through in `FormInput.renderBareControl`. All exports preserved (`Input`, `inputVariants`, `InputSize`, `InputVariant`, `Textarea`, `InputArea`, `textareaVariants`, `TextareaProps`, `InputAreaProps`). Build green. |
 |      | 16     | **Done.** Graduated Input primitives to `packages/ui-v2/src/components/forms/` group folder (mirroring `typography/`). 5 sub-folders: `label/` (Label + @radix-ui/react-label), `field/` (Field, FieldLabel, FieldDescription, FieldError, FieldGroup, FieldSet, FieldContent, FieldTitle, FieldLegend, fieldVariants), `input/` (Input, inputVariants, InputSize, InputVariant), `textarea/` (Textarea, InputArea, textareaVariants), `input-group/` (InputGroup + 5 sub-components + 3 CVA variant sets). Group barrel `forms/index.ts` re-exports all. Top barrel: `export * from './forms'`. 16 contract tests (Input: 6, Textarea: 5, InputGroup: 5). `ui-v2-dev` barrel switched from `export * from './Field'` etc. to named re-exports from `@sndq/ui-v2/components`. 4 MDX pages under `primitives/forms/` (input, textarea, field, input-group) + `meta.json`. Story files with `'use client'` wrappers for SSR compatibility. 71 tests pass, ui-v2-dev build green, docs build green. Blocks graduation (FormInput, FormTextarea → `blocks/forms/`) deferred. |
-|      | 17     |       |
-|      | 18     |       |
+|      | 17     | **Done.** Standardized `Badge` in prototype (`apps/ui-v2-dev/src/components/ui-v2/Badge.tsx`). Replaced raw `--color-*` variables with semantic `@theme`-backed tokens: `neutral` → `bg-sndq-surface-muted text-sndq-text-secondary`, `brand` → `bg-sndq-action-subtle text-sndq-action-text`, `success/warning/error` → `bg-sndq-{status}-bg text-sndq-{status}-text`. CVA base class switched from hardcoded utilities to `.sndq-badge` (from `components.css`). Added `React.forwardRef`, `data-slot="badge"`, `BadgeVariant` type export. No new tokens needed — all semantic tokens and `@theme` aliases pre-exist. Created `Badge.test.tsx` with 5 contract tests (default render + data-slot, variant classes with token assertions, default variant, override-wins, ref forwarding). Lint + build green. SHA: _to fill in after manual commit_. |
+|      | 18     | **Done.** Graduated `Badge` to `packages/ui-v2/src/components/badge/` (Badge.tsx, Badge.test.tsx, index.ts). Only change from prototype: `cn` import path (`@/lib/utils` → `../../lib/utils`). Added `export * from './badge'` to package barrel. Updated `ui-v2-dev` barrel: replaced `export * from './Badge'` with named re-exports from `@sndq/ui-v2/components` (`Badge`, `badgeVariants`, `BadgeProps`, `BadgeVariant`). Local `Badge.tsx` and `Badge.test.tsx` remain on disk in prototype. Created `primitives/badge.mdx` (playground, 5-variant demo, overview, when to use, variant token table, override-wins examples, API table, related components). Created `Badge.story.tsx` + `components/Badge.tsx` client wrapper. Updated `meta.json` (added `badge` after `icon`). Updated `index.mdx` (Badge listed under Interactive). No client wrapper strictly needed (Badge is a `<span>` with no event handlers) but created for consistency. 106 tests pass (5 Badge). ui-v2-dev build green. Docs build green (23 pages). SHA: _to fill in after manual commit_. |
 |      | 19     |       |
 |      | 20     |       |
 |      | 21     |       |

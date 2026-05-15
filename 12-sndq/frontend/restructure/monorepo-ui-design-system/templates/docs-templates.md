@@ -81,7 +81,7 @@ export function Example() {
 >
 > This is a usage sandbox with **curated controls**, not exhaustive testing.
 
-import { story } from '@/stories/{component-slug}.story';
+import { story } from '@/stories/{ComponentName}.story';
 
 <div className="border-sndq-border rounded-md border p-4">
   <story.WithControl />
@@ -110,18 +110,7 @@ import { story } from '@/stories/{component-slug}.story';
 
 {State explicitly where `className` applies (root? content? trigger?) and whether it overrides defaults.}
 
-## Accessibility
-
-### Keyboard support
-
-- **Tab**: {…}
-- **Enter/Space**: {…}
-- **Arrow keys**: {…}
-- **Escape**: {…}
-
-### Screen reader notes
-
-{ARIA attributes, labelling requirements, common pitfalls.}
+{/* A11y: not supported in ui-v2. Do not add an Accessibility section until the dedicated a11y pass. */}
 
 ## Composition
 
@@ -177,7 +166,7 @@ Use the following composition to build `{ComponentName}`:
 > - Controls MUST be curated to the **main props only** (`pickProps` from `apps/docs/src/lib/story-pick-props.ts`; see `apps/docs/AGENTS.md`).
 > - **One playground per page**.
 
-import { story } from '@/stories/{component-slug}.story';
+import { story } from '@/stories/{ComponentName}.story';
 
 <div className="border-sndq-border rounded-md border p-4">
   <story.WithControl />
@@ -294,15 +283,13 @@ export function Example() {
 > Only add a playground if the block has a small, meaningful set of props to tweak.
 > Controls MUST be curated to the **main props only**. **One playground per page**.
 
-import { story } from '@/stories/{block-slug}.story';
+import { story } from '@/stories/{BlockName}.story';
 
 <div className="border-sndq-border rounded-md border p-4">
   <story.WithControl />
 </div>
 
-## Accessibility
-
-{Only what differs from the underlying primitives; link to primitives otherwise.}
+{/* A11y: not supported in ui-v2. Do not add an Accessibility section until the dedicated a11y pass. */}
 
 ## Edge cases
 
@@ -367,15 +354,15 @@ This template defines the backing story for a docs page `<story.WithControl />` 
 
 ### Files (standard locations)
 
-- `apps/docs/src/stories/{slug}.story.tsx`
-- `apps/docs/src/stories/components/{slug}.tsx` (client wrapper)
+- `apps/docs/src/stories/{ComponentName}.story.tsx`
+- `apps/docs/src/stories/components/{ComponentName}.tsx` (client wrapper)
 
 ### Story file
 
 ```tsx
 import { defineStory } from '@/lib/story';
 import { pickProps } from '@/lib/story-pick-props';
-import { {ComponentName} } from './components/{slug}';
+import { {ComponentName} } from './components/{ComponentName}';
 
 const VISIBLE_PROPS = [
   // Curate to the “main” props only. Keep this list short.

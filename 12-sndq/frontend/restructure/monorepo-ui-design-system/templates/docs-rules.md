@@ -97,7 +97,6 @@ Use the templates in [`docs-templates.md`](./docs-templates.md).
 - **Usage**: minimal example with correct imports
 - **Props**: at least the non-obvious props; do not document trivial `className` repeatedly unless it has special meaning
 - **Styling**: tokens and/or CSS variables + className contract
-- **Accessibility**: keyboard + SR notes, or explicitly “inherits X behavior from Y”
 - **Examples**: 2–6 examples showing real use cases, each with a rendered visual demo above the code fence
 - **Playground**: Fumadocs Story playground with curated controls (required for Tier 1 primitives)
 - **RTL**: only if supported; otherwise explicitly say “Not supported”
@@ -112,7 +111,6 @@ Use the templates in [`docs-templates.md`](./docs-templates.md).
 - **Props**
 - **Customization**: what is safe/expected to override
 - **Examples**: include empty/loading where relevant
-- **Accessibility**: only what differs from primitives; link out otherwise
 - **Related**
 
 ---
@@ -167,19 +165,9 @@ If demonstrating a realistic state, use inline mock data.
 
 ---
 
-## 8. Accessibility rules (minimum bar)
+## 8. Accessibility (not currently supported)
 
-Every component/block page must either:
-
-- document keyboard + SR behavior directly, OR
-- explicitly delegate to a dependency (“This matches Radix X, see link”) AND list any **local deviations**.
-
-If the component has any of these, document them explicitly:
-
-- focus trapping / restoring focus
-- `aria-*` requirements
-- `label` / `id` pairing requirements
-- “asChild/render prop” semantics that can break roles
+A11y is not supported in ui-v2 at this time. **Do not add an Accessibility section** to component or block pages until the dedicated a11y pass. When that pass happens, revisit this section for the minimum bar.
 
 ---
 
@@ -246,7 +234,6 @@ A component/block doc is “done” when:
 - Usage snippet compiles in a typical SNDQ app
 - Non-obvious props are documented
 - Styling contract is documented
-- Accessibility section is present (direct or delegated)
 - At least 2 examples exist
 - Related links are present
 

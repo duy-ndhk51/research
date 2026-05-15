@@ -31,7 +31,9 @@ components/
 
 - **Folder**: kebab-case (e.g., `date-picker/`, `combo-button/`)
 - **Component file**: PascalCase (e.g., `DatePicker.tsx`)
-- **Barrel**: every folder has an `index.ts` that re-exports the public API (component, variants, types)
+- **Barrel**: every folder has an `index.ts` that re-exports the full public API: runtime exports (components, `*Variants` helpers) **and** all public TypeScript types. This is **required**, not optional.
+- **Prop types**: every exported component must have a corresponding exported `*Props` type (and any extra public types such as size or variant unions) defined in the PascalCase source file and re-exported from `index.ts`. Legacy `sndq-fe` deprecation lines use `type ButtonProps`-style re-exports only when the package already exports those types.
+- **Compound modules**: when one file exports multiple components (for example `Field` and `FieldLabel`), ship **one `*Props` type per exported component** with names aligned to the component (`FieldLabelProps`, not a shared generic name).
 - **Tests**: co-located inside the component folder
 - **Groups**: related components share a parent folder with shared utilities at the group level (e.g., `typography/text/`, `typography/heading/`, `typography/typography-shared.ts`)
 - **Top barrel**: `components/index.ts` re-exports from folder indexes (`export * from './container'`)

@@ -333,13 +333,14 @@ See [phase-3-batch-0-execution.md](./phase-3-batch-0-execution.md) for step-by-s
 1. Standardize in apps/ui-v2-dev/
    - Props audit: define stable interfaces, add JSDoc
    - Ensure extensibility (className forwarding, ref forwarding, asChild where appropriate)
-   - Unit tests: rendering, minimal variant coverage, accessibility, keyboard interaction (see [ui-v2 test templates](./templates/tests/ui-v2-test-templates.md))
+   - Unit tests: rendering, minimal variant coverage, keyboard interaction (see [ui-v2 test templates](./templates/tests/ui-v2-test-templates.md)). Note: a11y testing is deferred to a future pass.
    - Storybook/playground pages stay in apps/ui-v2-dev/
 
 2. Graduate to packages/ui-v2/
    - Move component files from apps/ui-v2-dev/src/components/ui-v2/ to packages/ui-v2/src/components/
    - Move block files to packages/ui-v2/src/blocks/
    - Add to barrel exports (src/components/index.ts or src/blocks/index.ts)
+   - Export public `*Props` types (and related unions) from each component module and its folder `index.ts` (required for `@sndq/ui-v2/components` and for `type` re-exports in legacy deprecations)
    - Update imports in apps/ui-v2-dev/ and apps/docs/ to use @sndq/ui-v2/components
 
 3. Deprecate legacy counterparts
@@ -372,6 +373,8 @@ export { Button, buttonVariants, type ButtonProps } from './button';
 export { ComboButton, type ComboButtonProps } from './combo-button';
 ```
 
+**Types and deprecations**: re-exporting `type ButtonProps` from `sndq-fe` depends on `@sndq/ui-v2` exporting `ButtonProps` from the package barrel first; add package `export type` surface before adding `type` clauses to legacy barrels.
+
 ```typescript
 // sndq-fe/src/components/ui/dialog.tsx
 
@@ -384,6 +387,7 @@ export { Dialog, DialogContent, DialogHeader, DialogFooter, ... };
 A component is ready to graduate when it has:
 
 - [ ] Stable prop interface with **minimal** JSDoc on public props (API essentials only)
+- [ ] Exported public TypeScript API: each component has `*Props` (and related types such as size or variant unions where applicable) exported from the implementation file and the folder `index.ts` barrel
 - [ ] `className` forwarding via `cn()` for style overrides
 - [ ] `ref` forwarding where applicable
 - [ ] Unit tests covering all variants and key interactions
