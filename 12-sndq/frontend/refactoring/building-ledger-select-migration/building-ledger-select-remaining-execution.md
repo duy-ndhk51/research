@@ -3,7 +3,7 @@
 Step-by-step execution guide for replacing all remaining `AccountingLedgerSelectV2` usages with `BuildingLedgerSelect`. Each commit should be independently verifiable and revertable.
 
 **Created**: 2026-05-15
-**Updated**: 2026-05-16 (re-prioritized: purchase-invoice API-ready first, BE-blocked last)
+**Updated**: 2026-05-17 (updated diffs for refactored BuildingLedgerSelect discriminated union value type)
 **Status**: In progress
 **Branch**: `feat/SQ-21333` (continue from prior fallback + v2 form migration)
 
@@ -46,12 +46,13 @@ Commits are ordered by priority based on the [API compatibility report](./buildi
 ### Prerequisites
 
 - BuildingLedgerSelect fallback + v2/v3 form migration is complete (commits 1-4 from prior execution)
-- `BuildingLedgerSelect` has the 3-tier fallback: building options → `selectedCostAccount` → `useMotherLedgerOptions`
+- `BuildingLedgerSelect` uses a **discriminated union** value type: `BuildingLedgerSelectValue = { kind: 'id', id: string } | { kind: 'full', ...CostAccountData }`
+- The 3-tier fallback resolves options: building options → full `CostAccountData` (inline fallback) → `useMotherLedgerOptions` (API fallback)
 - All 771 purchase-invoice tests passing
 
 ### Known constraints
 
-- All remaining usages pass **plain string IDs** (not `costAccount` objects), so they all rely on Priority 2 (`useMotherLedgerOptions` fallback)
+- All remaining usages pass **plain string IDs** (not `costAccount` objects), so value must be wrapped as `{ kind: 'id', id: stringValue }` and they rely on Priority 2 (`useMotherLedgerOptions` fallback)
 - 4 files need `buildingId` threaded from a parent — prop additions are required
 - `SupplierInvoiceSheet` needs 2 levels of threading (`FiscalYearSetupForm` → `SupplierStep` → `SupplierInvoiceSheet`)
 - Commits 6-7 are **blocked on BE API changes**:
@@ -130,7 +131,7 @@ Usage A (bulk, ~line 156):
 + {buildingId && (
 +   <BuildingLedgerSelect
 +     buildingId={buildingId}
-+     value={bulkLedger.value}
++     value={bulkLedger.value ? { kind: 'id', id: bulkLedger.value } : undefined}
 +     onChange={(ledger) => onGroupLedgerChange(allLineIds, ledger)}
 +     placeholder={bulkLedger.isMixed ? mixedLabel : undefined}
 +     error={amounts.some((a) => !a.motherId)}
@@ -138,7 +139,7 @@ Usage A (bulk, ~line 156):
 + )}
 ```
 
-Usage B (per line, by-VAT view, ~line 214):
+Usage B (per line, by-VAT view, ~line 214) — uses `kind: 'full'` when `costAccount` data is available:
 ```diff
 - <AccountingLedgerSelectV2
 -   value={amount.motherId}
@@ -148,14 +149,14 @@ Usage B (per line, by-VAT view, ~line 214):
 + {buildingId && (
 +   <BuildingLedgerSelect
 +     buildingId={buildingId}
-+     value={amount.motherId}
++     value={amount.costAccount ? { kind: 'full', ...amount.costAccount } : undefined}
 +     onChange={(ledger) => onLedgerChange(index, ledger)}
 +     error={!amount.motherId}
 +   />
 + )}
 ```
 
-Usage C (per line, individual view, ~line 259):
+Usage C (per line, individual view, ~line 259) — same `kind: 'full'` pattern:
 ```diff
 - <AccountingLedgerSelectV2
 -   value={amount.motherId}
@@ -165,14 +166,14 @@ Usage C (per line, individual view, ~line 259):
 + {buildingId && (
 +   <BuildingLedgerSelect
 +     buildingId={buildingId}
-+     value={amount.motherId}
++     value={amount.costAccount ? { kind: 'full', ...amount.costAccount } : undefined}
 +     onChange={(ledger) => onLedgerChange(index, ledger)}
 +     error={!amount.motherId}
 +   />
 + )}
 ```
 
-Note: `BuildingLedgerSelect` needs `error` prop added to its interface (currently not supported). Check if `AccountingLedgerSelectBase` supports it — if yes, thread it through. If not, omit `error` for now and document as deviation.
+Note: `BuildingLedgerSelect` supports `error?: boolean` prop (threaded through `AccountingLedgerSelectBase`). The `value` prop uses the discriminated union `BuildingLedgerSelectValue`: `{ kind: 'id', id }` for plain IDs (triggers mother-options fallback), `{ kind: 'full', ...CostAccountData }` for rich data (creates inline fallback option).
 
 **Quality gate checklist**:
 
@@ -242,22 +243,20 @@ cd sndq-fe && pnpm tsc --noEmit 2>&1 | head -30
     onUpdateCostCategory: ...;
   }) {
     ...
+    ...
+    if (!buildingId) return null;
     return (
 -     <AccountingLedgerSelectV2
 -       value={bulkValue.value}
 -       onChange={(ledger) => onUpdateLedger(costIds, ledger)}
 -       placeholder={bulkValue.isMixed ? mixedLabel : undefined}
 -     />
-+     <>
-+       {buildingId && (
-+         <BuildingLedgerSelect
-+           buildingId={buildingId}
-+           value={bulkValue.value}
-+           onChange={(ledger) => onUpdateLedger(costIds, ledger)}
-+           placeholder={bulkValue.isMixed ? mixedLabel : undefined}
-+         />
-+       )}
-+     </>
++     <BuildingLedgerSelect
++       buildingId={buildingId}
++       value={bulkValue.value ? { kind: 'id', id: bulkValue.value } : undefined}
++       onChange={(ledger) => onUpdateLedger(costIds, ledger)}
++       placeholder={bulkValue.isMixed ? mixedLabel : undefined}
++     />
     );
 ```
 
@@ -339,11 +338,13 @@ cd sndq-fe && pnpm tsc --noEmit 2>&1 | head -30
 + {buildingId && (
 +   <BuildingLedgerSelect
 +     buildingId={buildingId}
-+     value={selectedLedger}
++     value={selectedLedger ? { kind: 'full', ...selectedLedger } : undefined}
 +     onChange={handleLedgerChange}
 +   />
 + )}
 ```
+
+Note: `selectedLedger` is a `LedgerSelectOnChangeValue` built from `buildSelectedLedger(allocationCost)`, which provides `id`, `type`, `name`, `code` — compatible with `kind: 'full'` spread.
 
 **Change detail — PurchaseInvoiceCostAllocation.tsx** (~line 171):
 
@@ -421,11 +422,13 @@ cd sndq-fe && pnpm tsc --noEmit 2>&1 | head -30
 + {buildingId && (
 +   <BuildingLedgerSelect
 +     buildingId={buildingId}
-+     value={selectedLedger}
++     value={selectedLedger ? { kind: 'full', ...selectedLedger } : undefined}
 +     onChange={handleLedgerChange}
 +   />
 + )}
 ```
+
+Note: Same `kind: 'full'` pattern as Commit 3 — `selectedLedger` is built from `buildSelectedLedger(allocationCost)`.
 
 **Change detail — PurchaseInvoiceDetailFloatingSheet.tsx** (~line 538):
 
@@ -534,6 +537,7 @@ cd sndq-fe && pnpm tsc --noEmit 2>&1 | head -30
 ```diff
 - import AccountingLedgerSelectV2 from '@/modules/financial/forms/purchase-invoice-v2/components/amount-section/AccountingLedgerSelectV2';
 + import BuildingLedgerSelect from '@/modules/financial/forms/purchase-invoice-v2/components/amount-section/BuildingLedgerSelect';
++ import type { LedgerSelectOnChangeValue } from '@/modules/financial/forms/purchase-invoice-v2/components/amount-section/AccountingLedgerSelectBase';
 
   interface SupplierInvoiceSheetProps {
     isOpen: boolean;
@@ -544,16 +548,28 @@ cd sndq-fe && pnpm tsc --noEmit 2>&1 | head -30
 +   buildingId: string;
   }
 
+  // Update handler type signature:
+  const handleLedgerChange = (
+-   ledger: { id: string; name: string } | undefined,
++   ledger: LedgerSelectOnChangeValue | undefined,
+  ) => {
+    setValue('motherId', ledger?.id || '', { shouldValidate: true });
+    setValue('motherName', ledger?.name || '', { shouldValidate: true });
+  };
+
+  // JSX (~line 266):
 - <AccountingLedgerSelectV2
 -   value={watch('motherId')}
 -   onChange={handleLedgerChange}
 - />
 + <BuildingLedgerSelect
 +   buildingId={buildingId}
-+   value={watch('motherId')}
++   value={watch('motherId') ? { kind: 'id', id: watch('motherId') } : undefined}
 +   onChange={handleLedgerChange}
 + />
 ```
+
+Note: No `buildingId &&` guard needed — `buildingId` is a required `string` prop (always available from URL params via `FiscalYearSetupForm`). Uses `kind: 'id'` since only `motherId` (plain string) is stored in the form schema.
 
 **Quality gate checklist**:
 
@@ -614,14 +630,14 @@ cd sndq-fe && pnpm tsc --noEmit 2>&1 | head -30
 - />
 + <BuildingLedgerSelect
 +   buildingId={buildingId}
-+   value={accountingMotherId}
-+   onChange={(mother) =>
-+     setValue('accountingMotherId', mother?.id)
++   value={accountingMotherId ? { kind: 'id', id: accountingMotherId } : undefined}
++   onChange={(ledger) =>
++     setValue('accountingMotherId', ledger?.id)
 +   }
 + />
 ```
 
-`buildingId` is available as a prop on `AddBuildingSupplierSheetContent` (line 41, type `string`). No guard needed since it's required.
+`buildingId` is available as a prop on `AddBuildingSupplierSheetContent` (line 48, type `string`). No guard needed since it's required. Uses `kind: 'id'` since only the `accountingMotherId` string is stored in form state.
 
 **Quality gate checklist**:
 
@@ -662,20 +678,57 @@ cd sndq-fe && pnpm tsc --noEmit 2>&1 | head -30
 
 > **BLOCKED**: This commit requires a BE change to `OpeningDataSetupSupplierInvoiceEntryDto` to add `ledgerId` support. See [API compatibility report](./building-ledger-select-api-compatibility-report.md) section 2.2 and Recommended BE Feature Request #2.
 
-**What**: Direct swap — `buildingId` is already a prop (string, required).
+**What**: Thread `buildingId` from `SupplierFloatingSheetContent` to `InvoiceEntrySubSheetContent` (internal child component in same file), then swap the select.
 
 **API status**: `PATCH /opening-data-setup/buildings/:id` only accepts `accountingMotherId`. **Does NOT support `ledgerId`**. BE must add `ledgerId` field to `OpeningDataSetupSupplierInvoiceEntryDto` before this migration is safe.
 
 **Files to edit**:
 
-- `sndq-fe/src/modules/financial/forms/opening-data-setup/sheets/SupplierFloatingSheetContent.tsx` — Replace import and JSX
+- `sndq-fe/src/modules/financial/forms/opening-data-setup/sheets/SupplierFloatingSheetContent.tsx` — Replace import, thread `buildingId` to `InvoiceEntrySubSheetContent`, and swap JSX
 
 **Change detail**:
 
 ```diff
 - import AccountingLedgerSelectV2 from '@/modules/financial/forms/purchase-invoice-v2/components/amount-section/AccountingLedgerSelectV2';
 + import BuildingLedgerSelect from '@/modules/financial/forms/purchase-invoice-v2/components/amount-section/BuildingLedgerSelect';
+```
 
+Thread `buildingId` to `InvoiceEntrySubSheetContent` (~line 208):
+```diff
+  <InvoiceEntrySubSheetContent
+    defaultAmount={Math.abs(remaining)}
+    accountingYearFromDate={firstYear?.fromDate}
+    accountingYearToDate={firstYear?.toDate}
+    initialData={editingIndex !== null ? invoiceEntries[editingIndex] : undefined}
+    onSave={handleSaveInvoiceEntry}
+    onClose={closeSubSheet}
++   buildingId={buildingId}
+  />
+```
+
+Add `buildingId` prop to `InvoiceEntrySubSheetContent` (~line 582):
+```diff
+  function InvoiceEntrySubSheetContent({
+    defaultAmount,
+    accountingYearFromDate,
+    accountingYearToDate,
+    initialData,
+    onSave,
+    onClose,
++   buildingId,
+  }: {
+    defaultAmount: number;
+    accountingYearFromDate?: string;
+    accountingYearToDate?: string;
+    initialData?: SupplierInvoiceEntryFormData;
+    onSave: (entry: SupplierInvoiceEntryFormData) => void;
+    onClose: () => void;
++   buildingId: string;
+  })
+```
+
+Swap the select in `InvoiceEntrySubSheetContent` (~line 731):
+```diff
   <Controller
     name="accountingMotherId"
     control={methods.control}
@@ -691,14 +744,16 @@ cd sndq-fe && pnpm tsc --noEmit 2>&1 | head -30
 -       />
 +       <BuildingLedgerSelect
 +         buildingId={buildingId}
-+         value={field.value}
-+         onChange={(mother) => field.onChange(mother?.id ?? '')}
++         value={field.value ? { kind: 'id', id: field.value } : undefined}
++         onChange={(ledger) => field.onChange(ledger?.id ?? '')}
 +         placeholder={t('general.select')}
 +       />
       </FormField>
     )}
   />
 ```
+
+Note: `buildingId` is already a required prop on `SupplierFloatingSheetContent` (line 63, type `string`). The `InvoiceEntrySubSheetContent` is a private function component in the same file, so the threading is straightforward. Uses `kind: 'id'` since only `accountingMotherId` string is stored.
 
 **Quality gate checklist**:
 
@@ -841,12 +896,16 @@ After this migration is merged, `AccountingLedgerSelectV2` has zero consumers an
 
 - The `useMotherLedgerOptions` fallback with `needsMotherFallback` gate pattern works reliably for all existing data
 - Threading `buildingId` from parent components is straightforward when the parent already has it — the challenge is identifying where it lives
-- Components that only store plain string IDs (not `costAccount` objects) work via Priority 2 fallback without any caller changes
+- The discriminated union value type (`BuildingLedgerSelectValue`) cleanly separates two usage patterns:
+  - `{ kind: 'id', id }` — for consumers that only store a plain string ID (triggers `useMotherLedgerOptions` fallback if not found in building options)
+  - `{ kind: 'full', id, type, code?, name?, parentMotherName? }` — for consumers with rich `CostAccountData` or `LedgerSelectOnChangeValue` (creates inline fallback option without an API call)
+- The `kind` discriminator prevents ambiguity: previously it was unclear whether a plain string was a ledger ID, mother ID, or something else
 
 ### Known lessons from prior phases
 
 - `BuildingLedgerSelect` needs `buildingId &&` guard whenever `buildingId` can be `null | undefined`
 - The `needsMotherFallback` flag prevents unnecessary API calls when building options already contain the match
+- When converting `LedgerSelectOnChangeValue` (from `buildSelectedLedger`) to `BuildingLedgerSelectValue`, spread with `kind: 'full'`: `selectedLedger ? { kind: 'full', ...selectedLedger } : undefined`
 
 ---
 
@@ -854,10 +913,10 @@ After this migration is merged, `AccountingLedgerSelectV2` has zero consumers an
 
 | Date | Commit | Notes |
 |------|--------|-------|
-| | 1 | |
-| | 2 | |
-| | 3 | |
-| | 4 | |
+| 2026-05-16 | 1 | Done. Replaced 3 usages in AmountsAllocationSection. No new TS errors (pre-existing `motherId` errors from costAccount refactor). |
+| 2026-05-16 | 2 | Done. Threaded buildingId to CostSelector, replaced AccountingLedgerSelectV2 with BuildingLedgerSelect. Zero new TS errors. |
+| 2026-05-16 | 3 | Done. Threaded buildingId to EditLedgerSheet, replaced AccountingLedgerSelectV2 with BuildingLedgerSelect. Zero new TS errors. |
+| 2026-05-16 | 4 | Done. Threaded buildingId to EditLedgerFloatingSheetContent from 2 parents, replaced AccountingLedgerSelectV2 with BuildingLedgerSelect. Zero new TS errors. |
 | | 5 | |
 | | 6 | BLOCKED on BE — waiting for `LinkBuildingSupplierDto` to add `ledgerId` support |
 | | 7 | BLOCKED on BE — waiting for `OpeningDataSetupSupplierInvoiceEntryDto` to add `ledgerId` support |
