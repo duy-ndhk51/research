@@ -3,11 +3,13 @@
 Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-05-04  
-**Status**: In progress (Commits 1–6b, 7+8, 9+10, 11+12, 13+14, 15a-icon-docs implemented; pending manual commit)  
+**Status**: In progress (Commits 1–6b, 7+8, 9+10, 11+12, 13+14, 15a-icon-docs, 15b-15d, 16, 17, 18 implemented; Commit 19 DESIGN.md planned; pending manual commit)  
 **Architecture**: [README.md](./README.md)  
 **Migration plan**: [migration-plan.md](./migration-plan.md)  
 **Typography reference**: [typography-system-reference.md](./typography-system-reference.md)  
 **Layout shell reference**: [layout-system-reference.md](./layout-system-reference.md)  
+**DESIGN.md integration**: [design-md-integration.md](./design-md-integration.md) — phase-by-phase analysis, token mapping, component token workflow  
+**DESIGN.md research**: [04-frontend/design-systems/design-md-evaluation/](../../../../04-frontend/design-systems/design-md-evaluation/README.md) — format spec, features, benefits/tradeoffs, alternatives  
 **Phase 2 execution**: [phase-2-execution.md](./phase-2-execution.md)  
 **Phase 3, Batch 0 execution**: [phase-3-batch-0-execution.md](./phase-3-batch-0-execution.md)
 
@@ -31,18 +33,20 @@ Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently 
 
 **Goal**: Standardize and graduate, in order: **`Text`** and **`Heading`** (typography); **`Container`**, **`Section`**, **`Flex`**, and **`Grid`** (CVA-based layout shell — SNDQ semantic tokens only, **not** `@radix-ui/themes`); then the six highest-leverage interactive primitives (Button, Input, Badge, Select, Dialog, Sheet). Each graduate moves into `packages/ui-v2/`, with MDX in `apps/docs` (typography + interactive under **Primitives**; layout shell under **Foundations**). Finish with one JSDoc `@deprecated` pass on matching `sndq-fe` briicks/ui barrel exports — without rewriting `sndq-fe` call sites (Phase 4).
 
-**Structure**: **25 commits** across **1 PR** (default), grouped into **sub-batches** for review and narrative:
+**Structure**: **26 commits** across **1 PR** (default), grouped into **sub-batches** for review and narrative:
 
 | Sub-batch | Commits | Scope |
 |-----------|---------|--------|
 | **1A — Typography** | 1–4 | `Text` then `Heading` (standardize + graduate each) |
 | **1B — Layout shell** | 5–12 | `Container`, `Section`, `Flex`, `Grid` (standardize + graduate each); CVA + `semantic-tokens.css` layout variables (incl. `--sndq-space-*`) |
-| **1C — Interactive** | 13–24 | Button (+ co-located exports), Input, Badge, Select, Dialog, Sheet (standardize + graduate each) |
-| **1D — Deprecations** | 25 | Single `sndq-fe` JSDoc pass |
+| **1C — Interactive** | 13–18 | Button (+ co-located exports), Input, Badge (standardize + graduate each) |
+| **1C-bis — DESIGN.md** | 19 | Install `@google/design.md` CLI; create `packages/ui-v2/DESIGN.md` covering graduated tokens + components (Button, Badge, Input) |
+| **1C (cont.) — Interactive** | 20–25 | Select, Dialog, Sheet (standardize + graduate each) |
+| **1D — Deprecations** | 26 | Single `sndq-fe` JSDoc pass |
 
 | PR | Scope | Risk level | Commits |
 |----|-------|------------|---------|
-| **PR 1** | Sub-batches 1A–1D: typography, CVA `Container`/`Section`/`Flex`/`Grid`, six interactives, docs (primitives + foundations layout MDX), incremental `@sndq/config` `@theme` aliases as needed, `sndq-fe` deprecations | Medium | 1–25 |
+| **PR 1** | Sub-batches 1A → 1B → 1C → 1C-bis → 1C (cont.) → 1D: typography, CVA layout shell, interactive primitives (Button/Input/Badge), DESIGN.md specification (Google format), remaining interactives (Select/Dialog/Sheet), docs (primitives + foundations), incremental `@sndq/config` `@theme` aliases, `sndq-fe` deprecations | Medium | 1–26 |
 
 **Why typography first (1A)**: Establishes token usage, `cn()` pattern, and optional short Tailwind utilities before layout and the larger interactive set. See [typography-system-reference.md](./typography-system-reference.md).
 
@@ -1128,7 +1132,136 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 19: Standardize Select in prototype
+### Sub-batch 1C-bis — DESIGN.md (Commit 19)
+
+---
+
+### Commit 19: Add DESIGN.md specification and CLI toolchain
+
+**What**: Install `@google/design.md` (v0.1.1) as root devDependency, add convenience npm scripts (`design:lint`, `design:export:tailwind`, `design:export:dtcg`), and create `packages/ui-v2/DESIGN.md` — a machine-readable YAML token specification + human-readable prose covering the graduated component set (Button, Badge, Input/Textarea). This is the first implementation step of the [DESIGN.md integration plan](./design-md-integration.md).
+
+DESIGN.md is a Google-authored open format that encodes a visual identity as YAML tokens + markdown prose in a single file. It ships with a CLI toolchain (`lint`, `diff`, `export`) and is purpose-built for AI coding agents. It does **not** replace `tokens.css` / `components.css` (those remain the CSS runtime artifacts). It adds automated validation (broken references, WCAG contrast), regression gating (`diff`), export interop (Tailwind/DTCG), and agent readability.
+
+**Why after Commit 18 (not later)**: The token set is stable, the first three graduated interactive components (Button, Badge, Input) exist in `packages/ui-v2/`, and writing DESIGN.md now captures the design rationale while it is fresh. Future batches only add component token entries to the existing `components:` YAML section.
+
+**Files to edit**:
+
+- `package.json` (root) — add `@google/design.md` `^0.1.1` to `devDependencies`, add 3 scripts:
+  ```json
+  {
+    "design:lint": "npx @google/design.md lint packages/ui-v2/DESIGN.md",
+    "design:export:tailwind": "npx @google/design.md export --format tailwind packages/ui-v2/DESIGN.md",
+    "design:export:dtcg": "npx @google/design.md export --format dtcg packages/ui-v2/DESIGN.md"
+  }
+  ```
+- `apps/docs/AGENTS.md` — add a new **"DESIGN.md specification"** section that:
+  - Points agents to `packages/ui-v2/DESIGN.md` as the machine-readable design system spec (YAML tokens + prose)
+  - Instructs agents to reference DESIGN.md when building/modifying docs UI, writing MDX examples, or choosing token values
+  - Notes the lint/export scripts available at monorepo root (`pnpm run design:lint`, `design:export:tailwind`, `design:export:dtcg`)
+  - Example placement: after the "Tokens and CSS" section, before "Quality bar"
+
+**Files to create**:
+
+- `apps/ui-v2-dev/AGENTS.md` — new agent guide for the prototype app:
+  - What this app is: UI-V2 dev playground / prototype for standardizing components before graduation
+  - Commands: `pnpm --filter @sndq/ui-v2-dev dev`, `build`, `lint`, `type-check`, `test`
+  - **DESIGN.md specification** section: references `packages/ui-v2/DESIGN.md` as the canonical token + component spec; instructs agents to consult it when standardizing prototype components for graduation
+  - Folder map: key directories (`src/components/ui-v2/`, `src/patterns/form/`, etc.)
+  - Scope discipline: changes inside `apps/ui-v2-dev/` only unless the task explicitly includes other packages
+
+- `packages/ui-v2/AGENTS.md` — new agent guide for the component library:
+  - What this package is: `@sndq/ui-v2` — graduated, standardized component library
+  - Commands: `pnpm --filter @sndq/ui-v2 test`, `type-check`, `lint`
+  - **DESIGN.md specification** section: references `DESIGN.md` (same directory) as the canonical token + component spec; instructs agents to update the `components:` YAML section when graduating new components; notes `pnpm run design:lint` for validation
+  - Per-component folder convention (kebab-case folder, PascalCase files, `index.ts` barrel, co-located tests)
+  - Component graduation workflow: standardize in `apps/ui-v2-dev/` → graduate to `packages/ui-v2/` → add component tokens to DESIGN.md → run `design:lint`
+
+- `packages/ui-v2/DESIGN.md` — complete specification file with two layers:
+
+**YAML front matter** (~130 lines, 5 token groups):
+
+| Token group | Source | Entries | Content |
+|-------------|--------|---------|---------|
+| `colors` | `tokens.css` + `semantic-tokens.css` | ~65 | Briicks primitives (brand/neutral/success/warning/error scales) as hex; `--sndq-*` semantic tokens as `{colors.*}` references |
+| `typography` | `semantic-tokens.css` lines 78-91 | ~10 | body-xs through heading-xl + label (Inter body, DM Sans headings) |
+| `spacing` | `semantic-tokens.css` lines 94-96, 132-138 | ~10 | Scale 0-5 (0-24px) + control-sm (32px), control (40px), control-lg (44px) |
+| `rounded` | `semantic-tokens.css` lines 105-110 | 6 | xs (6px) through full (9999px) |
+| `components` | `components.css` + `Button.tsx` + `Badge.tsx` CVA | ~20 | Button (9 variants + hover states), Badge (5 variants), Input (default) |
+
+**Markdown body** (~180 lines, 8 canonical sections per [DESIGN.md spec](https://github.com/google-labs-code/design.md/blob/main/docs/spec.md)):
+
+| Section | Content |
+|---------|---------|
+| Overview | SNDQ brand identity, Belgian property management platform, visual philosophy, Briicks design system lineage |
+| Colors | Briicks palette rationale, semantic role hierarchy (action/surface/text/border/status) |
+| Typography | Dual-font strategy (Inter body + DM Sans headings), type scale, weight conventions |
+| Layout | 4px base unit, container system (sm/md/lg widths), section padding scale, spacing conventions |
+| Elevation & Depth | Shadow scale documented in prose (`--sndq-shadow-xs/sm/md`, inset-top, inset-press, focus-ring) — no shadow token type in DESIGN.md |
+| Shapes | Radius philosophy: xs for small controls → sm for menu items → md (10px) for standard controls → lg for cards → full for badges/pills |
+| Components | Button (all 9 variants, 3 sizes, states), Badge (5 color variants, 3 sizes), Input/Textarea (default/hover/focus/error/disabled) |
+| Do's and Don'ts | Token-only styling, `cn()` override-wins, semantic token discipline (never raw Briicks primitives in component code), status color usage |
+
+**What DESIGN.md cannot express** (documented in prose sections):
+
+| Missing concept | Why | Documented in |
+|-----------------|-----|---------------|
+| `color-mix()` values (`--sndq-action-subtle-hover/active`) | No CSS function support | Components prose |
+| Box shadows (`--sndq-shadow-*`) | No shadow token type | Elevation & Depth prose |
+| Dark mode (`.dark {}`) | No theme variant support | Custom Theming note in Overview |
+| `borderColor`, `borderWidth`, `gap`, `opacity`, `backdropFilter` | Limited to 8 component properties | Components prose |
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| Alpha-stage spec changes | LOW | Pinned `^0.1.1`; CLI calls wrapped in npm scripts; monitor changelog |
+| `transparent` keyword rejected by lint | LOW | Use `"#00000000"` (8-digit hex) if lint errors on `transparent` |
+| Contrast warnings on semantic token references | LOW | References like `{colors.sndq-action}` may not resolve for contrast calculation — review and document findings |
+| New devDependency in CI | LOW | `@google/design.md` is a standalone CLI with no native deps; `pnpm install` resolves it |
+
+**Verification**:
+
+```bash
+pnpm install
+npx @google/design.md spec                                    # format spec outputs correctly
+pnpm run design:lint                                          # target: 0 errors; review warnings
+pnpm run design:export:tailwind > /tmp/sndq-theme.json        # compare against tokens.css values
+pnpm run design:export:dtcg > /tmp/sndq-tokens.json           # DTCG output valid JSON
+
+# Agent awareness: verify DESIGN.md references exist
+grep -q 'DESIGN.md' apps/docs/AGENTS.md                       # docs app references DESIGN.md
+grep -q 'DESIGN.md' apps/ui-v2-dev/AGENTS.md                  # prototype app references DESIGN.md
+grep -q 'DESIGN.md' packages/ui-v2/AGENTS.md                  # package references DESIGN.md
+```
+
+**If it fails**:
+
+- **`npx @google/design.md: command not found`**: re-run `pnpm install` from the monorepo root; confirm `node_modules/.bin/design.md` or `node_modules/@google/design.md/` exists.
+- **`broken-ref` lint error**: a token reference like `{colors.brand-700}` does not match any defined color key — check spelling matches the YAML `colors:` keys exactly.
+- **`contrast-ratio` warning on component**: WCAG check requires resolved hex values — semantic references may produce warnings. Document which pairs pass/fail in the execution log.
+- **`section-order` warning**: sections must follow the canonical order (Overview, Colors, Typography, Layout, Elevation & Depth, Shapes, Components, Do's and Don'ts). Reorder if the linter flags.
+
+**Commit message**: `feat(ui-v2): add DESIGN.md specification and CLI toolchain`
+
+**Status**:
+
+- [ ] `@google/design.md` installed as root devDependency
+- [ ] 3 convenience scripts added to root `package.json`
+- [ ] `packages/ui-v2/DESIGN.md` created (YAML front matter + 8 prose sections)
+- [ ] `pnpm run design:lint` — 0 errors
+- [ ] `pnpm run design:export:tailwind` — output valid, compared against `tokens.css`
+- [ ] `apps/docs/AGENTS.md` updated (DESIGN.md specification section added)
+- [ ] `apps/ui-v2-dev/AGENTS.md` created (prototype app agent guide with DESIGN.md reference)
+- [ ] `packages/ui-v2/AGENTS.md` created (package agent guide with DESIGN.md reference)
+- [ ] Committed
+
+---
+
+### Sub-batch 1C (continued) — Interactive (Commits 20–25)
+
+---
+
+### Commit 20: Standardize Select in prototype
 
 **Verification**:
 
@@ -1148,7 +1281,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 20: Graduate Select + MDX + consumers
+### Commit 21: Graduate Select + MDX + consumers
 
 **Commit message**: `feat(ui-v2): graduate Select to package and document`
 
@@ -1158,7 +1291,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 21: Standardize Dialog in prototype
+### Commit 22: Standardize Dialog in prototype
 
 **Verification**:
 
@@ -1178,7 +1311,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 22: Graduate Dialog + MDX + consumers
+### Commit 23: Graduate Dialog + MDX + consumers
 
 **Commit message**: `feat(ui-v2): graduate Dialog to package and document`
 
@@ -1188,7 +1321,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 23: Standardize Sheet in prototype
+### Commit 24: Standardize Sheet in prototype
 
 **Verification**:
 
@@ -1208,7 +1341,7 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 24: Graduate Sheet + MDX + consumers
+### Commit 25: Graduate Sheet + MDX + consumers
 
 **Commit message**: `feat(ui-v2): graduate Sheet to package and document`
 
@@ -1218,11 +1351,11 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Sub-batch 1D — Deprecations (Commit 25)
+### Sub-batch 1D — Deprecations (Commit 26)
 
 ---
 
-### Commit 25: Deprecate legacy briicks/ui exports (Batch 1)
+### Commit 26: Deprecate legacy briicks/ui exports (Batch 1)
 
 **What**: Add `/** @deprecated Use … from @sndq/ui-v2/components instead. */` above each relevant re-export in the briicks/ui barrel files listed in [Legacy deprecation mapping](#legacy-deprecation-mapping-batch-1). Do not change implementation bodies.
 
@@ -1302,7 +1435,7 @@ Compare builds to baselines (same commands as §2 with `-final` suffix).
 
 **Final status**:
 
-- [ ] All 25 commits complete
+- [ ] All 26 commits complete
 - [ ] Root build / lint / type-check pass
 - [ ] Manual: docs `/primitives/...` and `/primitives/layout/container`, `/primitives/layout/section`, `/primitives/layout/flex`, `/primitives/layout/grid` render
 - [ ] Manual: ui-v2-dev playground still exercises graduated components
@@ -1314,18 +1447,27 @@ Compare builds to baselines (same commands as §2 with `-final` suffix).
 
 > **Heads up: first `@sndq/ui-v2` component graduation (Batch 1)**
 >
-> PR [link] follows **sub-batches**: **1A** typography (`Text`, `Heading`), **1B** layout shell (`Container`, `Section`, `Flex`, `Grid` — CVA + SNDQ semantic tokens, **not** Radix Themes; **strict semantic-vs-numeric prop typing**; canonical **`className` override-wins** rule via `cn(variantClasses, className)`), **1C** Button through Sheet, **1D** legacy JSDoc deprecations. Typography uses `semantic-tokens.css` and incremental `@sndq/config` `@theme` aliases; see [typography-system-reference.md](./typography-system-reference.md). Layout shell tokens, prop-typing rule, and override-wins guarantee: [layout-system-reference.md](./layout-system-reference.md). The main app is **not** bulk-migrated yet — you will see `@deprecated` JSDoc on legacy briicks/ui exports (including **briicks text**). New feature work should import from `@sndq/ui-v2/components` where possible.
+> PR [link] follows **sub-batches**: **1A** typography (`Text`, `Heading`), **1B** layout shell (`Container`, `Section`, `Flex`, `Grid` — CVA + SNDQ semantic tokens, **not** Radix Themes; **strict semantic-vs-numeric prop typing**; canonical **`className` override-wins** rule via `cn(variantClasses, className)`), **1C** Button, Input, Badge, **1C-bis** `DESIGN.md` specification (Google `@google/design.md` format — machine-readable token spec + CLI lint/export), **1C (cont.)** Select, Dialog, Sheet, **1D** legacy JSDoc deprecations. Typography uses `semantic-tokens.css` and incremental `@sndq/config` `@theme` aliases; see [typography-system-reference.md](./typography-system-reference.md). Layout shell tokens, prop-typing rule, and override-wins guarantee: [layout-system-reference.md](./layout-system-reference.md). DESIGN.md captures the token set and component contracts for AI agent readability, automated validation, and Figma interop — see [design-md-integration.md](./design-md-integration.md). The main app is **not** bulk-migrated yet — you will see `@deprecated` JSDoc on legacy briicks/ui exports (including **briicks text**). New feature work should import from `@sndq/ui-v2/components` where possible.
 >
 > After pulling:
 >
-> 1. `pnpm install`
+> 1. `pnpm install` ← now also installs `@google/design.md` CLI
 > 2. Restart TS server and ESLint server in the IDE
+>
+> New npm scripts (informational — not required for daily dev):
+> - `pnpm run design:lint` — validate `packages/ui-v2/DESIGN.md` tokens + structure
+> - `pnpm run design:export:tailwind` — export to Tailwind theme JSON
+> - `pnpm run design:export:dtcg` — export to W3C DTCG format
 >
 > Touch points:
 > - `packages/ui-v2/src/components/*`, `packages/ui-v2/src/lib/utils.ts`
+> - `packages/ui-v2/DESIGN.md` ← **new** machine-readable token specification
+> - `packages/ui-v2/AGENTS.md` ← **new** agent guide for the component library
 > - `packages/config/tailwind/tokens.css` (incremental `@theme` aliases)
 > - `packages/config/tailwind/semantic-tokens.css` (typography + **layout shell** tokens, incl. `--sndq-space-*`)
 > - `apps/ui-v2-dev/` imports
+> - `apps/ui-v2-dev/AGENTS.md` ← **new** agent guide for the prototype app
+> - `apps/docs/AGENTS.md` ← **updated** with DESIGN.md specification section
 > - `apps/docs/content/docs/primitives/*`, `apps/docs/content/docs/foundations/{container,section,flex,grid}.mdx`
 > - `sndq-fe/src/components/briicks/{text,button,input,badge,select}/`, `sndq-fe/src/components/ui/{dialog,sheet}.tsx`
 
@@ -1343,6 +1485,7 @@ After Batch 1 merges, open [phase-3-batch-2-execution.md](./phase-3-batch-2-exec
 - **Typography + gradual `@theme`** reduces token drift before scaling interactive primitives.
 - **Layout shell (1B)** documents page width, section rhythm, and inner-layout primitives (`Flex`, `Grid`) in **Foundations** while components still export from `@sndq/ui-v2/components`.
 - **Strict prop-typing rule** (semantic OR numeric, never both) and **`className` override-wins** are gated on every graduating component — landing them in Batch 1 sets the precedent for every future batch.
+- **DESIGN.md after first graduated set (1C-bis)**: Writing the token specification while design rationale is fresh ensures accuracy. Future batches only add component entries to the existing `components:` YAML + re-run `pnpm run design:lint`.
 
 ### Known lessons from prior phases
 
@@ -1377,10 +1520,11 @@ After Batch 1 merges, open [phase-3-batch-2-execution.md](./phase-3-batch-2-exec
 |      | 16     | **Done.** Graduated Input primitives to `packages/ui-v2/src/components/forms/` group folder (mirroring `typography/`). 5 sub-folders: `label/` (Label + @radix-ui/react-label), `field/` (Field, FieldLabel, FieldDescription, FieldError, FieldGroup, FieldSet, FieldContent, FieldTitle, FieldLegend, fieldVariants), `input/` (Input, inputVariants, InputSize, InputVariant), `textarea/` (Textarea, InputArea, textareaVariants), `input-group/` (InputGroup + 5 sub-components + 3 CVA variant sets). Group barrel `forms/index.ts` re-exports all. Top barrel: `export * from './forms'`. 16 contract tests (Input: 6, Textarea: 5, InputGroup: 5). `ui-v2-dev` barrel switched from `export * from './Field'` etc. to named re-exports from `@sndq/ui-v2/components`. 4 MDX pages under `primitives/forms/` (input, textarea, field, input-group) + `meta.json`. Story files with `'use client'` wrappers for SSR compatibility. 71 tests pass, ui-v2-dev build green, docs build green. Blocks graduation (FormInput, FormTextarea → `blocks/forms/`) deferred. |
 |      | 17     | **Done.** Standardized `Badge` in prototype (`apps/ui-v2-dev/src/components/ui-v2/Badge.tsx`). Replaced raw `--color-*` variables with semantic `@theme`-backed tokens: `neutral` → `bg-sndq-surface-muted text-sndq-text-secondary`, `brand` → `bg-sndq-action-subtle text-sndq-action-text`, `success/warning/error` → `bg-sndq-{status}-bg text-sndq-{status}-text`. CVA base class switched from hardcoded utilities to `.sndq-badge` (from `components.css`). Added `React.forwardRef`, `data-slot="badge"`, `BadgeVariant` type export. No new tokens needed — all semantic tokens and `@theme` aliases pre-exist. Created `Badge.test.tsx` with 5 contract tests (default render + data-slot, variant classes with token assertions, default variant, override-wins, ref forwarding). Lint + build green. SHA: _to fill in after manual commit_. |
 |      | 18     | **Done.** Graduated `Badge` to `packages/ui-v2/src/components/badge/` (Badge.tsx, Badge.test.tsx, index.ts). Only change from prototype: `cn` import path (`@/lib/utils` → `../../lib/utils`). Added `export * from './badge'` to package barrel. Updated `ui-v2-dev` barrel: replaced `export * from './Badge'` with named re-exports from `@sndq/ui-v2/components` (`Badge`, `badgeVariants`, `BadgeProps`, `BadgeVariant`). Local `Badge.tsx` and `Badge.test.tsx` remain on disk in prototype. Created `primitives/badge.mdx` (playground, 5-variant demo, overview, when to use, variant token table, override-wins examples, API table, related components). Created `Badge.story.tsx` + `components/Badge.tsx` client wrapper. Updated `meta.json` (added `badge` after `icon`). Updated `index.mdx` (Badge listed under Interactive). No client wrapper strictly needed (Badge is a `<span>` with no event handlers) but created for consistency. 106 tests pass (5 Badge). ui-v2-dev build green. Docs build green (23 pages). SHA: _to fill in after manual commit_. |
-|      | 19     |       |
+|      | 19     | **Planned.** Install `@google/design.md` v0.1.1 as root devDependency, add `design:lint` / `design:export:tailwind` / `design:export:dtcg` npm scripts. Create `packages/ui-v2/DESIGN.md` covering graduated tokens (colors, typography, spacing, rounded) + components (Button, Badge, Input). Add agent awareness: update `apps/docs/AGENTS.md` (new DESIGN.md section), create `apps/ui-v2-dev/AGENTS.md` and `packages/ui-v2/AGENTS.md` with DESIGN.md references. Lint, export roundtrip, commit. |
 |      | 20     |       |
 |      | 21     |       |
 |      | 22     |       |
 |      | 23     |       |
 |      | 24     |       |
 |      | 25     |       |
+|      | 26     |       |

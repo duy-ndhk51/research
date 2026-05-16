@@ -10,7 +10,7 @@ Gradual, five-phase migration from legacy component libraries (`briicks/`, `ui/`
 **Phase 1b execution**: [phase-1b-execution.md](./phase-1b-execution.md) — Briicks token extraction (folded into Phase 2)
 **Phase 2 execution**: [phase-2-execution.md](./phase-2-execution.md) — prototype integration, token/CSS extraction, package scaffolding, deprecation
 **Phase 3, Batch 0 execution**: [phase-3-batch-0-execution.md](./phase-3-batch-0-execution.md) — Fumadocs at site root (`baseUrl: '/'`), Orama search, IA stubs in `apps/docs`
-**Phase 3, Batch 1 execution**: [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md) — Sub-batches: typography (`Text`, `Heading`), CVA layout shell (`Container`, `Section`, `Flex`, `Grid` — docs under Foundations; **strict semantic-vs-numeric prop typing**; canonical **`className` override-wins** via `cn(variantClasses, className)`), then Button, Input, Badge, Select, Dialog, Sheet; incremental `@theme` aliases; package graduation + MDX + `sndq-fe` deprecations · [typography-system-reference.md](./typography-system-reference.md) · [layout-system-reference.md](./layout-system-reference.md)
+**Phase 3, Batch 1 execution**: [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md) — Sub-batches: typography (`Text`, `Heading`), CVA layout shell (`Container`, `Section`, `Flex`, `Grid` — docs under Foundations; **strict semantic-vs-numeric prop typing**; canonical **`className` override-wins** via `cn(variantClasses, className)`), then Button, Input, Badge, Select, Dialog, Sheet; DESIGN.md specification layer (Google `@google/design.md` format — token validation, contrast checking, Tailwind/DTCG export); incremental `@theme` aliases; package graduation + MDX + `sndq-fe` deprecations · [typography-system-reference.md](./typography-system-reference.md) · [layout-system-reference.md](./layout-system-reference.md) · [design-md-integration.md](./design-md-integration.md)
 **Phase 3, Batch 2 execution**: [phase-3-batch-2-execution.md](./phase-3-batch-2-execution.md) — Card, Tabs, Tooltip, EmptyState, Skeleton
 **Phase 3, Batch 3 execution**: [phase-3-batch-3-execution.md](./phase-3-batch-3-execution.md) — Remaining primitives + blocks (waves); final legacy deprecation pass
 
@@ -343,6 +343,12 @@ See [phase-3-batch-0-execution.md](./phase-3-batch-0-execution.md) for step-by-s
    - Export public `*Props` types (and related unions) from each component module and its folder `index.ts` (required for `@sndq/ui-v2/components` and for `type` re-exports in legacy deprecations)
    - Update imports in apps/ui-v2-dev/ and apps/docs/ to use @sndq/ui-v2/components
 
+2b. Define component tokens in DESIGN.md (after all batch components graduate)
+   - Add YAML entries for each component + variants to the `components:` section
+   - Reference existing color/typography/spacing/rounded tokens via `{colors.*}`, `{typography.*}`, etc.
+   - Run: pnpm run design:lint — 0 errors
+   - Run: npx @google/design.md diff (against previous version) — review changes match expected batch scope
+
 3. Deprecate legacy counterparts
    - Add JSDoc @deprecated to the specific briicks/ and ui/ exports that now have a replacement
    - Message: "Use {ComponentName} from @sndq/ui-v2/components instead."
@@ -670,6 +676,17 @@ Every ui-v2 prop is **either** semantic (e.g. `Container.size = "sm" | "md" | "l
 - **Mixing modes on a single prop** ("you can write `gap="md"` *or* `gap="3"`") fragments usage across teams, erodes the "change one place, update everywhere" lever, and makes future migrations harder. If both expressivity and governance are needed for one axis, ship two distinct, non-overlapping props instead.
 
 Canonical statement: [layout-system-reference.md §3-bis](./layout-system-reference.md#3-bis-prop-typing-rule-strict-never-both). Enforced via the standardization gate in [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md).
+
+### Why DESIGN.md (Google format) as a specification layer
+
+`packages/ui-v2/DESIGN.md` encodes the token set and component contracts as machine-readable YAML + human-readable prose using Google's open DESIGN.md format (`@google/design.md` v0.1.1). It does NOT replace `tokens.css` / `components.css` (those remain the CSS runtime artifacts). It adds:
+
+- **Automated validation**: `lint` catches broken token references, WCAG contrast failures, structural issues
+- **Regression gating**: `diff` detects token-level regressions between branches
+- **Export interop**: `export --format tailwind` and `--format dtcg` enable roundtrip verification and future Figma Variables import
+- **Agent readability**: AI agents can read one file to understand the full visual identity
+
+Introduced in Batch 1 (Commit 19) after tokens are stable and the first graduated components (Button, Badge, Input) exist. Component tokens are added per-batch going forward (see step 2b in the [per-batch workflow](#per-batch-workflow)). Full integration analysis: [design-md-integration.md](./design-md-integration.md). General research: [04-frontend/design-systems/design-md-evaluation/](../../../../04-frontend/design-systems/design-md-evaluation/README.md).
 
 ### Why `className` override-wins is a system-wide guarantee
 

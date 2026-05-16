@@ -17,6 +17,7 @@ Full architecture specification for reorganizing the `sndq` monorepo into a hybr
 **Phase 1b execution**: [phase-1b-execution.md](./phase-1b-execution.md) — Briicks token extraction commits, radius conflict resolution, verification commands
 **Phase 2 execution**: [phase-2-execution.md](./phase-2-execution.md) — prototype integration, token/CSS extraction, package scaffolding, deprecation
 **DESIGN.md integration**: [design-md-integration.md](./design-md-integration.md) — phase-by-phase planning for adopting Google's DESIGN.md format
+**DESIGN.md execution**: Commit 19 in [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md#commit-19-add-designmd-specification-and-cli-toolchain) — install `@google/design.md` CLI, create `packages/ui-v2/DESIGN.md`
 **Reference**: [cal.com monorepo](https://github.com/calcomhq/cal.com) — used as architectural reference
 
 ---
@@ -138,11 +139,13 @@ sndq/
 │   ├── docs/                     # Standalone docs site — standardized components only
 │   │   ├── package.json
 │   │   ├── tsconfig.json         # extends @sndq/tsconfig/nextjs.json
+│   │   ├── AGENTS.md             # Agent guide (references packages/ui-v2/DESIGN.md)
 │   │   └── src/app/              # Imports @sndq/ui-v2, manages its own showcase UI
 │   └── ui-v2-dev/                # Standalone UI v2 dev playground (was sndq-ui-v2)
 │       ├── package.json          # name: "@sndq/ui-v2-dev"
 │       ├── tsconfig.json         # extends @sndq/tsconfig/nextjs.json
 │       ├── eslint.config.mjs     # imports from @sndq/config/eslint.mjs
+│       ├── AGENTS.md             # Agent guide (references packages/ui-v2/DESIGN.md)
 │       ├── next.config.ts
 │       ├── postcss.config.mjs
 │       └── src/
@@ -155,6 +158,8 @@ sndq/
 │   ├── ui-v2/                    # @sndq/ui-v2
 │   │   ├── package.json
 │   │   ├── tsconfig.json         # extends @sndq/tsconfig/library.json
+│   │   ├── DESIGN.md             # Machine-readable token spec (Google DESIGN.md format)
+│   │   ├── AGENTS.md             # Agent guide (references DESIGN.md, component conventions)
 │   │   └── src/
 │   │       ├── components/       # Tier 1: primitives — per-component folders
 │   │       │   ├── index.ts      # barrel re-exports all component folders

@@ -3,7 +3,7 @@
 Planning document for integrating [DESIGN.md](https://github.com/google-labs-code/design.md) into the SNDQ monorepo UI migration. Determines WHAT to do and WHEN in the 5-phase migration, without prescribing exact commits.
 
 **Created**: 2026-04-29
-**Status**: Planning
+**Status**: In progress — Commit 19 in [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md#commit-19-add-designmd-specification-and-cli-toolchain)
 **General research**: [04-frontend/design-systems/design-md-evaluation/](../../../../04-frontend/design-systems/design-md-evaluation/README.md) — full features, benefits/tradeoffs, alternatives, metrics
 **Migration plan**: [migration-plan.md](./migration-plan.md) — 5-phase migration this document maps into
 **Architecture**: [README.md](./README.md) — target monorepo structure
@@ -120,14 +120,16 @@ Phase 5 removes legacy directories and the old submodule. DESIGN.md is not invol
 
 Based on the phase analysis, the recommended approach is a **two-step introduction**:
 
-### Step 1: Create DESIGN.md during Phase 2 (tokens only)
+### Step 1: Create DESIGN.md ~~during Phase 2 (tokens only)~~ → executed as Commit 19 in Phase 3, Batch 1
+
+> **Update (2026-05-15)**: Step 1 is being executed as **Commit 19** in [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md#commit-19-add-designmd-specification-and-cli-toolchain), not as a separate Phase 2 step. This is because (a) the token set is already stable (Briicks primitives + UI-V2 semantic tokens are all in `tokens.css` / `semantic-tokens.css`), (b) three graduated interactive components (Button, Badge, Input) already exist in `packages/ui-v2/`, and (c) writing DESIGN.md now includes both tokens AND the first component token entries — combining the originally separate Step 1 and Step 2 for the Batch 1 components.
 
 **When**: After tokens are extracted to `@sndq/config/tailwind/tokens.css` and UI-V2 semantic tokens are added.
 
 **What**: Write a DESIGN.md with:
 - YAML front matter: all primitive tokens (Briicks colors, type scale, spacing, radius) + UI-V2 semantic tokens
 - Markdown prose: Overview (SNDQ brand/product personality), Colors (palette rationale), Typography (font strategy), Layout (spacing philosophy), Shapes (radius philosophy)
-- No component tokens yet
+- ~~No component tokens yet~~ Component tokens for Button, Badge, Input included (Batch 1 components are already graduated)
 
 **Why this timing**:
 - The token set is freshly extracted and organized — writing DESIGN.md now documents the canonical form while it's fresh
@@ -225,9 +227,15 @@ The existing Phase 3 [per-batch workflow](./migration-plan.md#6-phase-3-standard
    - Check: 0 errors, 0 contrast warnings for new components
    - Run: npx @google/design.md diff DESIGN-prev.md DESIGN.md
    - Review: token changes match expected batch scope
-5. Deprecate legacy counterparts                 (existing)
-6. Verify                                        (existing)
+5. Update agent config (AGENTS.md) if needed     ← NEW
+   - Ensure packages/ui-v2/AGENTS.md lists the new components
+   - Ensure apps/docs/AGENTS.md and apps/ui-v2-dev/AGENTS.md
+     still accurately reference the DESIGN.md specification
+6. Deprecate legacy counterparts                 (existing)
+7. Verify                                        (existing)
 ```
+
+> **Agent awareness**: AGENTS.md files in `apps/docs/`, `apps/ui-v2-dev/`, and `packages/ui-v2/` all reference `packages/ui-v2/DESIGN.md` so AI agents working in any of these directories can consult the design system spec. This was introduced in Commit 19 alongside the DESIGN.md file itself.
 
 ### Batch 1 component tokens (example)
 
@@ -358,12 +366,12 @@ npx @google/design.md export --format tailwind DESIGN.md > /tmp/generated-theme.
 
 ## 8. Dependencies
 
-### Before creating DESIGN.md (Phase 2)
+### Before creating DESIGN.md ~~(Phase 2)~~ (now Commit 19, Batch 1)
 
-- [ ] Phase 1a merged (monorepo structure exists)
-- [ ] Token extraction to `@sndq/config/tailwind/tokens.css` complete (Briicks primitives)
-- [ ] UI-V2 semantic tokens added to `tokens.css`
-- [ ] `@google/design.md` added as devDependency in root `package.json`
+- [x] Phase 1a merged (monorepo structure exists)
+- [x] Token extraction to `@sndq/config/tailwind/tokens.css` complete (Briicks primitives)
+- [x] UI-V2 semantic tokens added to `semantic-tokens.css`
+- [ ] `@google/design.md` added as devDependency in root `package.json` ← will be checked after Commit 19 execution
 
 ### Before adding component tokens (Phase 3)
 
@@ -380,15 +388,15 @@ npx @google/design.md export --format tailwind DESIGN.md > /tmp/generated-theme.
 
 ## 9. Open Questions
 
-Questions to resolve before or during implementation:
+All questions resolved as of 2026-05-15 (Commit 19 planning):
 
-| # | Question | Context | Resolution path |
-|---|----------|---------|-----------------|
-| 1 | Where does DESIGN.md live in the repo? | Options: monorepo root, `packages/config/`, `packages/ui-v2/` | Recommendation: **monorepo root** (`sndq/DESIGN.md`) — it describes the entire design system, not just one package |
-| 2 | Should the Tailwind export replace manual `tokens.css` authoring? | If yes, DESIGN.md becomes the source of truth and `tokens.css` is generated. If no, they coexist and drift is monitored. | Run [Experiment 4](../../../../04-frontend/design-systems/design-md-evaluation/metrics-and-learning.md#experiment-4-export-roundtrip-test) to determine export accuracy. If high accuracy, consider generated `tokens.css`. |
-| 3 | How to handle the alpha-stage risk? | The spec may change. Pinning helps but doesn't prevent deprecation. | Pin version, wrap CLI calls in npm scripts, monitor changelog. Accept the risk given the tool is from Google. |
-| 4 | Should `@google/design.md` be a root devDep or per-package? | It's used for linting/CI, not runtime | Recommendation: **root devDependency** — it's a development tool, not a package dependency |
-| 5 | How to handle dark mode tokens? | DESIGN.md has no theme variant support. SNDQ uses `:root` / `.dark`. | Keep dark mode in CSS. DESIGN.md documents the light-mode canonical values. Add a custom `## Theming` prose section explaining the dark mode strategy. |
+| # | Question | Resolution |
+|---|----------|------------|
+| 1 | Where does DESIGN.md live in the repo? | **Resolved** — `packages/ui-v2/DESIGN.md`. It describes the `@sndq/ui-v2` package's visual contract. The original recommendation of monorepo root was reconsidered: DESIGN.md is scoped to the graduated component library, not the legacy `sndq-fe` surface. |
+| 2 | Should the Tailwind export replace manual `tokens.css` authoring? | **Resolved** — No. They coexist. `tokens.css` / `semantic-tokens.css` remain the CSS runtime artifacts. DESIGN.md is a specification + validation layer. Export drift is monitored via `pnpm run design:export:tailwind` roundtrip comparison. |
+| 3 | How to handle the alpha-stage risk? | **Resolved** — Pin `^0.1.1`, wrap CLI calls in npm scripts (`design:lint`, `design:export:tailwind`, `design:export:dtcg`), monitor changelog. Low risk given Google authorship and standalone CLI with no native deps. |
+| 4 | Should `@google/design.md` be a root devDep or per-package? | **Resolved** — Root devDependency. It's a monorepo-wide development tool, not a package runtime dependency. |
+| 5 | How to handle dark mode tokens? | **Resolved** — Light-mode canonical values in YAML. Dark mode stays in CSS (`:root` / `.dark` in `semantic-tokens.css`). A custom Theming note in the Overview prose section explains the dark mode strategy. |
 
 ---
 
@@ -398,4 +406,5 @@ Questions to resolve before or during implementation:
 - [Migration Plan](./migration-plan.md) — 5-phase migration this document maps into
 - [Architecture](./README.md) — target monorepo structure
 - [Component Lifting Process](./component-lifting-process.md) — 4-tier promotion model
-- [Phase 2 Execution](./phase-2-execution.md) — step-by-step for the phase where DESIGN.md is introduced
+- [Phase 2 Execution](./phase-2-execution.md) — step-by-step for token extraction phase
+- [Phase 3, Batch 1 Execution — Commit 19](./phase-3-batch-1-execution.md#commit-19-add-designmd-specification-and-cli-toolchain) — step-by-step for DESIGN.md creation
