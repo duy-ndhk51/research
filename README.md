@@ -51,6 +51,7 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 | 23 | [Dashboard UI Blocks & Component Libraries](./12-sndq/frontend/dashboard-ui-blocks-research.md) | SNDQ | `sndq`, `frontend`, `design-system`, `dashboard`, `ui-components` |
 | 24 | [Developer Broadcast](./13-projects/developer-broadcast/README.md) | Projects | `project`, `next.js`, `rss`, `feed-aggregator` |
 | 25 | [AI-Friendly Component Library Patterns (from Cloudflare Kumo)](./04-frontend/design-systems/kumo/ai-friendly-pattern.md) | Frontend | `design-system`, `ai-agents`, `kumo` |
+| 26 | [Drawer Component Architecture — Best Practices](./04-frontend/react/drawer-component-architecture.md) | Frontend | `react`, `compound-component`, `drawer`, `architecture` |
 <!-- TOPIC-INDEX-END -->
 
 **Playground experiments:**
