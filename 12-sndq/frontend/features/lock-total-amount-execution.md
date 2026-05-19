@@ -1,0 +1,1088 @@
+# Lock Total Amount Execution — Purchase Invoice V3
+
+Step-by-step execution guide for the Lock Total Amount feature. Each commit should be independently verifiable and revertable.
+
+**Created**: 2026-05-18
+**Status**: In progress — Commit 3 done
+**Branch**: `feature/lock-total-amount`
+
+> **IMPORTANT**: Do NOT automatically commit after each step. Implement each commit's changes, then stop and wait for manual review and testing. Only commit after explicit approval. This allows the implementer to verify each stage before moving forward.
+>
+> **STATUS TRACKING**: After completing each commit's implementation, automatically update this file:
+> 1. Check off the completed items in that commit's **Status** checklist
+> 2. Record the date and any notes in the **Execution Log** table at the bottom
+> 3. Update the top-level **Status** field (e.g., "In progress — Commit 3 done")
+> This keeps the plan as the single source of truth for progress.
+
+---
+
+## Table of Contents
+
+1. [Overview](#1-overview)
+2. [Before You Start](#2-before-you-start)
+3. [PR 1 — Core Pipeline and Pure Logic](#3-pr-1--core-pipeline-and-pure-logic)
+4. [PR 2 — Wire Pipeline into Form and UI](#4-pr-2--wire-pipeline-into-form-and-ui)
+5. [PR 3 — Peppol Auto-Lock and Validation](#5-pr-3--peppol-auto-lock-and-validation)
+6. [Final Verification](#6-final-verification)
+7. [Team Communication](#7-team-communication)
+8. [What's Next](#8-whats-next)
+9. [Execution Log](#execution-log)
+
+---
+
+## 1. Overview
+
+**Goal**: When the user locks the total incl. VAT amount, every line-level mutation (add, edit, delete, duplicate) is funnelled through a single reconciliation pipeline that guarantees the sum of line `totalAmount` values equals the locked total — with a real-time toast on every mismatch.
+
+**Structure**: 8 commits across 3 PRs.
+
+| PR | Scope | Risk level | Commits |
+|----|-------|------------|---------|
+| **PR 1** | Pure logic: extract shared utility, build pipeline + reconciliation | Low | 1–3 |
+| **PR 2** | Wire pipeline into form context, CRUD hooks, and footer UI | Medium | 4–6 |
+| **PR 3** | Peppol auto-lock default, submit-time validation, translations | Low | 7–8 |
+
+**Why 3 PRs**: PR 1 is zero-UI, pure-function code that can be unit-tested in isolation. PR 2 is the integration work — riskiest because it touches existing CRUD hooks. PR 3 is additive behavior (Peppol default + validation) that doesn't change the core pipeline.
+
+### Architecture: Action Pipeline with Reconciliation
+
+Instead of scattering `if (isAmountLocked)` branches across every handler, all array-level mutations flow through a single `useAmountPipeline` hook. The pipeline applies a post-processing reconciliation step when locked; when unlocked it is a passthrough.
+
+```mermaid
+flowchart LR
+  subgraph userActions [User Actions]
+    Add[Add Line]
+    Edit[Edit Amount]
+    Delete[Delete Line]
+    Duplicate[Duplicate Line]
+    VatChange[Change VAT]
+  end
+
+  subgraph pipeline [useAmountPipeline]
+    Compute[computeNewLines]
+    Reconcile[reconcile]
+    Validate[assertTotalMatch]
+    Replace["replace()"]
+  end
+
+  Add --> Compute
+  Edit --> Compute
+  Delete --> Compute
+  Duplicate --> Compute
+  VatChange --> Compute
+
+  Compute --> Reconcile
+  Reconcile --> Validate
+  Validate --> Replace
+```
+
+### Reconciliation Rules Per Action
+
+| Action | Reconciliation behavior |
+|--------|------------------------|
+| ADD_LINE | New line gets `max(0, lockedTotal - sumOfExisting)` |
+| EDIT_AMOUNT | Other lines redistribute proportionally by their current ratio |
+| DELETE_LINES | Remaining lines redistribute proportionally to fill the locked total |
+| DUPLICATE_LINE | No reconciliation — both keep amounts; toast fires on mismatch |
+| UPDATE_LINE | If `totalAmount` changed, same as EDIT_AMOUNT; otherwise passthrough |
+
+### Redistribution Algorithm
+
+```
+remaining = lockedTotal - editedLine.totalAmount
+sumOfOthers = sum of other lines' old totalAmounts
+for each other line:
+  newTotal = round(remaining * (line.totalAmount / sumOfOthers))
+backCalc: amount = calculateSubtotalFromTotal(newTotal, vatRate)
+rounding fix: assign remainder cent to first non-edited line
+unit distribution: NOT recalculated (deferred to explicit user action)
+```
+
+### State Shape
+
+```typescript
+type LockState =
+  | { locked: false }
+  | { locked: true; lockedTotal: number };
+```
+
+### Prerequisites
+
+- `feature/purchase-invoice-v3` branch is merged and stable
+- Dev server runs without errors (`pnpm dev`)
+- Existing Peppol flow works for create-from-Peppol scenario
+
+### Known constraints
+
+- `calculateSubtotalFromTotal` is currently a private function inside `reducer.ts` — must be extracted first
+- `useLineCrud` calls `append`/`remove` individually; locked mode requires `replace()` to update all lines atomically
+- The `useInvoiceLineDispatch` hook calls `onUpdate(index, nextState)` for single-line changes; locked mode needs a multi-line update path for amount changes
+- All amounts are integers in cents — redistribution rounding must be deterministic (remainder to first line)
+
+---
+
+## 2. Before You Start
+
+### Quality gate before each implementation commit
+
+Use this gate for every implementation commit. If an item is intentionally skipped, record it under that commit's **Deviations from the gate** section.
+
+- [ ] Public API / behavior is stable for this commit scope
+- [ ] Public props, types, functions, or commands have minimal useful documentation where applicable
+- [ ] Existing project helpers and patterns are reused instead of introducing one-off abstractions
+- [ ] Tests or documented manual checks cover the main behavior and likely regressions
+- [ ] No unrelated files, app-specific imports, or ownership-boundary leaks are introduced
+- [ ] Security-sensitive values, credentials, generated secrets, and local env files are not committed
+- [ ] Build, lint, type-check, and any targeted verification commands are known before editing
+- [ ] Any skipped verification is recorded as a deviation with a follow-up owner or trigger
+
+### Documentation and comment policy
+
+- Keep code comments minimal and focused on intent, invariants, or non-obvious behavior.
+- Put usage examples, migration notes, variant tables, setup steps, and operational runbooks in docs, not inline code comments.
+- Add deprecation notices only on the public export or entry point that consumers actually use.
+- If docs and code disagree, update the docs in the same commit or record the gap as a deviation.
+
+### Inspect source tree before implementation
+
+Before the first implementation commit, inspect the actual repository state and record any differences from this plan.
+
+- [ ] Confirm `reducer.ts` still contains the private `calculateSubtotalFromTotal` function at line 18
+- [ ] Confirm `useLineCrud.ts` has `append`, `remove`, `update`, `prepend` but not `replace`
+- [ ] Confirm `useInvoiceLinesData.ts` has `replace` from `useFieldArray` (line 26)
+- [ ] Confirm `InvoiceLinesTableFooter.tsx` renders totals at line 47–57
+- [ ] Confirm `PurchaseInvoiceFormContext.tsx` exports `PurchaseInvoiceFormContextValue` interface
+- [ ] Confirm `usePurchaseInvoiceForm.ts` receives `peppolInvoiceId` and passes it to context
+- [ ] Confirm `useInvoiceFormActions.ts` has `onSubmit` and `onError` handlers
+- [ ] Confirm current lint, type-check, build status
+
+### Capture baselines
+
+Run these from `sndq-fe/` and save the output. Diff against these after risky commits.
+
+```bash
+cd sndq-fe
+pnpm tsc --noEmit 2>&1 | tee /tmp/lock-amount-tsc-before.txt
+pnpm lint 2>&1 | tee /tmp/lock-amount-lint-before.txt
+```
+
+### Create branch
+
+```bash
+git checkout develop
+git pull origin develop
+git checkout -b feature/lock-total-amount
+```
+
+---
+
+## 3. PR 1 — Core Pipeline and Pure Logic
+
+Pure-function code with zero UI changes. Extracting shared math, defining types, and building the pipeline + reconciliation logic. Safe to merge independently because nothing consumes it yet.
+
+---
+
+### Commit 1: Extract `calculateSubtotalFromTotal` into shared utility
+
+**What**: Move `calculateSubtotalFromTotal` out of `reducer.ts` into a shared utility so both the reducer and the new pipeline can import it without circular dependencies.
+
+**Files to create**:
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/utils/amountCalculation.ts`
+
+```typescript
+export function calculateSubtotalFromTotal(
+  totalAmount: number,
+  vatRate: number,
+): number {
+  return Math.round((totalAmount * 10000) / (10000 + vatRate * 100));
+}
+
+/**
+ * Recomputes a line's excl-VAT amount from its totalAmount,
+ * preserving all other fields. Does NOT recalculate unit distribution.
+ */
+export function setTotalAmountForLine(
+  line: AmountWithDistributionData,
+  totalAmount: number,
+  defaultVatRate?: number,
+): AmountWithDistributionData {
+  const vatRate = line.vatRate || defaultVatRate || 0;
+  const subtotal = line.hasVat
+    ? calculateSubtotalFromTotal(totalAmount, vatRate)
+    : totalAmount;
+  return { ...line, amount: subtotal, totalAmount };
+}
+```
+
+**Files to edit**:
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/reducer.ts` — remove the private `calculateSubtotalFromTotal` function (lines 18–23), import from `utils/amountCalculation`. Update `setTotalAmount` and `setVat` functions to use the imported version.
+
+**Files to delete**: None
+
+**Quality gate checklist**:
+
+- [ ] Public API / behavior for this commit is stable
+- [ ] Documentation or comments are updated where this commit changes behavior
+- [ ] Verification covers the main behavior and likely regression
+- [ ] No unrelated or secret-bearing files are included
+- [ ] Rollback path is clear
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| Import path breaks existing reducer usage | LOW | Type-check passes; `InvoiceLineCard` amount editing still works |
+
+**Verification**:
+
+```bash
+cd sndq-fe
+pnpm tsc --noEmit
+pnpm lint
+```
+
+Manual: Open a purchase invoice form, edit a line amount, confirm the excl-VAT back-calculation still works correctly.
+
+**If it fails**:
+
+- **"Cannot find module './utils/amountCalculation'"**: Check relative import path from `reducer.ts`
+- **Amount calculation changes**: Verify the extracted function is byte-identical to the original
+
+**Deviations from the gate**: None
+
+**Commit message**: `refactor: extract calculateSubtotalFromTotal to shared util`
+
+**Status**:
+
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented
+- [x] Build / lint / type-check green or deviation documented
+- [ ] Manual verification complete, if applicable
+- [ ] Committed
+
+---
+
+### Commit 2: Define pipeline types and pure reconciliation functions
+
+**What**: Create the `PipelineAction` type, `LockState` type, and the three pure reconciliation functions: `reconcileOnAdd`, `reconcileOnEdit`, `reconcileOnDelete`. All pure functions with no React dependencies — fully unit-testable.
+
+**Files to create**:
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/pipeline/types.ts`
+
+```typescript
+import type { AmountWithDistributionData } from '../../../../purchase-invoice-v2/schema';
+
+export type LockState =
+  | { locked: false }
+  | { locked: true; lockedTotal: number };
+
+export type PipelineAction =
+  | { type: 'ADD_LINE'; defaults: AmountWithDistributionData }
+  | { type: 'DELETE_LINES'; indices: number[] }
+  | { type: 'DUPLICATE_LINE'; index: number }
+  | { type: 'EDIT_AMOUNT'; index: number; totalAmount: number }
+  | { type: 'UPDATE_LINE'; index: number; data: AmountWithDistributionData };
+```
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/pipeline/computeNewLines.ts`
+
+Pure function that applies the raw action to produce a new lines array. No lock awareness.
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/pipeline/reconcile.ts`
+
+Contains `reconcile(lines, action, lockedTotal)` which delegates to:
+  - `reconcileOnAdd` — sets last line's totalAmount to `max(0, lockedTotal - sumOfOthers)`
+  - `reconcileOnEdit` — redistributes other lines proportionally, rounding remainder to first line
+  - `reconcileOnDelete` — redistributes all remaining lines proportionally
+  - `DUPLICATE_LINE` — no-op (returns lines as-is)
+  - `UPDATE_LINE` — if totalAmount changed, delegates to `reconcileOnEdit`; otherwise no-op
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/pipeline/assertTotalMatch.ts`
+
+```typescript
+export function assertTotalMatch(
+  lines: AmountWithDistributionData[],
+  lockedTotal: number,
+): { matched: boolean; diff: number } {
+  const sum = lines.reduce((s, l) => s + l.totalAmount, 0);
+  return { matched: sum === lockedTotal, diff: sum - lockedTotal };
+}
+```
+
+**Files to edit**: None
+
+**Files to delete**: None
+
+**Quality gate checklist**:
+
+- [ ] Public API / behavior for this commit is stable
+- [ ] Documentation or comments are updated where this commit changes behavior
+- [ ] Verification covers the main behavior and likely regression
+- [ ] No unrelated or secret-bearing files are included
+- [ ] Rollback path is clear
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| Redistribution rounding produces off-by-one | LOW | Unit tests with known inputs |
+| Negative remainder on reconcileOnAdd | LOW | Test with sum > lockedTotal |
+
+**Verification**:
+
+```bash
+cd sndq-fe
+pnpm tsc --noEmit
+```
+
+Additionally, write a test file to verify redistribution math:
+
+```bash
+pnpm test src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/pipeline/reconcile.test.ts
+```
+
+Test cases to cover:
+1. `reconcileOnEdit`: total=1000, lines=[600,400], edit line[1] to 200 -> line[0] should be 800
+2. `reconcileOnEdit`: total=1000, lines=[400,600], add line[2]=0, edit line[2] to 200 -> lines=[320,480,200]
+3. `reconcileOnAdd`: total=1000, existing=[400] -> new line gets 600
+4. `reconcileOnAdd`: total=1000, existing=[400,600] -> new line gets 0
+5. `reconcileOnDelete`: total=1000, lines=[400,400,200], delete line[2] -> lines=[500,500]
+6. Rounding: total=1000, 3 equal lines -> [334,333,333]
+7. Edge case: all other lines are 0 -> no redistribution, mismatch flagged
+
+**If it fails**:
+
+- **Rounding off-by-one**: Check that remainder is assigned to index 0 (first non-edited line)
+- **Negative amounts**: `reconcileOnAdd` must `max(0, ...)` the remainder
+
+**Deviations from the gate**: None
+
+**Commit message**: `feat: add pipeline types and reconciliation logic`
+
+**Status**:
+
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented
+- [x] Build / lint / type-check green or deviation documented
+- [ ] Manual verification complete, if applicable
+- [ ] Committed
+
+---
+
+### Commit 3: Create `useAmountPipeline` hook and vendor `useStableCallback`
+
+**What**: The React hook that wires `computeNewLines` -> `reconcile` -> `assertTotalMatch` -> `replace()`. Accepts `liveAmounts`, `replace` (from `useFieldArray`), `lockState`, and a `onMismatch` callback for toast errors.
+
+Uses a vendored `useStableCallback` hook (based on [Base UI's implementation](https://github.com/mui/base-ui/blob/master/packages/utils/src/useStableCallback.ts)) to stabilize the `execute` function identity without manual refs or `useCallback`. This eliminates the 3-ref + `useCallback` boilerplate and reads directly from closure values. The hook will be replaced by React's `useEffectEvent` when it graduates from experimental.
+
+**Files to create**:
+
+- `sndq-fe/src/hooks/lib/useStableCallback.ts` — Vendored from Base UI, adapted for React 19.2+ (uses `useInsertionEffect` natively). Stabilizes a callback so it's always the same reference between renders while always calling the latest closure. Includes a render-time safety guard that throws in development if called during render.
+
+- `sndq-fe/src/hooks/lib/useRefWithInit.ts` — Vendored from Base UI. A `useRef` variant that accepts a lazy initializer function (avoids re-creating the init value on every render).
+
+- `sndq-fe/src/common/utils/lib/safeReact.ts` — Vendored from Base UI. A spread-clone of the React namespace for safely reading APIs that may be missing in older versions (prevents bundler import rewriting issues).
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/pipeline/useAmountPipeline.ts`
+
+```typescript
+interface UseAmountPipelineParams {
+  liveAmounts: AmountWithDistributionData[];
+  replace: (lines: AmountWithDistributionData[]) => void;
+  lockState: LockState;
+  onMismatch?: (diff: number) => void;
+}
+
+interface UseAmountPipelineReturn {
+  execute: (action: PipelineAction) => void;
+}
+```
+
+The hook uses `useStableCallback` to wrap the `execute` function:
+1. Calls `computeNewLines(liveAmounts, action)` to get raw result (reads from closure, always fresh)
+2. If `lockState.locked`, calls `reconcile(rawResult, action, lockState.lockedTotal)`
+3. If `lockState.locked`, calls `assertTotalMatch` and fires `onMismatch` if not matched
+4. Calls `replace(finalResult)` to commit
+
+No manual refs needed — `useStableCallback` handles the stale-closure problem via `useInsertionEffect`.
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/pipeline/index.ts`
+
+Barrel export for all pipeline modules.
+
+**Files to edit**: None
+
+**Files to delete**: None
+
+**Quality gate checklist**:
+
+- [ ] Public API / behavior for this commit is stable
+- [ ] Documentation or comments are updated where this commit changes behavior
+- [ ] Verification covers the main behavior and likely regression
+- [ ] No unrelated or secret-bearing files are included
+- [ ] Rollback path is clear
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| `useStableCallback` called during render | LOW | Runtime guard (`assertNotCalled`) throws in dev; `execute` is only called from event handlers |
+| Future migration to `useEffectEvent` | LOW | JSDoc on `useStableCallback` documents the migration path; `useEffectEvent` has a stricter contract (no prop/context passing) |
+
+**Verification**:
+
+```bash
+cd sndq-fe
+pnpm tsc --noEmit
+pnpm lint
+pnpm test src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/
+```
+
+**If it fails**:
+
+- **Cannot call event handler during rendering**: The `execute` function was called during render. Move the call into an event handler or effect.
+- **Import path issues**: Verify `@/hooks/lib/useStableCallback` resolves correctly via the `@/` path alias.
+
+**Deviations from the gate**:
+
+- **Vendored Base UI utilities** — introduced `useStableCallback`, `useRefWithInit`, and `safeReact` as vendored code in `src/hooks/lib/` and `src/common/utils/lib/`. These are library-grade utilities that replace the manual ref pattern used in 25+ files across the codebase. Marked for replacement by `useEffectEvent` when stable.
+
+**Commit message**: `feat: add useAmountPipeline hook with vendored useStableCallback`
+
+**Status**:
+
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented
+- [x] Build / lint / type-check green or deviation documented
+- [ ] Manual verification complete, if applicable
+- [ ] Committed
+
+---
+
+### PR 1 Checkpoint
+
+Push PR 1 and wait for CI or the relevant automated checks to pass before continuing.
+
+```bash
+git push -u origin feature/lock-total-amount
+# Create PR targeting develop
+# Wait for CI to complete successfully
+```
+
+**This validates**: Pure logic compiles, lint passes, unit tests for reconciliation math pass.
+
+**Manual checkpoint**:
+
+- [ ] PR description matches the commit scope
+- [ ] CI passes or failures are explained
+- [ ] No existing behavior changed — pipeline is not wired yet
+- [ ] Rollback: revert the 3 commits; no runtime impact
+
+**Status**:
+
+- [ ] PR created
+- [ ] CI passes
+- [ ] Reviewed
+- [ ] Merged or approved to continue
+
+---
+
+## 4. PR 2 — Wire Pipeline into Form and UI
+
+Integration work — connects the pipeline to the existing form context, replaces direct field-array calls in CRUD hooks, adds the lock toggle UI in the footer. This is the riskiest PR because it changes how all line mutations work.
+
+---
+
+### Commit 4: Add lock state to context and instantiate pipeline
+
+**What**: Add `lockState` and `toggleAmountLock` to `PurchaseInvoiceFormContext`. Instantiate `useAmountPipeline` in `useInvoiceLinesData` and expose it alongside existing returns.
+
+**Files to edit**:
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/contexts/PurchaseInvoiceFormContext.tsx` — add to `PurchaseInvoiceFormContextValue`:
+
+```typescript
+lockState: LockState;
+toggleAmountLock: () => void;
+```
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/PurchaseInvoiceFormV3.tsx` — add `useState` for lock state, compute `lockedTotal` from current totals when toggling, pass into context provider.
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/hooks/useInvoiceLinesData.ts` — instantiate `useAmountPipeline` with `liveAmounts`, `replace` (already available from `useFieldArray`), `lockState` (from context), and a `onMismatch` callback that calls `toast.error`. Expose `pipeline` in return value.
+
+**Files to create**: None
+
+**Files to delete**: None
+
+**Quality gate checklist**:
+
+- [ ] Public API / behavior for this commit is stable
+- [ ] Documentation or comments are updated where this commit changes behavior
+- [ ] Verification covers the main behavior and likely regression
+- [ ] No unrelated or secret-bearing files are included
+- [ ] Rollback path is clear
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| Context type change breaks existing consumers | MEDIUM | All usages of `usePurchaseInvoiceFormContext()` must handle new fields |
+| Lock state initial value must not interfere with unlocked flow | LOW | Default is `{ locked: false }` — pipeline is passthrough |
+
+**Verification**:
+
+```bash
+cd sndq-fe
+pnpm tsc --noEmit
+pnpm lint
+```
+
+Manual: Open purchase invoice form. Confirm everything still works normally (lock is not toggled yet, pipeline is in passthrough mode).
+
+**If it fails**:
+
+- **"Property 'lockState' is missing in type..."**: Add the new properties to the context provider value in `PurchaseInvoiceFormV3.tsx`
+
+**Deviations from the gate**: None
+
+**Commit message**: `feat: add lock state to context and instantiate pipeline`
+
+**Status**:
+
+- [ ] Quality gate checklist satisfied
+- [ ] Tests green or deviation documented
+- [ ] Build / lint / type-check green or deviation documented
+- [ ] Manual verification complete, if applicable
+- [ ] Committed
+
+---
+
+### Commit 5: Route CRUD operations through pipeline
+
+**What**: Replace direct `append`/`remove`/`update` calls in `useLineCrud` with `pipeline.execute()` calls. Route amount edits from `useInvoiceLineDispatch` through the pipeline when totalAmount changes.
+
+**Files to edit**:
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/hooks/useLineCrud.ts`
+  - Add `pipeline` to params (from `useAmountPipeline`)
+  - `handleAdd` -> `pipeline.execute({ type: 'ADD_LINE', defaults: createDefaultLine(...) })`
+  - `handleDuplicate` -> `pipeline.execute({ type: 'DUPLICATE_LINE', index })`
+  - `handleConfirmDelete` (single) -> `pipeline.execute({ type: 'DELETE_LINES', indices: [idx] })`
+  - `handleConfirmDelete` (bulk) -> `pipeline.execute({ type: 'DELETE_LINES', indices: [...] })`
+  - Remove direct `append`, `remove` calls from the hook params (they are no longer needed — pipeline uses `replace`)
+  - Keep `update` for non-pipeline operations (distribution sheet submit)
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/hooks/useInvoiceLineDispatch.ts`
+  - Add `pipeline` and `lockState` to params
+  - In the dispatch callback: after computing `nextState` via `applyInvoiceLineAction`, check if `totalAmount` changed and `lockState.locked`:
+    - If yes: `pipeline.execute({ type: 'EDIT_AMOUNT', index, totalAmount: nextState.totalAmount })`
+    - If `totalAmount` unchanged but other fields changed: `pipeline.execute({ type: 'UPDATE_LINE', index, data: nextState })`
+    - If not locked: `onUpdate(index, nextState)` (existing behavior, untouched)
+  - This is the key integration point — single-line edits that change the total (e.g., VAT rate change) are automatically routed through the pipeline
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/hooks/useInvoiceLinesData.ts` — pass `pipeline` to `useLineCrud` and `useInvoiceLineDispatch` consumers (via the returned `update` callback or directly)
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/hooks/useInvoiceLineHandlers.ts` — pass `pipeline` and `lockState` through to `useInvoiceLineDispatch`
+
+**Files to create**: None
+
+**Files to delete**: None
+
+**Quality gate checklist**:
+
+- [ ] Public API / behavior for this commit is stable
+- [ ] Documentation or comments are updated where this commit changes behavior
+- [ ] Verification covers the main behavior and likely regression
+- [ ] No unrelated or secret-bearing files are included
+- [ ] Rollback path is clear
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| Unlocked mode regression — pipeline passthrough must be identical to old behavior | HIGH | Full manual test of unlocked add/edit/delete/duplicate |
+| `replace()` vs `append()`/`remove()` ordering differences | MEDIUM | RHF `replace` re-renders the entire array; confirm no flicker or lost focus |
+| Distribution sheet submit bypasses pipeline | LOW | `handleDistributionSubmit` still uses direct `update()` — acceptable since it updates a single line's distribution, not amount |
+
+**Verification**:
+
+```bash
+cd sndq-fe
+pnpm tsc --noEmit
+pnpm lint
+```
+
+Manual (critical — test with lock OFF):
+1. Add a line -> line appears with default values
+2. Edit a line's total amount -> excl-VAT recalculates correctly
+3. Change VAT rate -> total stays, excl-VAT recalculates
+4. Duplicate a line -> copy appears with same values
+5. Delete a line -> line is removed
+6. Bulk delete -> selected lines removed
+7. Open distribution sheet -> submit distribution -> line updates correctly
+
+All must behave identically to pre-pipeline behavior.
+
+**If it fails**:
+
+- **Lines disappear or reset on edit**: The `replace()` call may be creating new objects without preserving `_fieldId`. Ensure the pipeline preserves the original object references for unchanged lines.
+- **Stale data after rapid edits**: Check that `liveAmountsRef` is used inside `execute` instead of the closure-captured `liveAmounts`.
+- **Distribution sheet broken**: Confirm `handleDistributionSubmit` still uses direct `update()`, not the pipeline.
+
+**Deviations from the gate**:
+
+- **Distribution sheet submit is not routed through pipeline** — acceptable because it updates distribution fields (units), not the totalAmount. If in locked mode the totalAmount changes via custom distribution, this should be handled in a follow-up.
+
+**Commit message**: `feat: route CRUD operations through amount pipeline`
+
+**Status**:
+
+- [ ] Quality gate checklist satisfied
+- [ ] Tests green or deviation documented
+- [ ] Build / lint / type-check green or deviation documented
+- [ ] Manual verification complete, if applicable
+- [ ] Committed
+
+---
+
+### Commit 6: Add lock toggle UI to footer
+
+**What**: Add a lock/unlock icon button next to the total amount in `InvoiceLinesTableFooter`. Wire it to `toggleAmountLock` from context.
+
+**Files to edit**:
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/InvoiceLinesTableFooter.tsx`
+  - Add props: `isLocked: boolean`, `onToggleLock: () => void`
+  - Import `Lock` and `LockOpen` from `lucide-react`
+  - Add a button to the right of the total amount display:
+
+```tsx
+<div className="mt-1 flex items-center justify-between gap-8 border-t pt-2">
+  <Paragraph className="font-base text-[16px]">
+    {t('financial.invoice_total_short')}:
+  </Paragraph>
+  <div className="flex items-center gap-2">
+    <Paragraph
+      variant="mono"
+      className={`text-[20px] ${isCreditNote ? 'text-warning-700' : ''}`}
+    >
+      {formatAmount(totals.totalInclVat, isCreditNote)}
+    </Paragraph>
+    <button
+      type="button"
+      onClick={onToggleLock}
+      className="rounded p-1 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+      title={t(isLocked ? 'purchase_invoice.unlock_total_amount' : 'purchase_invoice.lock_total_amount')}
+    >
+      {isLocked ? <Lock size={16} /> : <LockOpen size={16} />}
+    </button>
+  </div>
+</div>
+```
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/components/invoice-lines/InvoiceLinesTableV3.tsx` — pass `isLocked` and `onToggleLock` to `InvoiceLinesTableFooter` from the context/pipeline data.
+
+**Files to create**: None
+
+**Files to delete**: None
+
+**Quality gate checklist**:
+
+- [ ] Public API / behavior for this commit is stable
+- [ ] Documentation or comments are updated where this commit changes behavior
+- [ ] Verification covers the main behavior and likely regression
+- [ ] No unrelated or secret-bearing files are included
+- [ ] Rollback path is clear
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| Lock icon misaligned on small screens | LOW | Visual check at various widths |
+| Toggle fires form submit | LOW | Button must have `type="button"` |
+
+**Verification**:
+
+```bash
+cd sndq-fe
+pnpm tsc --noEmit
+pnpm lint
+```
+
+Manual (critical — test locked mode end-to-end):
+1. Create invoice with 2 lines: line1=600, line2=400 (total=1000)
+2. Click lock icon -> icon changes to locked state
+3. Add new line -> line3 should auto-fill with 0 (remainder is 0)
+4. Edit line3 to 200 -> line1 and line2 redistribute proportionally (line1=480, line2=320 or line1=320, line2=480 depending on original ratio)
+5. Delete line3 -> line1 and line2 redistribute to sum 1000 again
+6. Duplicate line1 -> both keep their amount; toast error fires because total > 1000
+7. Click unlock icon -> icon changes to unlocked state
+8. Edit line1 -> no redistribution, normal behavior restored
+
+**If it fails**:
+
+- **Lock icon doesn't toggle**: Check that `toggleAmountLock` is correctly wired from context through `InvoiceLinesTableV3` to `InvoiceLinesTableFooter`
+- **Redistribution not happening**: Check that `lockState.locked` is `true` when the pipeline's `execute` runs; add a `console.log` in the reconcile function
+
+**Deviations from the gate**: None
+
+**Commit message**: `feat: add lock toggle UI to invoice lines footer`
+
+**Status**:
+
+- [ ] Quality gate checklist satisfied
+- [ ] Tests green or deviation documented
+- [ ] Build / lint / type-check green or deviation documented
+- [ ] Manual verification complete, if applicable
+- [ ] Committed
+
+---
+
+### PR 2 Checkpoint
+
+Push PR 2 and wait for CI or the relevant automated checks to pass before continuing.
+
+```bash
+git push -u origin feature/lock-total-amount
+# Update PR or create new PR targeting develop
+# Wait for CI to complete successfully
+```
+
+**This validates**: Full pipeline integration works. Unlocked mode is regression-free. Locked mode correctly redistributes on add/edit/delete.
+
+**Manual checkpoint**:
+
+- [ ] PR description matches the commit scope
+- [ ] CI passes or failures are explained
+- [ ] Unlocked mode regression test passes (commit 5 manual checks)
+- [ ] Locked mode end-to-end test passes (commit 6 manual checks)
+- [ ] Rollback: revert commits 4–6; form reverts to pre-pipeline direct field-array calls
+
+**Status**:
+
+- [ ] PR created
+- [ ] CI passes
+- [ ] Reviewed
+- [ ] Merged or approved to continue
+
+---
+
+## 5. PR 3 — Peppol Auto-Lock and Validation
+
+Additive behavior — auto-enables lock for Peppol invoices and adds submit-time validation as a safety net.
+
+---
+
+### Commit 7: Auto-enable lock for Peppol invoices
+
+**What**: When `peppolInvoiceId` is set and form data is populated from Peppol, automatically enable locked mode with the computed total. User can still unlock manually.
+
+**Files to edit**:
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/PurchaseInvoiceFormV3.tsx`
+  - Initialize `lockState` based on whether `peppolInvoiceId` is truthy
+  - After Peppol data is parsed and lines are populated (via `handlePeppolDataParsed`), compute the total from `amounts` and set `lockState = { locked: true, lockedTotal: computedTotal }`
+  - Implementation approach: use a `useEffect` that watches for `peppolInvoiceId` and the form's `amounts` being populated, then auto-locks once (using a ref to prevent re-triggering)
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/hooks/usePurchaseInvoiceForm.ts` — expose a callback or flag to signal when Peppol prefill is complete, so the auto-lock can trigger at the right time (after lines are populated, not before)
+
+**Files to create**: None
+
+**Files to delete**: None
+
+**Quality gate checklist**:
+
+- [ ] Public API / behavior for this commit is stable
+- [ ] Documentation or comments are updated where this commit changes behavior
+- [ ] Verification covers the main behavior and likely regression
+- [ ] No unrelated or secret-bearing files are included
+- [ ] Rollback path is clear
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| Auto-lock triggers before Peppol lines are populated | MEDIUM | Lock total would be 0, breaking all redistribution |
+| Auto-lock re-triggers on re-render | LOW | Use a ref guard to fire only once |
+| Editing existing Peppol invoice should NOT auto-lock | MEDIUM | Only auto-lock on create-from-Peppol (no invoiceId), not edit |
+
+**Verification**:
+
+```bash
+cd sndq-fe
+pnpm tsc --noEmit
+pnpm lint
+```
+
+Manual:
+1. Navigate to create invoice from Peppol XML -> form populates -> lock icon should be in locked state
+2. Check that the locked total matches the sum of Peppol-parsed lines
+3. Add a new line -> gets remainder amount
+4. Click unlock -> icon changes, normal edit behavior
+5. Open an existing invoice that was created from Peppol -> lock should NOT be auto-enabled (it was already saved)
+
+**If it fails**:
+
+- **Lock total is 0**: The `useEffect` fires before Peppol lines are set. Add a guard: only auto-lock when `amounts.length > 0` and `peppolInvoiceId` is set.
+- **Lock re-triggers after user unlocks**: The ref guard (`hasAutoLocked.current`) must be set to `true` on the first auto-lock and never reset.
+
+**Deviations from the gate**: None
+
+**Commit message**: `feat: auto-enable lock for Peppol invoices`
+
+**Status**:
+
+- [ ] Quality gate checklist satisfied
+- [ ] Tests green or deviation documented
+- [ ] Build / lint / type-check green or deviation documented
+- [ ] Manual verification complete, if applicable
+- [ ] Committed
+
+---
+
+### Commit 8: Add submit-time validation and translation keys
+
+**What**: Add a safety-net validation in `onSubmit` that prevents submission when locked total mismatches. Add the required translation keys.
+
+**Files to edit**:
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v2/hooks/useInvoiceFormActions.ts`
+  - Add `lockState: LockState` to `UseInvoiceFormActionsParams` interface
+  - In `onSubmit`, before the API call, add:
+
+```typescript
+if (lockState.locked) {
+  const currentSum = data.amounts.reduce((s, a) => s + a.totalAmount, 0);
+  if (currentSum !== lockState.lockedTotal) {
+    toast.error(t('purchase_invoice.validation_error_locked_total_mismatch'));
+    return;
+  }
+}
+```
+
+  - In `onError`, add a block after the existing amounts checks:
+
+```typescript
+if (lockState.locked) {
+  const currentAmounts = methods.getValues('amounts');
+  const currentSum = currentAmounts.reduce((s: number, a: { totalAmount: number }) => s + a.totalAmount, 0);
+  if (currentSum !== lockState.lockedTotal) {
+    toast.error(t('purchase_invoice.validation_error_locked_total_mismatch'));
+    return;
+  }
+}
+```
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/hooks/usePurchaseInvoiceForm.ts` — pass `lockState` to `useInvoiceFormActions`
+
+- `sndq-fe/messages/en/purchase_invoice.json` — add keys:
+
+```json
+"lock_total_amount": "Lock total amount",
+"unlock_total_amount": "Unlock total amount",
+"validation_error_locked_total_mismatch": "The total of all lines does not match the locked total amount. Please adjust line amounts."
+```
+
+- `sndq-fe/messages/nl/purchase_invoice.json` — add equivalent Dutch translations (request from language expert or use placeholder)
+- `sndq-fe/messages/fr/purchase_invoice.json` — add equivalent French translations
+- `sndq-fe/messages/de/purchase_invoice.json` — add equivalent German translations
+
+**Files to create**: None
+
+**Files to delete**: None
+
+**Quality gate checklist**:
+
+- [ ] Public API / behavior for this commit is stable
+- [ ] Documentation or comments are updated where this commit changes behavior
+- [ ] Verification covers the main behavior and likely regression
+- [ ] No unrelated or secret-bearing files are included
+- [ ] Rollback path is clear
+
+**Risks**:
+
+| Risk | Severity | What to check |
+|------|----------|---------------|
+| Submit blocked when not locked | LOW | Guard is `if (lockState.locked)` — no-op when unlocked |
+| Missing translation keys crash the UI | LOW | next-intl falls back to key name; won't crash |
+
+**Verification**:
+
+```bash
+cd sndq-fe
+pnpm tsc --noEmit
+pnpm lint
+```
+
+Manual:
+1. Lock total at 1000, duplicate a line (creates mismatch), click Submit -> toast error appears, form does NOT submit
+2. Fix the mismatch (edit amounts), click Submit -> form submits successfully
+3. Unlock, click Submit -> form submits normally (no locked validation)
+4. Check all 4 languages show the translation (switch locale in app settings)
+
+**If it fails**:
+
+- **Form submits despite mismatch**: Check that `onSubmit` has an early `return` after the toast, not just the toast call
+- **Translation key not found**: Verify the JSON key path matches `purchase_invoice.validation_error_locked_total_mismatch`
+
+**Deviations from the gate**:
+
+- **Translation placeholders for NL/FR/DE** — English keys used as placeholders until language expert provides proper translations. Record as follow-up.
+
+**Commit message**: `feat: add submit validation and i18n for locked total`
+
+**Status**:
+
+- [ ] Quality gate checklist satisfied
+- [ ] Tests green or deviation documented
+- [ ] Build / lint / type-check green or deviation documented
+- [ ] Manual verification complete, if applicable
+- [ ] Committed
+
+---
+
+### PR 3 Checkpoint
+
+Push PR 3 and wait for CI or the relevant automated checks to pass before continuing.
+
+```bash
+git push -u origin feature/lock-total-amount
+# Update PR or create new PR targeting develop
+# Wait for CI to complete successfully
+```
+
+**This validates**: Peppol auto-lock works correctly, submit validation catches mismatches, translations render.
+
+**Manual checkpoint**:
+
+- [ ] PR description matches the commit scope
+- [ ] CI passes or failures are explained
+- [ ] Peppol create flow auto-locks correctly
+- [ ] Submit validation blocks on mismatch
+- [ ] Rollback: revert commits 7–8; Peppol flow works normally without auto-lock
+
+**Status**:
+
+- [ ] PR created
+- [ ] CI passes
+- [ ] Reviewed
+- [ ] Merged or approved to continue
+
+---
+
+## 6. Final Verification
+
+After all 8 commits, run the full suite from the repository root:
+
+```bash
+cd sndq-fe
+pnpm tsc --noEmit 2>&1 | tee /tmp/lock-amount-tsc-final.txt
+pnpm lint 2>&1 | tee /tmp/lock-amount-lint-final.txt
+pnpm build
+```
+
+Compare against baselines:
+
+```bash
+diff /tmp/lock-amount-tsc-before.txt /tmp/lock-amount-tsc-final.txt
+diff /tmp/lock-amount-lint-before.txt /tmp/lock-amount-lint-final.txt
+```
+
+**Manual verification**:
+
+- [ ] **Unlocked mode**: Full regression test — add/edit/delete/duplicate/VAT change/distribution all work identically to pre-feature behavior
+- [ ] **Locked mode — add**: New line gets remainder; toast if remainder < 0
+- [ ] **Locked mode — edit**: Other lines redistribute proportionally; excl-VAT back-calculated per line's VAT rate
+- [ ] **Locked mode — delete**: Remaining lines redistribute to fill locked total
+- [ ] **Locked mode — duplicate**: Both keep amounts; toast fires on mismatch
+- [ ] **Locked mode — VAT change**: If totalAmount changes, redistribution triggers
+- [ ] **Locked mode — unlock**: Returns to normal behavior, current amounts preserved
+- [ ] **Peppol create**: Auto-locks with correct total
+- [ ] **Peppol edit existing**: Does NOT auto-lock
+- [ ] **Submit with mismatch**: Blocked with toast
+- [ ] **Submit without mismatch**: Succeeds normally
+- [ ] **Translations**: All 4 languages render correctly for new keys
+
+**Expected result**: The lock toggle appears next to the total in the invoice lines footer. When locked, all line mutations maintain the locked total through the pipeline reconciliation. Peppol invoices auto-lock. Submit is blocked on mismatch.
+
+**Final status**:
+
+- [ ] All 8 commits complete
+- [ ] Build passes
+- [ ] Lint passes
+- [ ] Type-check passes
+- [ ] Tests pass or missing coverage is documented
+- [ ] Manual verification complete
+- [ ] All PRs created and merged, or ready for merge
+
+---
+
+## 7. Team Communication
+
+Send to the team before merging PR 2 (the riskiest PR):
+
+> **Heads up: Lock Total Amount feature for Purchase Invoice V3**
+>
+> PR [link] adds a lock/unlock toggle next to the invoice total. When locked, adding/editing/deleting lines auto-redistributes amounts to maintain the total. Peppol invoices auto-lock by default.
+>
+> After pulling:
+>
+> 1. Run `pnpm install` (no new dependencies)
+> 2. Restart dev server
+>
+> Files that changed and may conflict:
+> - `invoice-lines/hooks/useLineCrud.ts`
+> - `invoice-lines/hooks/useInvoiceLineDispatch.ts`
+> - `invoice-lines/hooks/useInvoiceLinesData.ts`
+> - `invoice-lines/InvoiceLinesTableFooter.tsx`
+> - `invoice-lines/InvoiceLinesTableV3.tsx`
+> - `invoice-lines/reducer.ts`
+> - `contexts/PurchaseInvoiceFormContext.tsx`
+> - `PurchaseInvoiceFormV3.tsx`
+> - `hooks/useInvoiceFormActions.ts`
+>
+> Known deviations or follow-ups:
+> - NL/FR/DE translations are placeholders — language expert review needed
+> - Distribution keys are NOT recalculated during locked-mode redistribution (deferred to explicit user action)
+> - Custom distribution sheet submit is not routed through pipeline (follow-up if needed)
+
+---
+
+## 8. What's Next
+
+After Lock Total Amount is merged, consider:
+
+- **Unit distribution recalculation**: When locked-mode redistribution changes a line's totalAmount, optionally re-apply the line's distribution key to recalculate unit amounts
+- **Visual mismatch indicator**: Show the difference between locked total and current sum inline (e.g., red badge showing "+200" next to the lock icon)
+- **Steward V3 support**: If the steward purchase invoice form (V2-steward) needs the same feature, the pipeline can be reused
+
+### Lessons to carry forward
+
+- The pipeline pattern avoids if/else branching across many files
+- `replace()` from `useFieldArray` is the key to atomic multi-line updates
+- `calculateSubtotalFromTotal` is a critical shared utility — keep it extracted
+
+### Known lessons from prior phases
+
+- Peppol data parsing is async — auto-lock must wait for lines to populate
+- RHF `replace` triggers a full array re-render — test for focus loss in inputs
+
+---
+
+## Execution Log
+
+Record notes, issues, verification results, and deviations here as you go.
+
+| Date | Commit | Notes |
+|------|--------|-------|
+| 2026-05-19 | 1 | Done. Extracted `calculateSubtotalFromTotal` to `utils/amountCalculation.ts`, added `setTotalAmountForLine`. Reducer imports from new util. ESLint clean, 21/21 reducer tests pass, 15/15 new `amountCalculation.test.ts` tests pass. Type-check errors in `PurchaseInvoiceFormV3.tsx` are pre-existing (from partial future-commit changes already in working tree). Pending: manual verification and commit. |
+| 2026-05-19 | 2 | Done. Created `pipeline/types.ts` (LockState, PipelineAction), `pipeline/computeNewLines.ts`, `pipeline/reconcile.ts`, `pipeline/assertTotalMatch.ts`. 25/25 pipeline tests pass. Type-check clean, ESLint clean. All 115 invoice-lines tests pass (zero regressions). Key fix: `UPDATE_LINE` reconcile uses sum-check instead of direct comparison (since `computeNewLines` already applies the update before `reconcile` sees it). Pending: manual verification and commit. |
+| 2026-05-19 | 3 | Done. Vendored Base UI's `useStableCallback` (+ `useRefWithInit`, `safeReact`) into `src/hooks/lib/` and `src/common/utils/lib/`. Created `pipeline/useAmountPipeline.ts` using `useStableCallback` — eliminates 3 manual refs and `useCallback`, reads directly from closure. Created `pipeline/index.ts` barrel export. JSDoc documents future migration to `useEffectEvent`. Type-check clean, ESLint clean. All 115 invoice-lines tests pass (zero regressions). Pending: manual verification and commit. |
+| | 4 | |
+| | 5 | |
+| | 6 | |
+| | 7 | |
+| | 8 | |
