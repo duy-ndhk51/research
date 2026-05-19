@@ -3,7 +3,7 @@
 Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently verifiable and revertable.
 
 **Created**: 2026-05-04  
-**Status**: In progress (Commits 1–6b, 7+8, 9+10, 11+12, 13+14, 15a-icon-docs, 15b-15d, 16, 17, 18 implemented; Commit 19 DESIGN.md planned; pending manual commit)  
+**Status**: In progress (Commits 1–6b, 7+8, 9+10, 11+12, 13+14, 15a-icon-docs, 15b-15d, 16, 17, 18 implemented; Commit 19 DESIGN.md token pipeline planned; pending manual commit)  
 **Architecture**: [README.md](./README.md)  
 **Migration plan**: [migration-plan.md](./migration-plan.md)  
 **Typography reference**: [typography-system-reference.md](./typography-system-reference.md)  
@@ -40,13 +40,13 @@ Step-by-step execution guide for Phase 3, Batch 1. Each commit is independently 
 | **1A — Typography** | 1–4 | `Text` then `Heading` (standardize + graduate each) |
 | **1B — Layout shell** | 5–12 | `Container`, `Section`, `Flex`, `Grid` (standardize + graduate each); CVA + `semantic-tokens.css` layout variables (incl. `--sndq-space-*`) |
 | **1C — Interactive** | 13–18 | Button (+ co-located exports), Input, Badge (standardize + graduate each) |
-| **1C-bis — DESIGN.md** | 19 | Install `@google/design.md` CLI; create `packages/ui-v2/DESIGN.md` covering graduated tokens + components (Button, Badge, Input) |
+| **1C-bis — DESIGN.md token pipeline** | 19 | Install `@google/design.md` CLI; make `packages/ui-v2/DESIGN.md` the token source; export generated Tailwind tokens into `packages/config/tailwind`; keep manual CSS files synchronized by referencing generated variables |
 | **1C (cont.) — Interactive** | 20–25 | Select, Dialog, Sheet (standardize + graduate each) |
 | **1D — Deprecations** | 26 | Single `sndq-fe` JSDoc pass |
 
 | PR | Scope | Risk level | Commits |
 |----|-------|------------|---------|
-| **PR 1** | Sub-batches 1A → 1B → 1C → 1C-bis → 1C (cont.) → 1D: typography, CVA layout shell, interactive primitives (Button/Input/Badge), DESIGN.md specification (Google format), remaining interactives (Select/Dialog/Sheet), docs (primitives + foundations), incremental `@sndq/config` `@theme` aliases, `sndq-fe` deprecations | Medium | 1–26 |
+| **PR 1** | Sub-batches 1A → 1B → 1C → 1C-bis → 1C (cont.) → 1D: typography, CVA layout shell, interactive primitives (Button/Input/Badge), DESIGN.md specification and generated Tailwind token pipeline, remaining interactives (Select/Dialog/Sheet), docs (primitives + foundations), incremental `@sndq/config` `@theme` aliases, `sndq-fe` deprecations | Medium | 1–26 |
 
 **Why typography first (1A)**: Establishes token usage, `cn()` pattern, and optional short Tailwind utilities before layout and the larger interactive set. See [typography-system-reference.md](./typography-system-reference.md).
 
@@ -62,29 +62,58 @@ Full a11y wiring (`aria-invalid`, `aria-describedby`, id linking between control
 
 ### Typography and `@theme` utilities (gradual)
 
-- **Canonical values** live in `packages/config/tailwind/semantic-tokens.css` (`--sndq-text`, `--sndq-text-secondary`, `--sndq-text-xs` … `--sndq-text-7xl`, font stacks). Variant `cva` strings must use these variables (for example `text-[var(--sndq-text-secondary)]` or `text-[length:var(--sndq-text-sm)]`) until a shorter utility exists.
-- **Short utilities** (`text-*` from `@theme`): extend `packages/config/tailwind/tokens.css` (or a small file imported alongside it, matching the existing `@theme inline` pattern) **only for variables that shipped typography variants actually reference** in that commit. Add aliases in the **same commit** as the variant that first needs them (optional **Commit 0** theme-only is allowed if the team prefers theme before components — default is co-locate with **Commit 1** `Text` standardize).
+- **Pre-Commit 19 runtime values** live in `packages/config/tailwind/semantic-tokens.css` and `packages/config/tailwind/tokens.css` (`--sndq-text`, `--sndq-text-secondary`, `--sndq-text-xs` … `--sndq-text-7xl`, font stacks). Existing Batch 1 commits may reference those already-shipped runtime variables.
+- **Post-Commit 19 source values** live in `packages/ui-v2/DESIGN.md`, and `packages/config/tailwind/tokens.css` is regenerated from that file. Future typography token changes start in DESIGN.md, then flow into generated `tokens.css`.
+- **Short utilities** (`text-*` from `@theme`): before Commit 19, extend `tokens.css` only for variables that shipped typography variants actually reference. After Commit 19, add the token to DESIGN.md first and regenerate `tokens.css` instead of manually editing the generated file.
   - Recommended mapping for text color utilities (so components can use `text-sndq-text-primary` instead of arbitrary values):
     - `--color-sndq-text-primary: var(--sndq-text);`
     - `--color-sndq-text-secondary: var(--sndq-text-secondary);`
     - `--color-sndq-text-tertiary: var(--sndq-text-tertiary);`
     - This yields Tailwind utilities: `text-sndq-text-primary`, `text-sndq-text-secondary`, `text-sndq-text-tertiary`.
-- **Do not** map the entire semantic palette in one commit.
+- **Do not** map the entire semantic palette before Commit 19. Commit 19 is the deliberate consolidation point where the generated token artifact is allowed to include the stable palette from DESIGN.md.
 - **`cn`**: `packages/ui-v2/src/lib/utils.ts` mirrors `sndq-fe/packages/ui/src/lib/utils.ts` (`clsx` + `tailwind-merge`). Components use `cn(variantClasses, className)` on the root. `@sndq/ui-v2` must not import the submodule.
 
 ### Layout tokens and CVA (gradual)
 
 - **Not Radix Themes**: Do **not** add `@radix-ui/themes`, its `Theme` provider for spacing, or its layout CSS. Implement **`Container`**, **`Section`**, **`Flex`**, and **`Grid`** with [`cva`](https://cva.style/docs) + `cn()` only, same spirit as typography.
-- **Canonical layout values** live in `packages/config/tailwind/semantic-tokens.css`. Add variables **incrementally** in the same commit that first uses them in a `cva` recipe, for example:
+- **Pre-Commit 19 runtime layout values** live in `packages/config/tailwind/semantic-tokens.css`. Add variables **incrementally** in the same commit that first uses them in a `cva` recipe, for example:
   - **Container**: max width and horizontal inset — e.g. `--sndq-container-max-sm`, `--sndq-container-max-md`, `--sndq-container-gutter` (exact set is defined in [layout-system-reference.md](./layout-system-reference.md) and implemented alongside Commits 5–6).
   - **Section**: vertical padding / band rhythm — e.g. `--sndq-section-py-sm`, `--sndq-section-py-md`, `--sndq-section-py-lg` (alongside Commits 7–8).
   - **Numeric spacing scale** (used by `Flex` / `Grid` `gap*`): `--sndq-space-0` … `--sndq-space-5` (alongside Commits 9–12; extend the range only when a recipe needs a new step).
 - **`cva` recipes** must reference only those `var(--sndq-…)` values (or existing primitives they compose). No ad-hoc pixel literals in component files. Numeric `gap*` must resolve to `--sndq-space-*` only.
-- **Optional `@theme` aliases** in `packages/config/tailwind/tokens.css`: only when a shipped layout variant needs a shorter utility in the **same** commit.
+- **Post-Commit 19 layout token changes** start in `packages/ui-v2/DESIGN.md`; regenerate `tokens.css` and keep `semantic-tokens.css` only for unsupported runtime aliases/computed values.
+- **Optional `@theme` aliases** in `packages/config/tailwind/tokens.css`: before Commit 19, only when a shipped layout variant needs a shorter utility in the **same** commit. After Commit 19, these aliases are generated, not hand-authored.
 - **v1 API**:
   - `Container` / `Section`: a single **`size`** enum per component (e.g. `sm | md | lg` — exact names in layout reference).
   - `Flex` / `Grid`: layout enums (`direction`, `align`, `justify`, `wrap`, `flow`) + **numeric** `gap` / `gapX` / `gapY`; `Grid` also takes **numeric** `columns`. Full prop tables in [layout-system-reference.md §4–§5](./layout-system-reference.md#4-flex-api-v1).
   - **No** Radix-style responsive object props (`gap={{ sm: '2', lg: '4' }}`) in Batch 1 — wrap with Tailwind utilities at call sites.
+
+### DESIGN.md token pipeline (source of truth)
+
+`packages/ui-v2/DESIGN.md` becomes the **authoring source** for stable design-token values. `packages/config/tailwind` remains the **runtime distribution package** consumed by apps.
+
+```mermaid
+flowchart LR
+    designMd["packages/ui-v2/DESIGN.md"]
+    generatedTokens["packages/config/tailwind/tokens.css"]
+    semanticCss["packages/config/tailwind/semantic-tokens.css"]
+    componentCss["packages/config/tailwind/components.css"]
+    animationCss["packages/config/tailwind/animations.css"]
+    apps["sndq-fe / apps/docs / apps/ui-v2-dev"]
+
+    designMd -->|"design:export:tailwind"| generatedTokens
+    generatedTokens --> semanticCss
+    generatedTokens --> componentCss
+    generatedTokens --> apps
+    semanticCss --> componentCss
+    componentCss --> apps
+    animationCss --> apps
+```
+
+- **Generated artifact**: `packages/config/tailwind/tokens.css` is generated from `packages/ui-v2/DESIGN.md`. Do not manually edit token values there after Commit 19.
+- **Manual runtime layers**: `semantic-tokens.css`, `components.css`, and `animations.css` stay hand-authored where DESIGN.md cannot express behavior (computed `color-mix()`, shadows, keyframes, component state selectors), but they must reference variables produced by the generated token artifact.
+- **No duplicated literals**: after Commit 19, avoid copying hex values, spacing values, radius values, or font sizes into manual config files unless DESIGN.md cannot represent that concept. If an unsupported value is required, document it in the `DESIGN.md` prose section and keep it isolated in the relevant manual CSS file.
+- **Import contract stays stable**: apps continue importing `@sndq/config/tailwind/tokens.css`, `semantic-tokens.css`, `animations.css`, and `components.css`. The source of `tokens.css` changes, not the public import path.
 
 ### Strict prop-typing rule (semantic vs numeric — never both)
 
@@ -150,6 +179,7 @@ A component may graduate only when:
 - [ ] Unit tests: variants, a11y basics, keyboard interaction as relevant (keyboard/a11y depth varies by component; layout primitives: render + variant class coverage)
 - [ ] No imports from app-specific code (hooks, services, `next-intl`, `@/modules`, etc.)
 - [ ] Uses `@sndq/config/tailwind` tokens / shared component CSS (no hardcoded one-off theme in the component file)
+- [ ] If a component requires a new token value, add it to `packages/ui-v2/DESIGN.md` first, regenerate `packages/config/tailwind/tokens.css`, then update manual CSS layers to reference the generated variable
 - [ ] **Strict prop-typing rule satisfied**: every prop is either semantic OR numeric — never both (see [Strict prop-typing rule](#strict-prop-typing-rule-semantic-vs-numeric--never-both))
 - [ ] **Typography (`Text`, `Heading`)**: variant styles reference `semantic-tokens.css` variables; any new **`@theme`** alias is added **incrementally** in the same change that introduces the variant needing it (see [Typography and `@theme` utilities (gradual)](#typography-and-theme-utilities-gradual))
 - [ ] **Layout shell (`Container`, `Section`)**: `cva` maps reference only layout semantic tokens from `semantic-tokens.css`; default elements documented (`Container` → `div`, `Section` → `section` for document outline unless design specifies otherwise); **v1** uses discrete `size` presets only (see [Layout tokens and CVA (gradual)](#layout-tokens-and-cva-gradual))
@@ -1136,29 +1166,51 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 19: Add DESIGN.md specification and CLI toolchain
+### Commit 19: Add DESIGN.md source and generated Tailwind token pipeline
 
-**What**: Install `@google/design.md` (v0.1.1) as root devDependency, add convenience npm scripts (`design:lint`, `design:export:tailwind`, `design:export:dtcg`), and create `packages/ui-v2/DESIGN.md` — a machine-readable YAML token specification + human-readable prose covering the graduated component set (Button, Badge, Input/Textarea). This is the first implementation step of the [DESIGN.md integration plan](./design-md-integration.md).
+**What**: Install `@google/design.md` (v0.1.1) as root devDependency, add scripts that validate and export `packages/ui-v2/DESIGN.md`, and make `packages/config/tailwind/tokens.css` the generated Tailwind runtime artifact from that spec. `packages/ui-v2/DESIGN.md` is the authoring source for design-token values; `@sndq/config` is the package that distributes those tokens to apps.
 
-DESIGN.md is a Google-authored open format that encodes a visual identity as YAML tokens + markdown prose in a single file. It ships with a CLI toolchain (`lint`, `diff`, `export`) and is purpose-built for AI coding agents. It does **not** replace `tokens.css` / `components.css` (those remain the CSS runtime artifacts). It adds automated validation (broken references, WCAG contrast), regression gating (`diff`), export interop (Tailwind/DTCG), and agent readability.
+DESIGN.md is a Google-authored open format that encodes a visual identity as YAML tokens + markdown prose in a single file. It ships with a CLI toolchain (`lint`, `diff`, `export`) and is purpose-built for AI coding agents. In this repo it **does replace manual editing of stable token values in `tokens.css`**. It does **not** replace `semantic-tokens.css`, `components.css`, or `animations.css` where those files contain behavior DESIGN.md cannot express, but those files must reference the generated variables instead of duplicating token literals.
 
-**Why after Commit 18 (not later)**: The token set is stable, the first three graduated interactive components (Button, Badge, Input) exist in `packages/ui-v2/`, and writing DESIGN.md now captures the design rationale while it is fresh. Future batches only add component token entries to the existing `components:` YAML section.
+**Why after Commit 18 (not later)**: The token set is stable, the first three graduated interactive components (Button, Badge, Input) exist in `packages/ui-v2/`, and writing DESIGN.md now captures the design rationale while it is fresh. Future batches add component token entries to the existing `components:` YAML section, regenerate `tokens.css`, and keep manual CSS layers referencing generated tokens.
 
 **Files to edit**:
 
-- `package.json` (root) — add `@google/design.md` `^0.1.1` to `devDependencies`, add 3 scripts:
+- `package.json` (root) — add `@google/design.md` `^0.1.1` to `devDependencies`, add token pipeline scripts:
   ```json
   {
     "design:lint": "npx @google/design.md lint packages/ui-v2/DESIGN.md",
-    "design:export:tailwind": "npx @google/design.md export --format tailwind packages/ui-v2/DESIGN.md",
-    "design:export:dtcg": "npx @google/design.md export --format dtcg packages/ui-v2/DESIGN.md"
+    "design:export:tailwind": "npx @google/design.md export --format tailwind packages/ui-v2/DESIGN.md > packages/config/tailwind/tokens.css",
+    "design:export:dtcg": "npx @google/design.md export --format dtcg packages/ui-v2/DESIGN.md > packages/config/tailwind/tokens.dtcg.json",
+    "design:sync": "pnpm run design:lint && pnpm run design:export:tailwind && pnpm run design:export:dtcg"
+  }
+  ```
+  - If the CLI supports an official `--output` flag, use that instead of shell redirection.
+  - Before overwriting `tokens.css`, export once to a temporary file and confirm the Tailwind output is valid CSS for Tailwind v4 imports. If the CLI emits JS/JSON config instead of CSS, add a tiny repository export adapter script and make `design:export:tailwind` call that adapter instead.
+- `packages/config/package.json` — keep existing CSS exports stable and add an export only if `tokens.dtcg.json` is intentionally consumed by tooling:
+  ```json
+  {
+    "./tailwind/tokens.css": "./tailwind/tokens.css",
+    "./tailwind/semantic-tokens.css": "./tailwind/semantic-tokens.css",
+    "./tailwind/components.css": "./tailwind/components.css",
+    "./tailwind/animations.css": "./tailwind/animations.css"
   }
   ```
 - `apps/docs/AGENTS.md` — add a new **"DESIGN.md specification"** section that:
   - Points agents to `packages/ui-v2/DESIGN.md` as the machine-readable design system spec (YAML tokens + prose)
   - Instructs agents to reference DESIGN.md when building/modifying docs UI, writing MDX examples, or choosing token values
-  - Notes the lint/export scripts available at monorepo root (`pnpm run design:lint`, `design:export:tailwind`, `design:export:dtcg`)
+  - Notes the lint/export scripts available at monorepo root (`pnpm run design:lint`, `design:sync`, `design:export:tailwind`, `design:export:dtcg`)
   - Example placement: after the "Tokens and CSS" section, before "Quality bar"
+- `packages/config/tailwind/semantic-tokens.css` — reduce to the manual runtime layer that DESIGN.md cannot generate:
+  - Keep computed tokens such as `--sndq-action-subtle-hover` / `--sndq-action-subtle-active` if they require `color-mix()`.
+  - Keep shadows and any unsupported runtime variables if DESIGN.md cannot export them.
+  - Remove duplicated hex / spacing / radius / font literals that now come from generated `tokens.css`.
+  - Reference generated variables only, for example `var(--color-brand-700)` or `var(--sndq-action)`.
+- `packages/config/tailwind/components.css` — no generation; audit only:
+  - Keep component classes and state selectors manual.
+  - Replace duplicated raw values with generated variables where a matching token exists.
+  - Keep genuinely behavioral values (compound shadows, focus rings, state selectors) here and document them in `DESIGN.md` prose.
+- `packages/config/tailwind/animations.css` — no generation; leave as manual keyframes, with no design-token literals unless a duration/easing token is later added to DESIGN.md.
 
 **Files to create**:
 
@@ -1176,16 +1228,16 @@ DESIGN.md is a Google-authored open format that encodes a visual identity as YAM
   - Per-component folder convention (kebab-case folder, PascalCase files, `index.ts` barrel, co-located tests)
   - Component graduation workflow: standardize in `apps/ui-v2-dev/` → graduate to `packages/ui-v2/` → add component tokens to DESIGN.md → run `design:lint`
 
-- `packages/ui-v2/DESIGN.md` — complete specification file with two layers:
+- `packages/ui-v2/DESIGN.md` — complete specification file with two layers and a clear ownership note:
 
 **YAML front matter** (~130 lines, 5 token groups):
 
 | Token group | Source | Entries | Content |
 |-------------|--------|---------|---------|
-| `colors` | `tokens.css` + `semantic-tokens.css` | ~65 | Briicks primitives (brand/neutral/success/warning/error scales) as hex; `--sndq-*` semantic tokens as `{colors.*}` references |
-| `typography` | `semantic-tokens.css` lines 78-91 | ~10 | body-xs through heading-xl + label (Inter body, DM Sans headings) |
-| `spacing` | `semantic-tokens.css` lines 94-96, 132-138 | ~10 | Scale 0-5 (0-24px) + control-sm (32px), control (40px), control-lg (44px) |
-| `rounded` | `semantic-tokens.css` lines 105-110 | 6 | xs (6px) through full (9999px) |
+| `colors` | Authoring source for generated `tokens.css` | ~65 | Briicks primitives (brand/neutral/success/warning/error scales) as hex; `sndq-*` semantic tokens as `{colors.*}` references |
+| `typography` | Authoring source for generated `tokens.css` | ~10 | body-xs through heading-xl + label (Inter body, DM Sans headings) |
+| `spacing` | Authoring source for generated `tokens.css` | ~10 | Scale 0-5 (0-24px) + control-sm (32px), control (40px), control-lg (44px), container/section spacing where supported |
+| `rounded` | Authoring source for generated `tokens.css` | 6 | xs (6px) through full (9999px) |
 | `components` | `components.css` + `Button.tsx` + `Badge.tsx` CVA | ~20 | Button (9 variants + hover states), Badge (5 variants), Input (default) |
 
 **Markdown body** (~180 lines, 8 canonical sections per [DESIGN.md spec](https://github.com/google-labs-code/design.md/blob/main/docs/spec.md)):
@@ -1201,13 +1253,24 @@ DESIGN.md is a Google-authored open format that encodes a visual identity as YAM
 | Components | Button (all 9 variants, 3 sizes, states), Badge (5 color variants, 3 sizes), Input/Textarea (default/hover/focus/error/disabled) |
 | Do's and Don'ts | Token-only styling, `cn()` override-wins, semantic token discipline (never raw Briicks primitives in component code), status color usage |
 
+**Generated/manual split**:
+
+| File | Ownership after Commit 19 |
+|------|---------------------------|
+| `packages/ui-v2/DESIGN.md` | Hand-authored source of truth for token values and component token contracts |
+| `packages/config/tailwind/tokens.css` | Generated by `pnpm run design:export:tailwind`; do not hand-edit token values |
+| `packages/config/tailwind/tokens.dtcg.json` | Generated by `pnpm run design:export:dtcg` if checked in for tooling/interoperability |
+| `packages/config/tailwind/semantic-tokens.css` | Manual runtime layer for unsupported computed tokens, dark-mode overrides, and aliases that cannot be represented in DESIGN.md |
+| `packages/config/tailwind/components.css` | Manual component class/state layer; references generated token variables |
+| `packages/config/tailwind/animations.css` | Manual keyframes/animations layer |
+
 **What DESIGN.md cannot express** (documented in prose sections):
 
 | Missing concept | Why | Documented in |
 |-----------------|-----|---------------|
-| `color-mix()` values (`--sndq-action-subtle-hover/active`) | No CSS function support | Components prose |
+| `color-mix()` values (`--sndq-action-subtle-hover/active`) | No CSS function support | Components prose + `semantic-tokens.css` |
 | Box shadows (`--sndq-shadow-*`) | No shadow token type | Elevation & Depth prose |
-| Dark mode (`.dark {}`) | No theme variant support | Custom Theming note in Overview |
+| Dark mode (`.dark {}`) | No theme variant support | Custom Theming note in Overview + `semantic-tokens.css` if needed |
 | `borderColor`, `borderWidth`, `gap`, `opacity`, `backdropFilter` | Limited to 8 component properties | Components prose |
 
 **Risks**:
@@ -1218,6 +1281,8 @@ DESIGN.md is a Google-authored open format that encodes a visual identity as YAM
 | `transparent` keyword rejected by lint | LOW | Use `"#00000000"` (8-digit hex) if lint errors on `transparent` |
 | Contrast warnings on semantic token references | LOW | References like `{colors.sndq-action}` may not resolve for contrast calculation — review and document findings |
 | New devDependency in CI | LOW | `@google/design.md` is a standalone CLI with no native deps; `pnpm install` resolves it |
+| Generated output not CSS-import compatible | MEDIUM | Export to a temporary file first. If output is config JSON/JS, add an adapter script instead of redirecting directly into `tokens.css` |
+| Manual CSS drift after generation | MEDIUM | Keep manual files free of duplicated token literals; run a focused diff after `design:sync` and audit only unsupported tokens remain manual |
 
 **Verification**:
 
@@ -1225,13 +1290,18 @@ DESIGN.md is a Google-authored open format that encodes a visual identity as YAM
 pnpm install
 npx @google/design.md spec                                    # format spec outputs correctly
 pnpm run design:lint                                          # target: 0 errors; review warnings
-pnpm run design:export:tailwind > /tmp/sndq-theme.json        # compare against tokens.css values
-pnpm run design:export:dtcg > /tmp/sndq-tokens.json           # DTCG output valid JSON
+pnpm run design:export:tailwind                               # writes packages/config/tailwind/tokens.css
+pnpm run design:export:dtcg                                   # writes packages/config/tailwind/tokens.dtcg.json, if checked in
+pnpm run design:sync                                          # lint + both exports
+
+# Drift checks: generated tokens are the source for runtime config.
+git diff -- packages/config/tailwind/tokens.css
+rg "#[0-9A-Fa-f]{6}" packages/config/tailwind/semantic-tokens.css packages/config/tailwind/components.css
 
 # Agent awareness: verify DESIGN.md references exist
-grep -q 'DESIGN.md' apps/docs/AGENTS.md                       # docs app references DESIGN.md
-grep -q 'DESIGN.md' apps/ui-v2-dev/AGENTS.md                  # prototype app references DESIGN.md
-grep -q 'DESIGN.md' packages/ui-v2/AGENTS.md                  # package references DESIGN.md
+rg 'DESIGN.md' apps/docs/AGENTS.md                            # docs app references DESIGN.md
+rg 'DESIGN.md' apps/ui-v2-dev/AGENTS.md                       # prototype app references DESIGN.md
+rg 'DESIGN.md' packages/ui-v2/AGENTS.md                       # package references DESIGN.md
 ```
 
 **If it fails**:
@@ -1240,16 +1310,20 @@ grep -q 'DESIGN.md' packages/ui-v2/AGENTS.md                  # package referenc
 - **`broken-ref` lint error**: a token reference like `{colors.brand-700}` does not match any defined color key — check spelling matches the YAML `colors:` keys exactly.
 - **`contrast-ratio` warning on component**: WCAG check requires resolved hex values — semantic references may produce warnings. Document which pairs pass/fail in the execution log.
 - **`section-order` warning**: sections must follow the canonical order (Overview, Colors, Typography, Layout, Elevation & Depth, Shapes, Components, Do's and Don'ts). Reorder if the linter flags.
+- **`tokens.css` output breaks Tailwind import**: revert only the generated file, inspect CLI output shape, and switch `design:export:tailwind` to a repository adapter script that emits Tailwind v4 `@theme` CSS.
 
-**Commit message**: `feat(ui-v2): add DESIGN.md specification and CLI toolchain`
+**Commit message**: `feat(ui-v2): add design token pipeline`
 
 **Status**:
 
 - [ ] `@google/design.md` installed as root devDependency
-- [ ] 3 convenience scripts added to root `package.json`
+- [ ] `design:lint`, `design:export:tailwind`, `design:export:dtcg`, and `design:sync` scripts added to root `package.json`
 - [ ] `packages/ui-v2/DESIGN.md` created (YAML front matter + 8 prose sections)
+- [ ] `packages/config/tailwind/tokens.css` generated from `packages/ui-v2/DESIGN.md`
+- [ ] `packages/config/tailwind/semantic-tokens.css` reduced to unsupported/manual runtime tokens only
+- [ ] `packages/config/tailwind/components.css` audited to reference generated token variables where possible
 - [ ] `pnpm run design:lint` — 0 errors
-- [ ] `pnpm run design:export:tailwind` — output valid, compared against `tokens.css`
+- [ ] `pnpm run design:sync` — generated artifacts updated and committed
 - [ ] `apps/docs/AGENTS.md` updated (DESIGN.md specification section added)
 - [ ] `apps/ui-v2-dev/AGENTS.md` created (prototype app agent guide with DESIGN.md reference)
 - [ ] `packages/ui-v2/AGENTS.md` created (package agent guide with DESIGN.md reference)
@@ -1417,6 +1491,7 @@ git push -u origin feature/phase-3-batch-1-standardize-graduate
 
 ```bash
 pnpm install
+pnpm run design:sync
 NODE_OPTIONS='--max-old-space-size=8192' pnpm build
 pnpm lint
 pnpm type-check
@@ -1431,11 +1506,12 @@ pnpm --filter @sndq/ui-v2-dev run test
 
 Compare builds to baselines (same commands as §2 with `-final` suffix).
 
-**Expected result**: All apps and packages build; `Text`, `Heading`, `Container`, `Section`, `Flex`, `Grid`, and the six interactive primitives importable from `@sndq/ui-v2/components`; docs **Primitives** list `text`, `heading`, Button through Sheet; docs **Foundations** list `container`, `section`, `flex`, `grid`; layout semantic tokens (incl. `--sndq-space-*`) present in `semantic-tokens.css` as introduced in Commits 5–12; legacy exports show deprecation in IDE.
+**Expected result**: All apps and packages build; `Text`, `Heading`, `Container`, `Section`, `Flex`, `Grid`, and the six interactive primitives importable from `@sndq/ui-v2/components`; docs **Primitives** list `text`, `heading`, Button through Sheet; docs **Foundations** list `container`, `section`, `flex`, `grid`; `packages/ui-v2/DESIGN.md` is the source for stable token values; `packages/config/tailwind/tokens.css` is generated from DESIGN.md; manual Tailwind files only keep unsupported runtime behavior; legacy exports show deprecation in IDE.
 
 **Final status**:
 
 - [ ] All 26 commits complete
+- [ ] `pnpm run design:sync` passes and generated `tokens.css` is committed
 - [ ] Root build / lint / type-check pass
 - [ ] Manual: docs `/primitives/...` and `/primitives/layout/container`, `/primitives/layout/section`, `/primitives/layout/flex`, `/primitives/layout/grid` render
 - [ ] Manual: ui-v2-dev playground still exercises graduated components
@@ -1447,7 +1523,7 @@ Compare builds to baselines (same commands as §2 with `-final` suffix).
 
 > **Heads up: first `@sndq/ui-v2` component graduation (Batch 1)**
 >
-> PR [link] follows **sub-batches**: **1A** typography (`Text`, `Heading`), **1B** layout shell (`Container`, `Section`, `Flex`, `Grid` — CVA + SNDQ semantic tokens, **not** Radix Themes; **strict semantic-vs-numeric prop typing**; canonical **`className` override-wins** rule via `cn(variantClasses, className)`), **1C** Button, Input, Badge, **1C-bis** `DESIGN.md` specification (Google `@google/design.md` format — machine-readable token spec + CLI lint/export), **1C (cont.)** Select, Dialog, Sheet, **1D** legacy JSDoc deprecations. Typography uses `semantic-tokens.css` and incremental `@sndq/config` `@theme` aliases; see [typography-system-reference.md](./typography-system-reference.md). Layout shell tokens, prop-typing rule, and override-wins guarantee: [layout-system-reference.md](./layout-system-reference.md). DESIGN.md captures the token set and component contracts for AI agent readability, automated validation, and Figma interop — see [design-md-integration.md](./design-md-integration.md). The main app is **not** bulk-migrated yet — you will see `@deprecated` JSDoc on legacy briicks/ui exports (including **briicks text**). New feature work should import from `@sndq/ui-v2/components` where possible.
+> PR [link] follows **sub-batches**: **1A** typography (`Text`, `Heading`), **1B** layout shell (`Container`, `Section`, `Flex`, `Grid` — CVA + SNDQ semantic tokens, **not** Radix Themes; **strict semantic-vs-numeric prop typing**; canonical **`className` override-wins** rule via `cn(variantClasses, className)`), **1C** Button, Input, Badge, **1C-bis** `DESIGN.md` token pipeline (Google `@google/design.md` format — machine-readable source spec + generated Tailwind token artifact in `@sndq/config`), **1C (cont.)** Select, Dialog, Sheet, **1D** legacy JSDoc deprecations. Typography uses generated `@sndq/config` `@theme` aliases after Commit 19; see [typography-system-reference.md](./typography-system-reference.md). Layout shell tokens, prop-typing rule, and override-wins guarantee: [layout-system-reference.md](./layout-system-reference.md). DESIGN.md captures the token set and component contracts for AI agent readability, automated validation, and Figma interop — see [design-md-integration.md](./design-md-integration.md). The main app is **not** bulk-migrated yet — you will see `@deprecated` JSDoc on legacy briicks/ui exports (including **briicks text**). New feature work should import from `@sndq/ui-v2/components` where possible.
 >
 > After pulling:
 >
@@ -1456,15 +1532,17 @@ Compare builds to baselines (same commands as §2 with `-final` suffix).
 >
 > New npm scripts (informational — not required for daily dev):
 > - `pnpm run design:lint` — validate `packages/ui-v2/DESIGN.md` tokens + structure
-> - `pnpm run design:export:tailwind` — export to Tailwind theme JSON
-> - `pnpm run design:export:dtcg` — export to W3C DTCG format
+> - `pnpm run design:sync` — lint DESIGN.md and regenerate checked-in token artifacts
+> - `pnpm run design:export:tailwind` — regenerate `packages/config/tailwind/tokens.css`
+> - `pnpm run design:export:dtcg` — regenerate the DTCG export, if checked in
 >
 > Touch points:
 > - `packages/ui-v2/src/components/*`, `packages/ui-v2/src/lib/utils.ts`
-> - `packages/ui-v2/DESIGN.md` ← **new** machine-readable token specification
+> - `packages/ui-v2/DESIGN.md` ← **new** machine-readable token source
 > - `packages/ui-v2/AGENTS.md` ← **new** agent guide for the component library
-> - `packages/config/tailwind/tokens.css` (incremental `@theme` aliases)
-> - `packages/config/tailwind/semantic-tokens.css` (typography + **layout shell** tokens, incl. `--sndq-space-*`)
+> - `packages/config/tailwind/tokens.css` ← generated Tailwind runtime token artifact
+> - `packages/config/tailwind/semantic-tokens.css` ← manual unsupported/computed token layer only
+> - `packages/config/tailwind/components.css` ← manual component classes referencing generated tokens
 > - `apps/ui-v2-dev/` imports
 > - `apps/ui-v2-dev/AGENTS.md` ← **new** agent guide for the prototype app
 > - `apps/docs/AGENTS.md` ← **updated** with DESIGN.md specification section
@@ -1482,10 +1560,10 @@ After Batch 1 merges, open [phase-3-batch-2-execution.md](./phase-3-batch-2-exec
 - **Vertical slices** per component keep bisect/revert sane.
 - **Sub-batches** (1A–1D) keep review focus: foundations vs interactive vs deprecations.
 - **Deprecate only after the export exists** in the package — avoids warning fatigue.
-- **Typography + gradual `@theme`** reduces token drift before scaling interactive primitives.
+- **Typography + generated `@theme` tokens** reduces token drift before scaling interactive primitives.
 - **Layout shell (1B)** documents page width, section rhythm, and inner-layout primitives (`Flex`, `Grid`) in **Foundations** while components still export from `@sndq/ui-v2/components`.
 - **Strict prop-typing rule** (semantic OR numeric, never both) and **`className` override-wins** are gated on every graduating component — landing them in Batch 1 sets the precedent for every future batch.
-- **DESIGN.md after first graduated set (1C-bis)**: Writing the token specification while design rationale is fresh ensures accuracy. Future batches only add component entries to the existing `components:` YAML + re-run `pnpm run design:lint`.
+- **DESIGN.md after first graduated set (1C-bis)**: Writing the token specification while design rationale is fresh ensures accuracy. Future batches add component entries and any new token values to DESIGN.md, then run `pnpm run design:sync` so `@sndq/config/tailwind/tokens.css` stays generated from the same source.
 
 ### Known lessons from prior phases
 
