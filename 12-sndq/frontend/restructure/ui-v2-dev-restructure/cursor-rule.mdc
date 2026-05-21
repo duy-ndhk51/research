@@ -1,0 +1,119 @@
+---
+alwaysApply: false
+globs: apps/ui-v2-dev/**
+---
+
+# UI-V2-Dev Routing Structure
+
+This app uses Next.js App Router with route-based code splitting. Follow these conventions when adding or modifying routes, examples, or layout components.
+
+## Route Architecture
+
+Two route groups at `src/app/`:
+
+- `(showcase)/` — sidebar navigation + sub-tab layouts for browsing components
+- `(standalone)/` — full-page rendering without chrome (previews)
+
+Root `page.tsx` renders the OverviewTab landing page (not inside any route group).
+
+### Category routes inside `(showcase)/`
+
+| Route | Source tab | Layout provides |
+|-------|-----------|-----------------|
+| `/primitives` | ComponentsTab (16 sections masonry) | Category sub-tabs (inputs, display, feedback, etc.) |
+| `/primitives/[component]` | Per-primitive view (e.g., CellTab at `/primitives/row`) | Same as primitives |
+| `/blocks/ui-v2` | BlocksTab (KPI, Headers, EntityCards, etc.) | Source sub-tabs (ui-v2, sndq, composable) |
+| `/blocks/sndq` | SndqBlocksTab (18 domain categories) | Same |
+| `/blocks/sndq/[domain]` | Domain-specific blocks | Same |
+| `/blocks/composable` | ComposableTab (5 patterns) | Same |
+| `/patterns/forms` | FormsTab (6 form patterns) | Type sub-tabs |
+| `/patterns/tables` | TableRowTab (6 tables) | Same |
+| `/patterns/filters` | FilterTab (11 patterns) | Same |
+| `/patterns/metrics` | MetricStripTab (9 patterns) | Same |
+| `/patterns/page-shells` | FloatingSheetTab (4 demos) | Same |
+| `/integrations/coss` | CossTab (492 particles) | Library sub-tabs |
+| `/integrations/coss/[category]` | Category-filtered particles | Same |
+| `/integrations/tremor` | TremorBlocksTab (~303 blocks) | Same |
+| `/integrations/tremor/[category]` | Category-filtered blocks | Same |
+| `/integrations/charts` | Recharts integration | Same |
+| `/integrations/data-table` | @tanstack/react-table | Same |
+| `/integrations/forms` | react-hook-form + zod | Same |
+| `/integrations/date-pickers` | react-day-picker | Same |
+| `/foundations/identity` | IdentityTab (spec + canvas) | Sub-tabs (identity, tokens) |
+| `/foundations/tokens` | FoundationTab (swatches + scales) | Same |
+
+## Naming Conventions
+
+- **Directories**: kebab-case (`data-table/`, `page-shells/`, `floating-sheet/`)
+- **Component files**: PascalCase (`Sidebar.tsx`, `ButtonPrimary.tsx`, `ExampleCard.tsx`)
+- **Hook files**: camelCase starting with `use` (`useToast.ts`)
+- **Barrel files**: every component/example folder has `index.ts`
+- **Exports**: named only — never `export default` for components
+- **Route files**: `page.tsx`, `layout.tsx`, `loading.tsx` (Next.js convention)
+
+## External Libraries Pattern
+
+Coss UI and Tremor are external integrated libraries under `/integrations/`:
+
+```
+integrations/{library}/
+├── page.tsx              # Full browser with sidebar categories
+└── [category]/
+    └── page.tsx          # Category-filtered view
+```
+
+Both share: sidebar category groups, lazy-loaded examples, dynamic `[category]` segment, grid layout. Future libraries (charts, data-table, forms, date-pickers) follow the same pattern.
+
+## Adding a New Primitive Section
+
+1. Create the section component in `src/components/sections/{Name}Section.tsx`
+2. Import it in `src/app/(showcase)/primitives/page.tsx`
+3. If it deserves a deep-link, register it in `src/registry/primitives.ts` so `/primitives/[component]` resolves
+
+## Adding a New Integration Library
+
+1. Create route folder: `src/app/(showcase)/integrations/{library}/`
+2. Add `page.tsx` (browser) and optionally `[category]/page.tsx`
+3. Add examples to `src/examples/integrations/{library}/`
+4. Register in `src/registry/integrations.ts`
+5. Add tab to `src/app/(showcase)/integrations/layout.tsx`
+
+## Layout Hierarchy
+
+```
+Root layout (fonts, globals.css)
+├── page.tsx (OverviewTab — not inside any route group)
+├── (showcase)/layout.tsx (Sidebar)
+│     ├── primitives/layout.tsx (category tabs)
+│     ├── blocks/layout.tsx (source tabs)
+│     ├── patterns/layout.tsx (type tabs)
+│     ├── integrations/layout.tsx (library tabs)
+│     └── foundations/layout.tsx (sub-tabs)
+└── (standalone)/ (no layout — inherits root only)
+      └── preview/[component]/page.tsx
+```
+
+## File Placement
+
+| File type | Location |
+|-----------|----------|
+| Route pages/layouts | `src/app/(showcase)/...` or `src/app/(standalone)/...` |
+| Layout UI (Sidebar, TopTabs) | `src/components/layout/` |
+| Showcase utilities (ExampleCard, LazyExample) | `src/components/showcase/` |
+| Registry metadata | `src/registry/` |
+| Component sections (for primitives page) | `src/components/sections/` |
+| Coss particle examples | `src/examples/integrations/coss/[category]/` |
+| Tremor block examples | `src/examples/integrations/tremor/[category]/` |
+| SNDQ domain blocks | `src/examples/blocks/sndq/[domain]/` |
+| Form patterns | `src/patterns/form/` |
+| Hooks | `src/lib/hooks/` |
+
+## Do Not
+
+- Modify component internals (props, logic, styling) — routing changes only
+- Use `export default` for components
+- Use kebab-case for component file names
+- Eagerly import all examples in a route page (use registry + lazy loading)
+- Create new npm dependencies
+- Skip `index.ts` barrels in example folders
+- Move or resurrect orphaned files (`TremorTab.tsx`, `FoundationsSection.tsx`)
