@@ -88,7 +88,7 @@ When `lockState.locked` is true, two extra steps run after the raw action:
 - **VAT and unit handling**: When the created line is auto-filled, `setTotalAmountForLine` back-calculates `amount` (excl. VAT) from `totalAmount` (incl. VAT). Selected share/percentage unit allocations on that created line stay valid; free/manual distributions are cleared instead of being guessed.
 - **Rounding**: No proportional redistribution is performed. The only automatic amount is the direct remaining amount or the duplicated source amount.
 - **Validation**: Real-time toast on every mismatch after any action + submit-time guard that blocks submission if totals don't match.
-- **Peppol default**: Auto-enabled for Peppol invoices (user can still unlock).
+- **Peppol default**: Auto-enabled for Peppol invoices via two paths. **Sheet "Edit"**: `PeppolInvoiceSheetRoute` computes `lockedTotal` from `initialData.amounts` and passes it as `config.initialLockState` (deterministic, no effects). **URL navigation**: `usePeppolPrefill` fires `onPrefillComplete(lockedTotal)` after data is set. User can still unlock manually.
 
 ## Key files
 
@@ -108,6 +108,9 @@ When `lockState.locked` is true, two extra steps run after the raw action:
 | Context | `PurchaseInvoiceFormContext.tsx` | `lockState`, `toggleAmountLock` |
 | Validation | `hooks/useInvoiceFormActions.ts` | Submit-time mismatch check |
 | Vendored hooks | `src/hooks/lib/useStableCallback.ts` | Stabilizes `execute` identity; future `useEffectEvent` replacement |
+| Form types | `purchase-invoice-v3/types.ts` | `PurchaseInvoiceFormConfig` with `initialLockState` |
+| Peppol auto-lock (Sheet) | `peppol/components/PeppolInvoiceSheetRoute.tsx` | Computes `lockedTotal`, passes `config.initialLockState` |
+| Peppol auto-lock (URL) | `purchase-invoice-v2/hooks/usePeppolPrefill.ts` | `onPrefillComplete(lockedTotal)` callback in `.then()` chain |
 
 ## Testing
 

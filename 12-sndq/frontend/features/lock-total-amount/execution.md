@@ -3,7 +3,7 @@
 Step-by-step execution guide for the Lock Total Amount feature. Each commit should be independently verifiable and revertable.
 
 **Created**: 2026-05-18
-**Status**: In progress — Commit 6 done; lock toggle UI added to footer
+**Status**: In progress — Commit 7 done; Peppol auto-lock via dual mechanism (config prop + callback)
 **Branch**: `feature/lock-total-amount`
 
 > **IMPORTANT**: Do NOT automatically commit after each step. Implement each commit's changes, then stop and wait for manual review and testing. Only commit after explicit approval. This allows the implementer to verify each stage before moving forward.
@@ -811,12 +811,24 @@ Additive behavior — auto-enables lock for Peppol invoices and adds submit-time
 
 **Files to edit**:
 
-- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/PurchaseInvoiceFormV3.tsx`
-  - Initialize `lockState` based on whether `peppolInvoiceId` is truthy
-  - After Peppol data is parsed and lines are populated (via `handlePeppolDataParsed`), compute the total from `amounts` and set `lockState = { locked: true, lockedTotal: computedTotal }`
-  - Implementation approach: use a `useEffect` that watches for `peppolInvoiceId` and the form's `amounts` being populated, then auto-locks once (using a ref to prevent re-triggering)
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/types.ts`
+  - Added `PurchaseInvoiceFormConfig` interface with `initialLockState?: LockState`
+  - Added `config?: PurchaseInvoiceFormConfig` to `PurchaseInvoiceFormV3Props`
 
-- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/hooks/usePurchaseInvoiceForm.ts` — expose a callback or flag to signal when Peppol prefill is complete, so the auto-lock can trigger at the right time (after lines are populated, not before)
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/PurchaseInvoiceFormV3.tsx`
+  - Destructured `config` from props
+  - Initialized `lockState` via `useState(config?.initialLockState ?? { locked: false })`
+  - Kept `onPeppolPrefillComplete` inline callback for Path B (URL navigation)
+
+- `sndq-fe/src/modules/peppol/components/PeppolInvoiceSheetRoute.tsx`
+  - Added `formConfig` state, computed `lockedTotal` from `initialData.amounts` in `onCreatePurchaseInvoice`
+  - Passed `config={formConfig}` to `PurchaseInvoiceFormFactory`
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v2/hooks/usePeppolPrefill.ts`
+  - Removed debug `console.log` statements
+  - `stableOnPrefillComplete` kept in deps (referentially stable via `useStableCallback`)
+
+- `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/hooks/usePurchaseInvoiceForm.ts` — threads `onPeppolPrefillComplete` callback to `usePeppolPrefill`
 
 **Files to create**: None
 
@@ -858,15 +870,21 @@ Manual:
 - **Lock total is 0**: The `useEffect` fires before Peppol lines are set. Add a guard: only auto-lock when `amounts.length > 0` and `peppolInvoiceId` is set.
 - **Lock re-triggers after user unlocks**: The ref guard (`hasAutoLocked.current`) must be set to `true` on the first auto-lock and never reset.
 
-**Deviations from the gate**: None
+**Deviations from the gate**:
+
+- **Dual-mechanism approach instead of single `useEffect` + ref guard** — the original plan called for a `useEffect` in `PurchaseInvoiceFormV3.tsx`. The actual implementation uses two mechanisms to cover both Peppol conversion paths:
+  - **Path A (Sheet "Edit")**: `PeppolInvoiceSheetRoute` computes `lockedTotal` from `initialData.amounts` and passes it via `config.initialLockState` prop through `PurchaseInvoiceFormFactory` to `PurchaseInvoiceFormV3`, which uses it in `useState` initialization. Fully deterministic, no effects.
+  - **Path B (URL navigation)**: `usePeppolPrefill` calls `onPrefillComplete(lockedTotal)` in the `.then()` chain after `handlePeppolDataParsed` resolves. The callback is stabilized via `useStableCallback` (equivalent to `useEffectEvent`).
+- **`config` prop added to `PurchaseInvoiceFormV3Props`** — a `PurchaseInvoiceFormConfig` interface was introduced in `types.ts` with `initialLockState?: LockState`. This provides a clean extension point for future form-level configuration.
+- **`onPrefillComplete` computes `lockedTotal` internally** — `usePeppolPrefill` reads amounts from `getValues('amounts')` and passes the computed `lockedTotal` to the callback, so the consumer just calls `setLockState({ locked: true, lockedTotal })`.
 
 **Commit message**: `feat: auto-enable lock for Peppol invoices`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented
+- [x] Build / lint / type-check green or deviation documented
 - [ ] Manual verification complete, if applicable
 - [ ] Committed
 
@@ -1118,5 +1136,5 @@ Record notes, issues, verification results, and deviations here as you go.
 | 2026-05-20 | 5 (no-replace) | Removed `replace` entirely from `UseAmountPipelineParams` and the `needsAtomicReplace` branch. Since `reconcileOnAdd`/`reconcileOnDuplicate` only modify the last element (the created line), `append(result[result.length - 1])` produces the same outcome — no full-array replacement needed. Removed `replace` from both `useInvoiceLinesData` and `useStewardInvoiceLinesData` pipeline calls (`replace` stays in `useFieldArray` destructuring for `useLineGrouping`/`useStewardLineGrouping`). `pnpm tsc --noEmit` clean. Updated PR description and execution docs. Pending: manual verification and commit. |
 | 2026-05-20 | 5 (cleanup) | Inlined `applyGranular` into two named functions inside the hook: `applyReconciliation` (reconcile + assertTotalMatch, returns raw when unlocked) and `commitToForm` (switch on action type → `append`/`remove`/`update`). The `execute` body now reads as a clean three-step pipeline: `computeNewLines` → `applyReconciliation` → `commitToForm`. Updated both research docs: replaced architecture diagrams with two-flow (locked vs unlocked) focus, fixed stale `replace`/`applyGranular` references in Commit 3/5 descriptions and execution log. Pending: manual verification and commit. |
 | 2026-05-20 | 6 | Done. Added lock/unlock icon button (`Lock`/`LockOpen` from lucide-react) next to the total amount in `InvoiceLinesTableFooter`. Wired `lockState.locked` and `toggleAmountLock` from context through `InvoiceLinesTableV3`. Made `isLocked`/`onToggleLock` props optional so steward form footer works without locking. Lock button conditionally renders only when `onToggleLock` is provided. `pnpm tsc --noEmit` clean, scoped lint clean. Pending: manual verification and commit. |
-| | 7 | |
+| 2026-05-20 | 7 | Done. Implemented Peppol auto-lock via dual mechanism. **Path A (Sheet Edit)**: `PeppolInvoiceSheetRoute` computes `lockedTotal` from `initialData.amounts` and passes via `config.initialLockState` prop to `PurchaseInvoiceFormV3` which uses it in `useState` init — fully deterministic, no effects. **Path B (URL navigation)**: `usePeppolPrefill` calls `onPrefillComplete(lockedTotal)` in `.then()` chain after `handlePeppolDataParsed` — callback stabilized via `useStableCallback`. Added `PurchaseInvoiceFormConfig` interface and `config` prop to `PurchaseInvoiceFormV3Props` in `types.ts`. Cleaned up debug `console.log`s from `usePeppolPrefill`. `pnpm tsc --noEmit` clean, scoped ESLint clean. Pending: manual verification and commit. |
 | | 8 | |
