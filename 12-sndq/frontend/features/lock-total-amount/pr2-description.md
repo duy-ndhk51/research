@@ -47,8 +47,8 @@ PR 1 introduced the pipeline as pure, untouched logic. This PR is the integratio
 ## How it works
 
 - **Unlocked mode**: Pipeline is a transparent passthrough — all mutations behave identically to before
-- **Locked mode**: Pipeline routes through `computeNewLines` → `applyReconciliation` → `commitToForm`
-  - Add/Duplicate: created line auto-filled from remaining amount
+- **Locked mode**: Pipeline routes through `executePipelineAction` — a single switch where each action handles compute, reconcile (if locked), and commit inline
+  - Add/Duplicate: created line auto-filled from remaining amount via `reconcileOnAdd`/`reconcileOnDuplicate`
   - Edit/Delete: no redistribution, mismatch left for user to fix manually
 - **Toggle**: Clicking the lock icon captures the current total as the locked value; clicking unlock restores normal behavior
 

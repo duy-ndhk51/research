@@ -27,9 +27,7 @@ flowchart TD
   end
 
   subgraph pipeline_layer ["pipeline.execute()"]
-    Compute[computeNewLines]
-    Reconcile["applyReconciliation"]
-    Commit["commitToForm"]
+    ExecuteFn["executePipelineAction — single switch by action type"]
   end
 
   subgraph rhf [RHF useFieldArray]
@@ -39,17 +37,15 @@ flowchart TD
   end
 
   AddBtn --> LineCrud
-  LineCrud -->|"always"| Compute
+  LineCrud -->|"always"| ExecuteFn
 
   LineCard --> Dispatch
-  Dispatch -->|"locked"| Compute
+  Dispatch -->|"locked"| ExecuteFn
   Dispatch -->|"unlocked"| Update
 
-  Compute --> Reconcile
-  Reconcile --> Commit
-  Commit --> Append
-  Commit --> Remove
-  Commit --> Update
+  ExecuteFn --> Append
+  ExecuteFn --> Remove
+  ExecuteFn --> Update
 ```
 
 - **Bulk ops** (add, duplicate, delete) always go through `pipeline.execute()` via `useLineCrud`
@@ -72,10 +68,9 @@ All actions use the same granular RHF method in both locked and unlocked modes, 
 
 ### Locked reconciliation steps
 
-When `lockState.locked` is true, two extra steps run after the raw action:
+When `lockState.locked` is true, one extra step runs after the raw action:
 
 1. **Reconcile** — only adjusts a newly created line when the action creates one
-2. **Validate** — checks the sum; fires a toast on any remaining mismatch (submit-time validation is the hard block)
 
 ## How it works
 
@@ -87,17 +82,20 @@ When `lockState.locked` is true, two extra steps run after the raw action:
 - **Credit-note sign handling**: Normal invoices fill positive remaining amounts; credit notes fill negative remaining amounts. Opposite-sign or zero remaining amounts create a `0` line.
 - **VAT and unit handling**: When the created line is auto-filled, `setTotalAmountForLine` back-calculates `amount` (excl. VAT) from `totalAmount` (incl. VAT). Selected share/percentage unit allocations on that created line stay valid; free/manual distributions are cleared instead of being guessed.
 - **Rounding**: No proportional redistribution is performed. The only automatic amount is the direct remaining amount or the duplicated source amount.
-- **Validation**: Real-time toast on every mismatch after any action + submit-time guard that blocks submission if totals don't match.
-- **Peppol default**: Auto-enabled for Peppol invoices via two paths. **Sheet "Edit"**: `PeppolInvoiceSheetRoute` computes `lockedTotal` from `initialData.amounts` and passes it as `config.initialLockState` (deterministic, no effects). **URL navigation**: `usePeppolPrefill` fires `onPrefillComplete(lockedTotal)` after data is set. User can still unlock manually.
+- **Validation**: Submit-time guard blocks submission if the sum of line totals does not match the locked total.
+- **Peppol default**: Auto-enabled when converting a Peppol invoice via the Sheet "Edit" button. `PeppolInvoiceSheetRoute` computes `lockedTotal` from `initialData.amounts` and passes it as `config.initialLockState` — fully deterministic, no effects. User can still unlock manually.
+- **XML upload auto-lock**: Auto-enabled when an XML file is uploaded and parsed. `handlePeppolDataParsed` returns the parsed amounts, and `safePeppolDataParsed` computes `lockedTotal` and calls `setLockState` via context.
+- **Footer display**: When locked, the footer shows the frozen `lockedTotal` instead of the live sum of line items.
 
 ## Key files
 
 | Area | Files | Notes |
 |------|-------|-------|
 | Pipeline types | `pipeline/types.ts` | `PipelineAction`, `LockState` |
-| Pipeline hook | `pipeline/useAmountPipeline.ts` | Exports `AmountPipeline` interface; three-step execute: `computeNewLines` → `applyReconciliation` → `commitToForm` |
-| Pipeline pure logic | `computeNewLines.ts`, `reconcile.ts`, `assertTotalMatch.ts` | Stateless functions, no RHF dependency |
-| Pipeline barrel | `pipeline/index.ts` | Re-exports `useAmountPipeline`, `AmountPipeline`, `LockState`, `PipelineAction` |
+| Pipeline pure logic | `pipeline/executePipelineAction.ts` | Pure function with single switch-by-action; compute + reconcile + commit per action |
+| Pipeline hook | `pipeline/useAmountPipeline.ts` | Thin React wrapper; delegates to `executePipelineAction` via `useStableCallback` |
+| Reconciliation | `pipeline/reconcile.ts` | Exports `reconcileOnAdd`, `reconcileOnDuplicate` directly |
+| Pipeline barrel | `pipeline/index.ts` | Re-exports `useAmountPipeline`, `AmountPipeline`, `LockState`, `PipelineAction`, `sumTotalAmounts` |
 | Shared utility | `utils/amountCalculation.ts` | `calculateSubtotalFromTotal`, `getDistributionAdjustment`, `setTotalAmountForLine` |
 | CRUD hook | `hooks/useLineCrud.ts` | Bulk ops (add/duplicate/delete) → `pipeline.execute()` |
 | Dispatch hook | `hooks/useInvoiceLineDispatch.ts` | Single-line edits → `pipeline.execute()` when locked, `update()` when unlocked |
@@ -105,16 +103,15 @@ When `lockState.locked` is true, two extra steps run after the raw action:
 | Data hook | `hooks/useInvoiceLinesData.ts` | Instantiates pipeline with `append`/`remove`/`update` |
 | UI | `InvoiceLinesTableV3.tsx`, `InvoiceLineCard.tsx`, `SingleTotalView.tsx` | Thread `AmountPipeline` prop to handlers |
 | UI (footer) | `InvoiceLinesTableFooter.tsx` | Lock icon toggle |
-| Context | `PurchaseInvoiceFormContext.tsx` | `lockState`, `toggleAmountLock` |
-| Validation | `hooks/useInvoiceFormActions.ts` | Submit-time mismatch check |
+| Context | `PurchaseInvoiceFormContext.tsx` | `lockState`, `setLockState`, `toggleAmountLock` |
+| Validation | `hooks/useInvoiceFormActions.ts` | Submit-time mismatch check using `sumTotalAmounts` |
 | Vendored hooks | `src/hooks/lib/useStableCallback.ts` | Stabilizes `execute` identity; future `useEffectEvent` replacement |
 | Form types | `purchase-invoice-v3/types.ts` | `PurchaseInvoiceFormConfig` with `initialLockState` |
-| Peppol auto-lock (Sheet) | `peppol/components/PeppolInvoiceSheetRoute.tsx` | Computes `lockedTotal`, passes `config.initialLockState` |
-| Peppol auto-lock (URL) | `purchase-invoice-v2/hooks/usePeppolPrefill.ts` | `onPrefillComplete(lockedTotal)` callback in `.then()` chain |
+| Peppol auto-lock | `peppol/components/PeppolInvoiceSheetRoute.tsx` | Computes `lockedTotal`, passes `config.initialLockState` |
 
 ## Testing
 
-- Unit tests for pipeline functions (reconcile, computeNewLines, assertTotalMatch), including created-line fill, duplicate fit/no-fit, credit-note sign handling, and no-redistribution edit/delete behavior
+- Unit tests for pipeline functions (`executePipelineAction`, `reconcileOnAdd`, `reconcileOnDuplicate`), including created-line fill, duplicate fit/no-fit, credit-note sign handling, invalid-index guard, and no-redistribution edit/delete behavior
 - 20 unit tests for amount calculation utilities, including direct `getDistributionAdjustment` coverage
 - Existing 75 tests (reducer, amountDefaults, lineGrouping) pass with zero regressions
 
@@ -129,4 +126,6 @@ When `lockState.locked` is true, two extra steps run after the raw action:
 - [ ] Edit/delete in locked mode -> no other line is changed; mismatch remains for manual correction
 - [ ] Unlock -> normal behavior restored
 - [ ] Peppol create -> auto-locks with correct total
+- [ ] XML upload -> auto-locks with correct total
+- [ ] Footer shows frozen locked total when locked, live sum when unlocked
 - [ ] Submit with mismatch -> blocked with toast
