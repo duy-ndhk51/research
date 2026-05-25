@@ -3,8 +3,8 @@
 Restructure `apps/ui-v2-dev` from a single-page tab-based architecture to Next.js App Router route-based code splitting.
 
 **Created**: 2026-05-20
-**Status**: Planning
-**Branch**: `feature/ui-v2-dev-route-restructure`
+**Status**: In progress (commit 12/13)
+**Branch**: `feat/SQ-21402`
 **Naming conventions**: `apps/docs/.cursor/rules/naming-conventions.mdc`
 
 ---
@@ -76,13 +76,15 @@ Convert to a route-based architecture with automatic code splitting:
 
 ---
 
-## Explicitly Dropped Content
+## Explicitly Dropped Content (deleted in Commit 12)
 
-| File | Reason |
-|------|--------|
-| `TremorTab.tsx` | Orphaned — never wired to ShowcasePage, unreachable |
-| `FoundationsSection.tsx` | Orphaned — exists in `sections/` but never mounted |
-| `components/forms/*.tsx` (7 files) | Duplicate of `patterns/form/` — FormsTab uses the patterns version |
+| File | Reason | Status |
+|------|--------|--------|
+| `TremorTab.tsx` | Orphaned — never wired to ShowcasePage, unreachable | Deleted |
+| `FoundationsSection.tsx` | Orphaned — never mounted | Deleted |
+| `components/forms/*.tsx` (7 files) | Duplicate of `patterns/form/` — FormsTab uses the patterns version | Deleted |
+| `modules/showcase/ShowcasePage.tsx` | Replaced by route-based navigation | Deleted |
+| `app/particles/` (route + UI files) | Merged into `/integrations/coss` | Deleted |
 
 ---
 

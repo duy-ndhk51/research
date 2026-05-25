@@ -3,6 +3,7 @@
 Agent guidance for restructuring `apps/ui-v2-dev` from a single-page tab architecture to Next.js App Router route-based code splitting.
 
 **Scope**: Routing and file organization only. Zero component logic changes.
+**Status**: In progress (commit 12/13) — tab files relocated, old code deleted, documentation pending.
 
 ---
 
@@ -25,25 +26,21 @@ To:
 
 ### DO
 
-- Move files to new locations following naming conventions
-- Create route `page.tsx` and `layout.tsx` files
-- Create `index.ts` barrel files in every component/example folder
-- Use named exports only
-- Import existing tab components — wrap them in route pages
+- Import components from route-colocated `_components/` directories
 - Add `'use client'` when a page imports components using React hooks
 - Follow [execution.md](./execution.md) commit by commit
 - Treat Coss UI and Tremor as external library integrations (under `/integrations/`)
+- Use `@/` alias imports for cross-directory references
 
 ### DO NOT
 
 - Modify any component's internal logic, props, or styling
 - Change how components render (only where they're imported from)
 - Add new npm dependencies
-- Create new UI components (only layout scaffolding)
 - Modify `globals.css` or design tokens
 - Change anything in `packages/ui-v2/` or `packages/config/`
 - Skip verification after each commit
-- Move `TremorTab.tsx` or `FoundationsSection.tsx` (they are dropped — orphaned dead code)
+- Import from `@/components/tabs/` (deleted in Commit 12)
 
 ---
 
@@ -69,45 +66,48 @@ To:
 src/app/
 ├── layout.tsx                    # Root: fonts + globals.css
 ├── page.tsx                      # OverviewTab (landing — 4 layer cards)
+├── _components/
+│   └── OverviewContent.tsx       # Relocated from tabs/OverviewTab.tsx
 │
 ├── (showcase)/                   # Sidebar + content
 │   ├── layout.tsx                # Sidebar nav
 │   │
-│   ├── primitives/               # /primitives — ComponentsTab (masonry gallery)
+│   ├── primitives/               # /primitives
 │   │   ├── layout.tsx            # Category sub-tabs
 │   │   ├── page.tsx              # 16 sections grid
+│   │   ├── _components/PrimitivesContent.tsx
 │   │   └── [component]/page.tsx  # Single primitive (e.g., /primitives/row)
 │   │
 │   ├── blocks/                   # /blocks
 │   │   ├── layout.tsx            # Sub-tabs: ui-v2 | sndq | composable
-│   │   ├── ui-v2/page.tsx        # BlocksTab (generic blocks)
-│   │   ├── sndq/page.tsx         # SndqBlocksTab (18 domain categories)
+│   │   ├── ui-v2/page.tsx + _components/BlocksContent.tsx
+│   │   ├── sndq/page.tsx + _components/SndqBlocksContent.tsx
 │   │   ├── sndq/[domain]/page.tsx
-│   │   └── composable/page.tsx   # ComposableTab (5 patterns)
+│   │   └── composable/page.tsx   # ComposableTab inlined (47 lines)
 │   │
 │   ├── patterns/                 # /patterns
-│   │   ├── layout.tsx            # Sub-tabs: forms | tables | filters | metrics | page-shells
-│   │   ├── forms/page.tsx        # FormsTab (6 form patterns)
-│   │   ├── tables/page.tsx       # TableRowTab (6 tables)
-│   │   ├── filters/page.tsx      # FilterTab (11 patterns)
-│   │   ├── metrics/page.tsx      # MetricStripTab (9 patterns)
-│   │   └── page-shells/page.tsx  # FloatingSheetTab (4 demos)
+│   │   ├── layout.tsx            # Sub-tabs
+│   │   ├── forms/page.tsx + _components/FormsContent.tsx
+│   │   ├── tables/page.tsx + _components/TableContent.tsx
+│   │   ├── filters/page.tsx + _components/FilterContent.tsx
+│   │   ├── metrics/page.tsx + _components/MetricContent.tsx
+│   │   └── page-shells/page.tsx + _components/FloatingSheetContent.tsx
 │   │
 │   ├── integrations/             # /integrations — external libraries
-│   │   ├── layout.tsx            # Sub-tabs: coss | tremor | charts | data-table | forms | date-pickers
-│   │   ├── coss/page.tsx         # CossTab (492 particles, sidebar categories)
+│   │   ├── layout.tsx            # Sub-tabs
+│   │   ├── coss/page.tsx + _components/CossBrowser.tsx
 │   │   ├── coss/[category]/page.tsx
-│   │   ├── tremor/page.tsx       # TremorBlocksTab (~303 blocks, 28 categories)
+│   │   ├── tremor/page.tsx + _components/TremorBrowser.tsx
 │   │   ├── tremor/[category]/page.tsx
-│   │   ├── charts/page.tsx       # Recharts integration
-│   │   ├── data-table/page.tsx   # @tanstack/react-table
-│   │   ├── forms/page.tsx        # react-hook-form + zod
-│   │   └── date-pickers/page.tsx # react-day-picker
+│   │   ├── charts/page.tsx       # Placeholder
+│   │   ├── data-table/page.tsx   # Placeholder
+│   │   ├── forms/page.tsx        # Placeholder
+│   │   └── date-pickers/page.tsx # Placeholder
 │   │
 │   └── foundations/              # /foundations
 │       ├── layout.tsx            # Sub-tabs: identity | tokens
-│       ├── identity/page.tsx     # IdentityTab (spec + canvas)
-│       └── tokens/page.tsx       # FoundationTab (swatches + scales)
+│       ├── identity/page.tsx + _components/IdentityContent.tsx + identity/
+│       └── tokens/page.tsx + _components/FoundationContent.tsx
 │
 └── (standalone)/                 # No sidebar
     └── preview/[component]/page.tsx
@@ -158,15 +158,18 @@ Both use:
 
 ---
 
-## Dropped Content
+## Dropped Content (deleted in Commit 12)
 
-These files are dead code and should NOT be migrated:
+These files were identified as dead code and have been deleted:
 
 | File | Reason |
 |------|--------|
-| `src/components/tabs/TremorTab.tsx` | Orphaned — never imported in ShowcasePage |
+| `src/components/tabs/` (entire directory) | Relocated to route-colocated `_components/` dirs |
+| `src/modules/showcase/ShowcasePage.tsx` | Replaced by route-based navigation |
+| `src/components/tabs/TremorTab.tsx` | Orphaned — never imported |
 | `src/components/sections/FoundationsSection.tsx` | Orphaned — never mounted |
 | `src/components/forms/*.tsx` (7 files) | Duplicate of `src/patterns/form/` |
+| `src/app/particles/` (route + UI files) | Merged into `/integrations/coss`; data relocated |
 
 ---
 
@@ -206,7 +209,7 @@ pnpm --filter @sndq/ui-v2-dev dev
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `Cannot find module '@/components/tabs/...'` | Route still imports deleted tab | Update to import underlying component directly |
+| `Cannot find module '@/components/tabs/...'` | Stale import from deleted tabs/ dir | Update to import from `_components/` or `@/components/showcase/` |
 | `useState is not defined` | Server component imports client hook | Add `'use client'` to the page |
 | 404 on route | Missing `page.tsx` | Create the file in correct location |
 | Hydration mismatch | Server/client render different content | Use `dynamic(import, { ssr: false })` |

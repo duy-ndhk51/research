@@ -31,12 +31,17 @@ apps/ui-v2-dev/
     │   ├── layout.tsx                        # Root: fonts, providers
     │   ├── page.tsx                          # "/" = OverviewTab (4 layer cards landing)
     │   │
+    │   ├── _components/
+    │   │   └── OverviewContent.tsx            # Relocated from tabs/OverviewTab.tsx
+    │   │
     │   ├── (showcase)/                       # Route group: sidebar + content shell
     │   │   ├── layout.tsx                    # Sidebar nav + content area
     │   │   │
     │   │   ├── primitives/                   # /primitives — ComponentsTab gallery
     │   │   │   ├── layout.tsx                # Category sub-tabs (inputs, display, feedback, etc.)
     │   │   │   ├── page.tsx                  # Masonry grid of all primitives (16 sections)
+    │   │   │   ├── _components/
+    │   │   │   │   └── PrimitivesContent.tsx  # Relocated from tabs/ComponentsTab.tsx
     │   │   │   └── [component]/              # /primitives/button, /primitives/row
     │   │   │       └── page.tsx              # Focused view of one primitive
     │   │   │
@@ -44,37 +49,55 @@ apps/ui-v2-dev/
     │   │   │   ├── layout.tsx                # Sub-tabs: ui-v2 | sndq | composable
     │   │   │   ├── page.tsx                  # Overview / redirect to ui-v2
     │   │   │   ├── ui-v2/                    # BlocksTab (generic: KPI, Headers, EntityCards, etc.)
-    │   │   │   │   └── page.tsx
+    │   │   │   │   ├── page.tsx
+    │   │   │   │   └── _components/
+    │   │   │   │       └── BlocksContent.tsx  # Relocated from tabs/BlocksTab.tsx
     │   │   │   ├── sndq/                     # SndqBlocksTab (domain blocks, 18 categories)
     │   │   │   │   ├── page.tsx              # Category grid
+    │   │   │   │   ├── _components/
+    │   │   │   │   │   └── SndqBlocksContent.tsx  # Relocated from tabs/SndqBlocksTab.tsx
     │   │   │   │   └── [domain]/             # /blocks/sndq/building
     │   │   │   │       └── page.tsx
-    │   │   │   └── composable/               # ComposableTab (5 assembled patterns)
+    │   │   │   └── composable/               # ComposableTab (5 assembled patterns, inlined)
     │   │   │       └── page.tsx
     │   │   │
     │   │   ├── patterns/                     # /patterns
     │   │   │   ├── layout.tsx                # Sub-tabs: forms | tables | filters | metrics | page-shells
     │   │   │   ├── page.tsx                  # Overview / redirect
     │   │   │   ├── forms/                    # FormsTab (6 form patterns)
-    │   │   │   │   └── page.tsx
+    │   │   │   │   ├── page.tsx
+    │   │   │   │   └── _components/
+    │   │   │   │       └── FormsContent.tsx   # Relocated from tabs/FormsTab.tsx
     │   │   │   ├── tables/                   # TableRowTab (6 table demos)
-    │   │   │   │   └── page.tsx
+    │   │   │   │   ├── page.tsx
+    │   │   │   │   └── _components/
+    │   │   │   │       └── TableContent.tsx   # Relocated from tabs/TableRowTab.tsx
     │   │   │   ├── filters/                  # FilterTab (11 filter patterns)
-    │   │   │   │   └── page.tsx
+    │   │   │   │   ├── page.tsx
+    │   │   │   │   └── _components/
+    │   │   │   │       └── FilterContent.tsx  # Relocated from tabs/FilterTab.tsx
     │   │   │   ├── metrics/                  # MetricStripTab (9 metric patterns)
-    │   │   │   │   └── page.tsx
+    │   │   │   │   ├── page.tsx
+    │   │   │   │   └── _components/
+    │   │   │   │       └── MetricContent.tsx  # Relocated from tabs/MetricStripTab.tsx
     │   │   │   └── page-shells/              # FloatingSheetTab (4 sheet demos)
-    │   │   │       └── page.tsx
+    │   │   │       ├── page.tsx
+    │   │   │       └── _components/
+    │   │   │           └── FloatingSheetContent.tsx  # Relocated from tabs/FloatingSheetTab.tsx
     │   │   │
     │   │   ├── integrations/                 # /integrations — external library showcases
     │   │   │   ├── layout.tsx                # Sub-tabs: coss | tremor | charts | data-table | forms | date-pickers
     │   │   │   ├── page.tsx                  # Overview / redirect
     │   │   │   ├── coss/                     # CossTab (492 particles, 6 sidebar groups)
     │   │   │   │   ├── page.tsx              # Full particle browser with sidebar categories
+    │   │   │   │   ├── _components/
+    │   │   │   │   │   └── CossBrowser.tsx   # Relocated from tabs/CossTab.tsx
     │   │   │   │   └── [category]/           # /integrations/coss/button
     │   │   │   │       └── page.tsx
     │   │   │   ├── tremor/                   # TremorBlocksTab (~303 blocks, 28 categories)
     │   │   │   │   ├── page.tsx              # Category grid
+    │   │   │   │   ├── _components/
+    │   │   │   │   │   └── TremorBrowser.tsx  # Relocated from tabs/TremorBlocksTab.tsx
     │   │   │   │   └── [category]/           # /integrations/tremor/kpi-cards
     │   │   │   │       └── page.tsx
     │   │   │   ├── charts/                   # Chart integration (Recharts)
@@ -90,9 +113,17 @@ apps/ui-v2-dev/
     │   │       ├── layout.tsx                # Sub-tabs: identity | tokens
     │   │       ├── page.tsx                  # Redirect to /foundations/identity
     │   │       ├── identity/                 # IdentityTab (spec + design canvas)
-    │   │       │   └── page.tsx
+    │   │       │   ├── page.tsx
+    │   │       │   └── _components/
+    │   │       │       ├── IdentityContent.tsx  # Relocated from tabs/IdentityTab.tsx
+    │   │       │       └── identity/           # Relocated from tabs/identity/
+    │   │       │           ├── identity-data.ts
+    │   │       │           ├── MarkdownRenderer.tsx
+    │   │       │           └── DesignCanvas.tsx
     │   │       └── tokens/                   # FoundationTab (swatches + scales)
-    │   │           └── page.tsx
+    │   │           ├── page.tsx
+    │   │           └── _components/
+    │   │               └── FoundationContent.tsx  # Relocated from tabs/FoundationTab.tsx
     │   │
     │   └── (standalone)/                     # Route group: full-screen previews
     │       └── preview/
@@ -109,63 +140,39 @@ apps/ui-v2-dev/
     │   │   ├── ExampleCard.tsx
     │   │   ├── VariantSection.tsx
     │   │   ├── LazyExample.tsx
+    │   │   ├── CellView.tsx                  # Relocated from tabs/RowTab.tsx (shared cross-group)
     │   │   └── index.ts
-    │   └── ui/
+    │   ├── sections/                          # 16 primitive demo sections (kept in place)
+    │   │   ├── ButtonSection.tsx
+    │   │   ├── InputSection.tsx
+    │   │   └── ...
+    │   ├── composable/                        # 5 composable examples (kept in place)
+    │   │   ├── FinancialExample.tsx
+    │   │   └── ...
+    │   ├── sndq-blocks/                       # 18 SNDQ domain block categories (kept in place)
+    │   │   ├── building/
+    │   │   └── ...
+    │   ├── blocks/                            # 28 Tremor block categories (kept in place)
+    │   │   ├── kpi-cards/
+    │   │   └── ...
+    │   ├── ComponentCard.tsx                  # Legacy card wrapper (still used by sections + relocated tabs)
+    │   └── ui-v2/                             # Prototype UI components
     │       └── index.ts
     │
     ├── registry/                             # Metadata (NOT component source)
     │   ├── primitives.ts
     │   ├── blocks.ts
     │   ├── integrations.ts
-    │   └── categories.ts
+    │   ├── categories.ts
+    │   ├── particles.ts                      # Relocated from app/particles/registry-particles.ts
+    │   └── particle-categories.ts            # Relocated from app/particles/registry-categories.ts
     │
-    ├── examples/                             # All example source files
-    │   ├── primitives/                       # Per-component folders (graduated)
-    │   │   ├── button/
-    │   │   │   ├── ButtonPrimary.tsx
-    │   │   │   ├── ButtonVariants.tsx
-    │   │   │   └── index.ts
-    │   │   ├── input/
-    │   │   │   ├── InputBasic.tsx
-    │   │   │   └── index.ts
-    │   │   └── ...
-    │   │
-    │   ├── prototypes/                       # Not yet graduated to @sndq/ui-v2
-    │   │   ├── floating-sheet/
-    │   │   │   └── index.ts
-    │   │   └── ...
-    │   │
-    │   ├── blocks/
-    │   │   ├── ui-v2/                        # Generic blocks (from BlocksTab)
-    │   │   │   └── index.ts
-    │   │   ├── sndq/                         # Domain blocks (from SndqBlocksTab)
-    │   │   │   ├── building/
-    │   │   │   │   ├── BuildingCell.tsx
-    │   │   │   │   ├── BuildingRow.tsx
-    │   │   │   │   └── index.ts
-    │   │   │   └── lease/
-    │   │   │       ├── LeaseRow.tsx
-    │   │   │       └── index.ts
-    │   │   └── composable/                   # Composable patterns
-    │   │       └── index.ts
-    │   │
-    │   └── integrations/
-    │       ├── coss/                         # CossTab particle examples (492 files)
-    │       │   ├── button/
-    │       │   │   ├── ButtonVariant01.tsx
-    │       │   │   └── index.ts
-    │       │   └── ...
-    │       ├── tremor/                       # TremorBlocksTab blocks (~303 files)
-    │       │   ├── kpi-cards/
-    │       │   │   ├── KpiCard01.tsx
-    │       │   │   └── index.ts
-    │       │   └── ...
-    │       ├── charts/
-    │       │   └── index.ts
-    │       ├── data-table/
-    │       │   └── index.ts
-    │       └── forms/
-    │           └── index.ts
+    ├── examples/
+    │   └── particles/                        # Relocated from app/particles/examples/ (492 files)
+    │       ├── index.ts                      # Lazy-loads all p-*.tsx via React.lazy
+    │       ├── p-accordion-1.tsx
+    │       ├── p-button-1.tsx
+    │       └── ...
     │
     ├── patterns/
     │   └── form/                             # Stays in place (FormsTab source)
@@ -323,16 +330,18 @@ export default function CossCategoryPage({ params }: { params: { category: strin
 |-----------|----------|----------------|
 | Route pages | `src/app/(showcase)/[category]/page.tsx` | N/A (Next.js) |
 | Route layouts | `src/app/(showcase)/[category]/layout.tsx` | N/A (Next.js) |
+| Route-colocated content | `src/app/(showcase)/[category]/_components/` | Relative `./_components/X` |
 | Layout UI (Sidebar, TopTabs) | `src/components/layout/` | `@/components/layout` |
-| Showcase utilities (ExampleCard, LazyExample) | `src/components/showcase/` | `@/components/showcase` |
+| Showcase utilities (ExampleCard, LazyExample, CellView) | `src/components/showcase/` | `@/components/showcase` |
 | Registry metadata | `src/registry/` | `@/registry/primitives` |
-| Primitive sections (from ComponentsTab) | `src/components/sections/` | Kept in place, imported by primitives page |
-| Coss particle examples | `src/examples/integrations/coss/[category]/` | Dynamic import via registry |
-| Tremor block examples | `src/examples/integrations/tremor/[category]/` | Dynamic import via registry |
-| SNDQ block examples | `src/examples/blocks/sndq/[domain]/` | Dynamic import via registry |
-| Composable examples | `src/examples/blocks/composable/` | Direct import |
-| Form patterns | `src/patterns/form/` | Direct import (stays in place) |
-| Identity tab helpers | `src/components/tabs/identity/` | Moved to route-local `_components/` |
+| Particle registry + categories | `src/registry/particles.ts`, `particle-categories.ts` | `@/registry/particles` |
+| Particle examples (492 files) | `src/examples/particles/` | `@/examples/particles` |
+| Primitive sections (16 sections) | `src/components/sections/` | `@/components/sections/*` |
+| Tremor block source | `src/components/blocks/` | `@/components/blocks/*` (dynamic) |
+| SNDQ block source | `src/components/sndq-blocks/` | `@/components/sndq-blocks/*` (dynamic) |
+| Composable examples | `src/components/composable/` | `@/components/composable/*` |
+| Form patterns | `src/patterns/form/` | `@/patterns/form` |
+| Identity helpers | `src/app/(showcase)/foundations/identity/_components/identity/` | Relative `./identity/*` |
 | Hooks | `src/lib/hooks/` | `@/lib/hooks/useX` |
 | Utilities | `src/lib/` | `@/lib/utils` |
 
@@ -340,40 +349,42 @@ export default function CossCategoryPage({ params }: { params: { category: strin
 
 ## 6. Migration Mapping
 
-### Current file → Target location
+### Current file → Final location (after Commit 12)
 
-| Current location | Target location | Notes |
-|-----------------|-----------------|-------|
-| `src/app/page.tsx` | `src/app/page.tsx` | Change from `ShowcasePage` to `OverviewTab` render |
-| `src/app/layout.tsx` | `src/app/layout.tsx` | No change |
-| `src/modules/showcase/ShowcasePage.tsx` | **DELETE** | Replaced by route-based navigation |
-| `src/components/tabs/OverviewTab.tsx` | Imported by `src/app/page.tsx` | Becomes the root page content |
-| `src/components/tabs/IdentityTab.tsx` | Imported by `(showcase)/foundations/identity/page.tsx` | |
-| `src/components/tabs/identity/*.tsx` | Move to `(showcase)/foundations/identity/_components/` | Route-local helpers |
-| `src/components/tabs/FoundationTab.tsx` | Imported by `(showcase)/foundations/tokens/page.tsx` | |
-| `src/components/tabs/ComponentsTab.tsx` | Imported by `(showcase)/primitives/page.tsx` | |
-| `src/components/tabs/CossTab.tsx` | Imported by `(showcase)/integrations/coss/page.tsx` | |
-| `src/components/tabs/TremorBlocksTab.tsx` | Imported by `(showcase)/integrations/tremor/page.tsx` | |
-| `src/components/tabs/BlocksTab.tsx` | Imported by `(showcase)/blocks/ui-v2/page.tsx` | |
-| `src/components/tabs/SndqBlocksTab.tsx` | Imported by `(showcase)/blocks/sndq/page.tsx` | |
-| `src/components/tabs/ComposableTab.tsx` | Imported by `(showcase)/blocks/composable/page.tsx` | |
-| `src/components/tabs/FormsTab.tsx` | Imported by `(showcase)/patterns/forms/page.tsx` | |
-| `src/components/tabs/TableRowTab.tsx` | Imported by `(showcase)/patterns/tables/page.tsx` | |
-| `src/components/tabs/FilterTab.tsx` | Imported by `(showcase)/patterns/filters/page.tsx` | |
-| `src/components/tabs/MetricStripTab.tsx` | Imported by `(showcase)/patterns/metrics/page.tsx` | |
-| `src/components/tabs/FloatingSheetTab.tsx` | Imported by `(showcase)/patterns/page-shells/page.tsx` | |
-| `src/components/tabs/RowTab.tsx` | Imported by `(showcase)/primitives/[component]/page.tsx` (slug=row) | |
-| `src/components/sections/*.tsx` | Stay in place | Imported by primitives page |
-| `src/components/blocks/[category]/*.tsx` | `src/examples/integrations/tremor/[category]/` | Move |
-| `src/components/sndq-blocks/[domain]/*.tsx` | `src/examples/blocks/sndq/[domain]/` | Move |
-| `src/components/composable/*.tsx` | `src/examples/blocks/composable/` | Move |
-| `src/app/particles/examples/*.tsx` | `src/examples/integrations/coss/[category]/` | Rename + restructure |
-| `src/app/particles/registry-*.ts` | `src/registry/integrations.ts` (coss section) | Consolidate |
-| `src/app/particles/page.tsx` | **DELETE** | Merged into `/integrations/coss` |
+| Original location | Final location | Status |
+|-------------------|----------------|--------|
+| `src/modules/showcase/ShowcasePage.tsx` | **DELETED** | Replaced by route-based navigation |
+| `src/components/tabs/OverviewTab.tsx` | `src/app/_components/OverviewContent.tsx` | Relocated |
+| `src/components/tabs/IdentityTab.tsx` | `(showcase)/foundations/identity/_components/IdentityContent.tsx` | Relocated |
+| `src/components/tabs/identity/*.tsx` | `(showcase)/foundations/identity/_components/identity/` | Relocated |
+| `src/components/tabs/FoundationTab.tsx` | `(showcase)/foundations/tokens/_components/FoundationContent.tsx` | Relocated |
+| `src/components/tabs/ComponentsTab.tsx` | `(showcase)/primitives/_components/PrimitivesContent.tsx` | Relocated |
+| `src/components/tabs/CossTab.tsx` | `(showcase)/integrations/coss/_components/CossBrowser.tsx` | Relocated |
+| `src/components/tabs/TremorBlocksTab.tsx` | `(showcase)/integrations/tremor/_components/TremorBrowser.tsx` | Relocated |
+| `src/components/tabs/BlocksTab.tsx` | `(showcase)/blocks/ui-v2/_components/BlocksContent.tsx` | Relocated |
+| `src/components/tabs/SndqBlocksTab.tsx` | `(showcase)/blocks/sndq/_components/SndqBlocksContent.tsx` | Relocated |
+| `src/components/tabs/ComposableTab.tsx` | Inlined into `(showcase)/blocks/composable/page.tsx` | Inlined |
+| `src/components/tabs/FormsTab.tsx` | `(showcase)/patterns/forms/_components/FormsContent.tsx` | Relocated |
+| `src/components/tabs/TableRowTab.tsx` | `(showcase)/patterns/tables/_components/TableContent.tsx` | Relocated |
+| `src/components/tabs/FilterTab.tsx` | `(showcase)/patterns/filters/_components/FilterContent.tsx` | Relocated |
+| `src/components/tabs/MetricStripTab.tsx` | `(showcase)/patterns/metrics/_components/MetricContent.tsx` | Relocated |
+| `src/components/tabs/FloatingSheetTab.tsx` | `(showcase)/patterns/page-shells/_components/FloatingSheetContent.tsx` | Relocated |
+| `src/components/tabs/RowTab.tsx` | `src/components/showcase/CellView.tsx` | Relocated (shared) |
+| `src/components/tabs/TremorTab.tsx` | **DELETED** | Orphaned |
+| `src/components/sections/*.tsx` | Stay in place | No change |
+| `src/components/blocks/` | Stay in place | No change |
+| `src/components/sndq-blocks/` | Stay in place | No change |
+| `src/components/composable/` | Stay in place | No change |
+| `src/app/particles/examples/` | `src/examples/particles/` | Relocated |
+| `src/app/particles/registry-particles.ts` | `src/registry/particles.ts` | Relocated |
+| `src/app/particles/registry-categories.ts` | `src/registry/particle-categories.ts` | Relocated |
+| `src/app/particles/page.tsx` + UI files | **DELETED** | Merged into `/integrations/coss` |
+| `src/components/sections/FoundationsSection.tsx` | **DELETED** | Orphaned |
+| `src/components/forms/` | **DELETED** | Duplicate of `src/patterns/form/` |
 | `src/patterns/form/*.tsx` | Stay in place | No change |
 | `src/components/ui-v2/*.tsx` | Stay in place | Prototype source |
 | `src/lib/*.ts` | Stay in place | No change |
-| `src/components/ComponentCard.tsx` | `src/components/showcase/ExampleCard.tsx` | Rename |
+| `src/components/ComponentCard.tsx` | Stay in place | Deferred -- still used by sections + relocated tabs |
 
 ### Current URL → Target URL
 
@@ -399,12 +410,14 @@ export default function CossCategoryPage({ params }: { params: { category: strin
 
 ---
 
-## 7. Dropped Content
+## 7. Dropped Content (deleted in Commit 12)
 
-These files are intentionally not migrated:
+These files were identified as dead code and deleted:
 
-| File | Reason | Safe to delete |
-|------|--------|----------------|
-| `src/components/tabs/TremorTab.tsx` | Orphaned — never imported in ShowcasePage, unreachable to users | Yes |
-| `src/components/sections/FoundationsSection.tsx` | Orphaned — exists but never mounted in ComponentsTab | Yes |
-| `src/components/forms/*.tsx` (7 files) | Exact duplicates of `src/patterns/form/*.tsx` — FormsTab uses the patterns version | Yes |
+| File | Reason |
+|------|--------|
+| `src/components/tabs/TremorTab.tsx` | Orphaned — never imported in ShowcasePage |
+| `src/components/sections/FoundationsSection.tsx` | Orphaned — never mounted in ComponentsTab |
+| `src/components/forms/*.tsx` (7 files) | Exact duplicates of `src/patterns/form/*.tsx` |
+| `src/modules/showcase/ShowcasePage.tsx` | Replaced by route-based navigation |
+| `src/app/particles/` (route + 6 UI files) | Route merged into `/integrations/coss`; data files relocated |

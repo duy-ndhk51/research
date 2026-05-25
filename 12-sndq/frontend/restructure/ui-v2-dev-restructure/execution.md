@@ -3,7 +3,7 @@
 Step-by-step execution guide for the ui-v2-dev routing restructure. Each commit should be independently verifiable and revertable.
 
 **Created**: 2026-05-20
-**Status**: In progress (commit 6/13)
+**Status**: Complete (13/13)
 **Architecture**: [architecture.md](./architecture.md)
 **Branch**: `feat/SQ-21402`
 
@@ -538,10 +538,10 @@ pnpm --filter @sndq/ui-v2-dev run lint
 | 2026-05-20 | 4 | Done. Registry scaffolding: categories.ts, primitives.ts, blocks.ts, integrations.ts. Type-check clean. |
 | 2026-05-20 | 5 | Done. /primitives wraps ComponentsTab, /primitives/row renders CellTab via dynamic route. Both verified 200. |
 | 2026-05-20 | 6 | Done. All 5 routes verified: /blocks (redirect), /blocks/ui-v2, /blocks/sndq, /blocks/sndq/building, /blocks/composable. Layout needed 'use client' for icon props. |
-| | 7 | |
-| | 8 | |
-| | 9 | |
-| | 10 | |
-| | 11 | |
-| | 12 | |
-| | 13 | |
+| 2026-05-21 | 7 | Done. All 6 routes verified: /patterns (redirect), forms, tables, filters, metrics, page-shells. |
+| 2026-05-21 | 8 | Done. Routes wrap CossTab as-is. File moves deferred to cleanup (commit 12). |
+| 2026-05-21 | 9 | Done. Tremor route wraps TremorBlocksTab. Block file moves deferred to cleanup. |
+| 2026-05-21 | 10 | Done. 4 placeholder pages: charts, data-table, forms, date-pickers. Type-check clean. |
+| 2026-05-21 | 11 | Done. Standalone preview route at /preview/[component]. /preview/row returns 200 (no sidebar), unknown slugs return 404. |
+| 2026-05-21 | 12 | Done. Relocated 15 tabs to route-colocated _components/. Moved 492 particle examples + 2 registries to src/examples/ and src/registry/. Deleted ShowcasePage, tabs/, forms/, FoundationsSection, particles route. All 14 routes verified 200, /particles correctly 404. ComponentCard deletion deferred. |
+| 2026-05-21 | 13 | Done. Created .cursor/rules/ui-v2-dev-routing.mdc (corrected file placement paths, added _components convention, removed stale refs). Created AGENTS.md with route architecture, file organization, and conventions. Type-check clean (pre-existing Badge.test.tsx only). |
