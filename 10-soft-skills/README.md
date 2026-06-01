@@ -18,6 +18,12 @@ Non-technical skills essential for a successful software engineering career.
 | Cracking the Coding Interview (6th Ed.) | Gayle Laakmann McDowell | [Notes](./interviewing/cracking-the-coding-interview.md) | Data structures, algorithms, Big O, problem-solving methodology, system design, behavioral interviews, company-specific guides |
 | How I Landed 10+ Big Tech Interviews Without Applying | Evgeny Shigol | [Notes](./interviewing/how-to-land-big-tech-jobs.md) | LinkedIn optimization, personal branding, networking, interview prep, negotiation |
 
+## Source Courses
+
+| Course | Platform | Notes | Key Topics |
+|--------|----------|-------|------------|
+| Behavioral Interview | ByteByteGo | [Notes](./interviewing/bytebytego-behavioral-interview.md) | Storytelling, behavioral competencies, leveling, interview preparation |
+
 ## Key Areas
 
 - Technical writing & documentation
