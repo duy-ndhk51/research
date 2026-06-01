@@ -6,7 +6,7 @@ Online courses and structured learning resources.
 
 | Course | Platform | Domain | Notes |
 |--------|----------|--------|-------|
-| [Behavioral Interview](../10-soft-skills/interviewing/bytebytego-behavioral-interview.md) | ByteByteGo | Soft Skills | Behavioral storytelling, competencies, and leveling |
+| [Behavioral Interview](../10-soft-skills/interviewing/bytebytego-behavioral-interview/README.md) | ByteByteGo | Soft Skills | Behavioral storytelling, competencies, and leveling |
 
 ## To Take
 

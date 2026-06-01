@@ -70,43 +70,13 @@ To:
 
 ```
 src/app/
-├── layout.tsx                    # Root: fonts + globals.css
-├── page.tsx                      # OverviewTab (landing — 4 layer cards)
-│
-├── (showcase)/                   # Sidebar + content
-│   ├── layout.tsx                # Sidebar nav
-│   │
-│   ├── primitives/               # /primitives/[component]
-│   │   ├── data/primitivesCategories.ts
-│   │   ├── components/PrimitivesCategoryContent.tsx
-│   │   ├── layout.tsx            # CategoryBrowserLayout
-│   │   ├── page.tsx              # Redirects to /primitives/button
-│   │   └── [component]/page.tsx  # Single primitive
-│   │
-│   ├── blocks/                   # /blocks/*
-│   │   ├── layout.tsx            # Passthrough
-│   │   ├── ui-v2/page.tsx + components/BlocksContent.tsx
-│   │   ├── sndq/data/ + components/ + layout.tsx + [category]/
-│   │   ├── forms/data/ + components/ + layout.tsx + [form]/
-│   │   ├── sheets/data/ + components/sections/ + layout.tsx + [section]/
-│   │   ├── composable/data/ + components/ + layout.tsx + [view]/
-│   │   ├── tables/page.tsx + components/TableContent.tsx
-│   │   ├── filters/page.tsx + components/FilterContent.tsx
-│   │   └── metrics/page.tsx + components/MetricContent.tsx
-│   │
-│   ├── integrations/             # /integrations — external libraries
-│   │   ├── layout.tsx            # Passthrough
-│   │   ├── coss/data/ + components/ + layout.tsx + [category]/
-│   │   ├── tremor/data/ + components/ + layout.tsx + [category]/
-│   │   ├── charts/page.tsx       # Placeholder
-│   │   ├── data-table/page.tsx   # Placeholder
-│   │   ├── forms/page.tsx        # Placeholder
-│   │   └── date-pickers/page.tsx # Placeholder
-│   │
-│   └── foundations/              # /foundations
-│       ├── layout.tsx            # Passthrough
-│       ├── identity/page.tsx + components/IdentityContent.tsx
-│       └── tokens/page.tsx + components/FoundationContent.tsx
+├── layout.tsx & page.tsx                # Root layout + OverviewTab landing
+├── (showcase)/
+│   ├── primitives/         # CategoryBrowserLayout
+│   ├── blocks/             # sndq, forms, sheets, composable (CategoryBrowserLayout)
+│   │                       # ui-v2, tables, filters, metrics (single-page)
+│   ├── integrations/       # coss, tremor (CategoryBrowserLayout)
+│   └── foundations/        # identity, tokens (single-page)
 ```
 
 ---

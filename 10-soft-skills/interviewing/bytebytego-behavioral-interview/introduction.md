@@ -1,31 +1,9 @@
-# ByteByteGo — Behavioral Interview
+# Introduction: Why Your Stories Matter
 
 > **Source**: [ByteByteGo Behavioral Interview: Introduction](https://bytebytego.com/courses/behavioral-interview/introduction)  
-> **Status**: In progress  
+> **Status**: Summarized  
 > **Topic**: behavioral interviews, storytelling, career leveling  
 > **Last reviewed**: 2026-06-01
-
----
-
-## Course Map
-
-- Introduction
-- Part I: The Framework
-- The Behavioral Interview Roadmap
-- What Companies Are Looking For
-- High-Signal Storytelling
-- The Essential Questions
-- Part II: The Competencies
-- Taking Initiative
-- Delivery
-- Problem Solving and Deep Dive
-- Earning Trust and Dealing with Conflict
-- Learning and Growth
-- Customer and User Focus
-- Innovation
-- Developing Others
-- Strategic Leadership and Thinking Big
-- Nailing the Interview
 
 ---
 
@@ -126,7 +104,5 @@ When reviewing a story, check whether it shows:
 
 ## Related Notes
 
-- [Cracking the Coding Interview](./cracking-the-coding-interview.md)
-- [How I Landed 10+ Big Tech Interviews Without Applying](./how-to-land-big-tech-jobs.md)
-- [Salary Negotiation — My Leverage Points](./salary-negotiation-leverage.md)
-- [Knowledge Note Template](../../templates/knowledge-note-template.md)
+- [Course Index](./README.md)
+- [What Companies Are Looking For](./what-companies-are-looking-for.md)

@@ -56,6 +56,17 @@ Apply it by:
 
 ---
 
+## Evaluation / Calibration
+
+Use this section when the lesson includes a rubric, decision criteria, signals, levels, or self-assessment method.
+
+| Dimension | What To Look For | Weak Signal | Strong Signal |
+|-----------|------------------|-------------|---------------|
+| {Dimension 1} | {Criterion} | {Weak signal} | {Strong signal} |
+| {Dimension 2} | {Criterion} | {Weak signal} | {Strong signal} |
+
+---
+
 ## Personal Operating Notes
 
 - {Personal reminder, habit, or standard to follow}

@@ -22,7 +22,7 @@ Non-technical skills essential for a successful software engineering career.
 
 | Course | Platform | Notes | Key Topics |
 |--------|----------|-------|------------|
-| Behavioral Interview | ByteByteGo | [Notes](./interviewing/bytebytego-behavioral-interview.md) | Storytelling, behavioral competencies, leveling, interview preparation |
+| Behavioral Interview | ByteByteGo | [Notes](./interviewing/bytebytego-behavioral-interview/README.md) | Storytelling, behavioral competencies, leveling, interview preparation |
 
 ## Key Areas
 
