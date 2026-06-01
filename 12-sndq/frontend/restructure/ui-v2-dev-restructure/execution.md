@@ -4,7 +4,6 @@ Step-by-step execution guide for the ui-v2-dev routing restructure. Each commit 
 
 **Created**: 2026-05-20
 **Status**: Complete (13/13)
-**Architecture**: [architecture.md](./architecture.md)
 **Branch**: `feat/SQ-21402`
 
 ---
@@ -352,22 +351,9 @@ pnpm --filter @sndq/ui-v2-dev run type-check
 
 ---
 
-### Commit 11: Add standalone preview route
+### ~~Commit 11: Add standalone preview route~~
 
-**What**: Create `(standalone)/preview/[component]/` for full-page previews without sidebar.
-
-**Files to create**:
-
-- `src/app/(standalone)/preview/[component]/page.tsx`
-
-**Verification**:
-
-```bash
-pnpm --filter @sndq/ui-v2-dev dev
-# Visit /preview/button — renders without sidebar
-```
-
-**Commit message**: `feat: add standalone preview route`
+**REMOVED** — route deleted (no consumers). The `(standalone)/preview/[component]` route was never linked, iframed, or redirected to from anywhere in the showcase app.
 
 ---
 
@@ -399,8 +385,6 @@ git push origin feature/ui-v2-dev-route-restructure
 - [ ] `/integrations/tremor/kpi-cards` — KPI category
 - [ ] `/foundations/identity` — IdentityTab
 - [ ] `/foundations/tokens` — FoundationTab
-- [ ] `/preview/button` — standalone preview
-
 ---
 
 ## 5. PR 3 — Cleanup
@@ -542,6 +526,6 @@ pnpm --filter @sndq/ui-v2-dev run lint
 | 2026-05-21 | 8 | Done. Routes wrap CossTab as-is. File moves deferred to cleanup (commit 12). |
 | 2026-05-21 | 9 | Done. Tremor route wraps TremorBlocksTab. Block file moves deferred to cleanup. |
 | 2026-05-21 | 10 | Done. 4 placeholder pages: charts, data-table, forms, date-pickers. Type-check clean. |
-| 2026-05-21 | 11 | Done. Standalone preview route at /preview/[component]. /preview/row returns 200 (no sidebar), unknown slugs return 404. |
+| 2026-05-21 | 11 | ~~Done.~~ REMOVED — route deleted (no consumers). |
 | 2026-05-21 | 12 | Done. Relocated 15 tabs to route-colocated _components/. Moved 492 particle examples + 2 registries to src/examples/ and src/registry/. Deleted ShowcasePage, tabs/, forms/, FoundationsSection, particles route. All 14 routes verified 200, /particles correctly 404. ComponentCard deletion deferred. |
 | 2026-05-21 | 13 | Done. Created .cursor/rules/ui-v2-dev-routing.mdc (corrected file placement paths, added _components convention, removed stale refs). Created AGENTS.md with route architecture, file organization, and conventions. Type-check clean (pre-existing Badge.test.tsx only). |
