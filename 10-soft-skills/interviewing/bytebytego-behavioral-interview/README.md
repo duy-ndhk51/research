@@ -12,7 +12,7 @@
 | # | Page | Status | Notes |
 |---|------|--------|-------|
 | Intro | [Introduction](./introduction.md) | Summarized | Why stories matter as much as technical skills |
-| 01 | The Behavioral Interview Roadmap | Not started | Framework |
+| 01 | [The Behavioral Interview Roadmap](./the-behavioral-interview-roadmap.md) | Summarized | Three preparation pillars and story-bank roadmap |
 | 02 | [What Companies Are Looking For](./what-companies-are-looking-for.md) | Summarized | Fit signals, level dimensions, and story calibration |
 | 03 | High-Signal Storytelling | Not started | Framework |
 | 04 | The Essential Questions | Not started | Framework |
