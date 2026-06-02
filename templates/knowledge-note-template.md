@@ -40,6 +40,18 @@
 
 ---
 
+## Framework / Structure
+
+Use this section when the lesson introduces a named framework, model, or reusable structure.
+
+| Part | Purpose | How To Use It |
+|------|---------|---------------|
+| {Part 1} | {Purpose} | {Usage} |
+| {Part 2} | {Purpose} | {Usage} |
+| {Part 3} | {Purpose} | {Usage} |
+
+---
+
 ## Practical Application
 
 Use this lesson when:
@@ -53,6 +65,16 @@ Apply it by:
 1. {Step 1}
 2. {Step 2}
 3. {Step 3}
+
+---
+
+## Action Plan / Roadmap
+
+Use this section when the lesson gives a sequence, preparation plan, study path, or execution roadmap.
+
+1. {Phase or step 1}: {What to do and why it matters}
+2. {Phase or step 2}: {What to do and why it matters}
+3. {Phase or step 3}: {What to do and why it matters}
 
 ---
 

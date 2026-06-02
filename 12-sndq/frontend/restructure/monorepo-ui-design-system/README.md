@@ -16,7 +16,7 @@ Full architecture specification for reorganizing the `sndq` monorepo into a hybr
 **Phase 1a execution**: [phase-1a-execution.md](./phase-1a-execution.md) — step-by-step commits, risk checklists, verification commands
 **Phase 1b execution**: [phase-1b-execution.md](./phase-1b-execution.md) — Briicks token extraction commits, radius conflict resolution, verification commands
 **Phase 2 execution**: [phase-2-execution.md](./phase-2-execution.md) — prototype integration, token/CSS extraction, package scaffolding, deprecation
-**DESIGN.md integration**: [design-md-integration.md](./design-md-integration.md) — phase-by-phase planning for adopting Google's DESIGN.md format
+**DESIGN.md integration**: [design-md-integration/](./design-md-integration/) — phase-by-phase planning for adopting Google's DESIGN.md format
 **DESIGN.md execution**: Commit 19 in [phase-3-batch-1-execution.md](./phase-3-batch-1-execution.md#commit-19-add-designmd-specification-and-cli-toolchain) — install `@google/design.md` CLI, create `packages/ui-v2/DESIGN.md`
 **Reference**: [cal.com monorepo](https://github.com/calcomhq/cal.com) — used as architectural reference
 

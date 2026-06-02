@@ -14,7 +14,7 @@
 | Intro | [Introduction](./introduction.md) | Summarized | Why stories matter as much as technical skills |
 | 01 | [The Behavioral Interview Roadmap](./the-behavioral-interview-roadmap.md) | Summarized | Three preparation pillars and story-bank roadmap |
 | 02 | [What Companies Are Looking For](./what-companies-are-looking-for.md) | Summarized | Fit signals, level dimensions, and story calibration |
-| 03 | High-Signal Storytelling | Not started | Framework |
+| 03 | [High-Signal Storytelling](./high-signal-storytelling.md) | Summarized | Pyramid structure, signal vs. noise, and prepared depth |
 | 04 | The Essential Questions | Not started | Framework |
 | 05 | Taking Initiative | Not started | Competency |
 | 06 | Delivery | Not started | Competency |
