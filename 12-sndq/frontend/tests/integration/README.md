@@ -12,6 +12,8 @@ Integration tests validate **behavioral contracts** across multiple components/p
 - Lock state transitions and their UI impact
 - Right panel tab selection logic
 - Form field interactions (auto-generate, date changes, AI indicators)
+- Amount distribution sheet (unit selection, distribution types, suggestions, validation)
+- Supplier defaults wiring (backfill empty lines, auto-save on submit)
 
 ## What integration tests do NOT cover
 
@@ -287,15 +289,17 @@ pnpm test:watch src/modules/financial/forms/purchase-invoice-v3/__tests__/integr
 
 ### Right Panel Tabs ([right-panel-tabs.md](./right-panel-tabs.md))
 
-**Purpose**: Guard the tab defaulting logic that determines whether users see the file uploader or Peppol attachments first.
-**Scope**: Tab selection priority (user override > Peppol default > uploader fallback), lock trigger on Peppol parse.
-**Risk**: Users see empty uploader instead of Peppol attachments. Or Peppol data parsing silently fails to trigger lock state.
+**Purpose**: Guard the tab defaulting logic that determines whether users see the file uploader or Peppol attachments first. Uses `hasPeppolData` (not `hasAttachments`) as the primary condition — the tab appears whenever Peppol data exists, with content varying based on attachment file presence.
+**Scope**: Tab selection priority (user override > Peppol default > uploader fallback), content switching (PeppolAttachmentsTab vs PeppolParsedPreview), hideInlineAttachments, lock trigger on Peppol parse.
+**Risk**: Users see empty uploader instead of Peppol data. PeppolParsedPreview rendered in both tabs (duplicate). Tab disappears when it should still show parsed data.
 
 | ID | Description | User Flow | Status |
 |----|-------------|-----------|--------|
-| IT-013 | Default tab is uploader (no peppol) | No `peppolData` → active tab is `'uploader'` | - [ ] |
-| IT-014 | Default tab is attachments (peppol has files) | `peppolData.attachments` has entries → active tab is `'attachments'` | - [ ] |
-| IT-015 | User tab selection overrides default | Peppol attachments present but user selects `'uploader'` → stays `'uploader'` | - [ ] |
+| IT-013 | Default tab is uploader (no peppol data) | No `peppolData` → active tab is `'uploader'`, no extra tabs | - [ ] |
+| IT-013b | Peppol data without attachments shows PeppolParsedPreview | `peppolData` exists, empty attachments → tab content is `PeppolParsedPreview`, `hideInlineAttachments: true` | - [ ] |
+| IT-013c | Peppol data cleared removes tab | `peppolData` cleared → extra tabs empty, falls back to `'uploader'` | - [ ] |
+| IT-014 | Peppol with attachment files shows PeppolAttachmentsTab | `peppolData.attachments` has entries → tab content is `PeppolAttachmentsTab` | - [ ] |
+| IT-015 | User tab selection overrides default | Peppol data present but user selects `'uploader'` → stays `'uploader'` | - [ ] |
 | IT-016 | Peppol amounts parsed triggers lock | `safePeppolDataParsed` with amounts → `setLockState({ locked: true, lockedTotal })` | - [ ] |
 | IT-016b | Peppol with no amounts skips lock | `safePeppolDataParsed` with `[]` → `setLockState` NOT called | - [ ] |
 
@@ -330,3 +334,49 @@ pnpm test:watch src/modules/financial/forms/purchase-invoice-v3/__tests__/integr
 | IT-027 | Belgian OGM structured remittance | `+++123/4567/89002+++` → parsed to `'123456789002'`, typed STRUCTURED | - [ ] |
 | IT-028 | Lock total matches Peppol amounts sum | Multi-line Peppol → `sumTotalAmounts` → config `{ locked: true, lockedTotal }` | - [ ] |
 | IT-029 | Grouping preserves originalLines and total | Switch individual → group by VAT → same total, `originalLines` preserved | - [ ] |
+
+### Amount Distribution Sheet ([amount-distribution-sheet.md](./amount-distribution-sheet.md))
+
+**Purpose**: Guard the distribution sheet UI lifecycle: unit initialization from building properties, distribution type switching (share/percentage/free/split_later/DK), share/amount recalculation, ledger and DK suggestions, and form validation.
+**Scope**: Sheet open/close, loading states, edit mode pre-fill, all 5 distribution types, whole building toggle, individual/bulk selection, amount redistribution on total change, suggestion chip interactions, total mismatch validation dialog, unit search/sort.
+**Risk**: Units not initialized on sheet open, distribution type switch corrupts amounts, DK mode doesn't force whole building, amount mismatch undetected, suggestions don't populate form fields.
+
+| ID | Description | User Flow | Status |
+|----|-------------|-----------|--------|
+| IT-030 | Loading state shows spinner | Sheet open + properties pending → spinner shown, no form | - [ ] |
+| IT-031 | Properties loaded initializes units | Sheet open + 3 properties → 3 unit rows, all unselected, amount 0 | - [ ] |
+| IT-032 | Edit mode pre-fills from editingItem | Open with saved line → form resets to prior values | - [ ] |
+| IT-033 | Share mode sets DEFAULT_SHARE | Select "Share" → `totalShare: 1000`, amounts redistributed | - [ ] |
+| IT-034 | Percentage mode sets PERCENTAGE_BASE_VALUE | Select "Percentage" → `totalShare: 10000` | - [ ] |
+| IT-035 | Free mode enables per-unit inputs | Select "Free" → unit amount inputs editable, shares hidden | - [ ] |
+| IT-036 | Split later clears all allocations | Select "Split later" → all shares/amounts zeroed | - [ ] |
+| IT-037 | DK mode forces wholeBuilding + applies shares | Select "Distribution key" → all units selected, key shares applied | - [ ] |
+| IT-038 | Changing DK recalculates shares | Switch from dk-1 to dk-2 → shares update to new key ratios | - [ ] |
+| IT-039 | Whole building toggle controls selection | ON → all checked; OFF → all unchecked + amounts zeroed | - [ ] |
+| IT-040 | Individual unit deselect zeros its values | Deselect one unit → its share and amount become 0 | - [ ] |
+| IT-041 | Select all checkbox toggles all units | Header checkbox → all checked; click again → all unchecked | - [ ] |
+| IT-042 | totalAmount change recalculates amounts | Change total with non-free mode → proportional redistribution | - [ ] |
+| IT-043 | Ledger suggestion chip sets costAccount | Click suggestion → costAccount field populated with ledger | - [ ] |
+| IT-044 | DK suggestion chip switches to DK mode | Click DK suggestion → DK mode enabled, key applied | - [ ] |
+| IT-045 | Total mismatch shows SplitErrorDialog | Submit with sum != total → error dialog with "divide equally" | - [ ] |
+| IT-046 | Unit search filters by name/address/owner | Type "Apt" → only matching units shown | - [ ] |
+| IT-047 | Unit sort reorders list | Sort by amount → units ordered ascending/descending | - [ ] |
+
+### Supplier Defaults — Backfill & Auto-save ([supplier-defaults.md](./supplier-defaults.md))
+
+**Purpose**: Guard the integration between supplier default hooks and the form context. `useBackfillSupplierDefaults` patches empty invoice lines when supplier defaults load; `useAutoSaveBuildingSupplierDefaults` persists settings to the building-supplier link on submit. Unit tests exist for internal logic — these tests verify the form-level wiring.
+**Scope**: Backfill triggers on supplier selection, "never overwrite" policy, idempotency via ref guard, auto-save on submit (create link vs update link), skip when all fields set.
+**Risk**: Supplier defaults silently overwrite user-set values, backfill fires multiple times corrupting amounts, auto-save creates duplicate links, or settings lost on submit.
+
+| ID | Description | User Flow | Status |
+|----|-------------|-----------|--------|
+| IT-048 | Backfill sets costAccount on empty lines | Select supplier with defaults → empty lines patched | - [ ] |
+| IT-049 | Backfill sets distributionKeyId on empty lines | Supplier defaults with DK → empty lines get key applied | - [ ] |
+| IT-050 | Backfill does NOT overwrite existing costAccount | Line has user-set ledger → stays untouched | - [ ] |
+| IT-051 | Backfill does NOT overwrite existing DK | Line has existing DK → stays untouched | - [ ] |
+| IT-052 | Changing supplier triggers new backfill | Switch from supplier A to B → backfill fires for new pair | - [ ] |
+| IT-053 | Same supplier does NOT re-trigger backfill | Re-render with same pair → setValue called only once | - [ ] |
+| IT-054 | Auto-save extracts settings from amounts | Submit → `saveSupplierDefaults` called with first line's data | - [ ] |
+| IT-055 | Auto-save creates link for new supplier | No existing link → `linkSupplier` mutation called | - [ ] |
+| IT-056 | Auto-save updates empty fields on existing link | Existing link with empty fields → `updateSupplier` called | - [ ] |
+| IT-057 | Auto-save skips when all fields set | Existing link fully configured → no mutation fired | - [ ] |

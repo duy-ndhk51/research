@@ -59,7 +59,7 @@ test('E2E-013: peppol invoice pre-fills form data', async ({ page }) => {
 
 ---
 
-## E2E-014: Attachments tab visible and defaulted
+## E2E-014: Attachments tab visible and defaulted (with attachment files)
 
 **Preconditions**: Peppol invoice has 2 attachments (PDF + XML).
 
@@ -71,7 +71,8 @@ test('E2E-013: peppol invoice pre-fills form data', async ({ page }) => {
 
 - "Peppol attachments" tab is visible in the right panel
 - Tab is the active/default tab (not uploader)
-- Attachment list shows the seeded attachments
+- Attachment list shows the seeded attachments (PDF + XML files)
+- The "Invoice preview" (uploader) tab falls back to the drag-drop upload zone
 
 ### Example Code
 
@@ -87,6 +88,55 @@ test('E2E-014: peppol attachments tab visible and default', async ({ page }) => 
   // The attachments tab should be active by default
   // Verify attachment items are listed
   await expect(drawer.getByText(/\.pdf/i)).toBeVisible();
+
+  // Switch to uploader tab — should show upload zone (not PeppolParsedPreview)
+  await drawer.getByText(/invoice preview/i).click();
+  await expect(drawer.locator('[data-testid="upload-zone"], .dropzone')).toBeVisible();
+});
+```
+
+---
+
+## E2E-014b: Attachments tab shows PeppolParsedPreview when no attachment files
+
+**Preconditions**: Peppol invoice with parsed data but no PDF/XML attachment files (empty `attachments` array).
+
+**Seed scenario**: `purchase-invoice-peppol-no-attachments`
+
+### Steps
+
+1. Navigate to a Peppol invoice that has no attachment files
+2. Open the form
+3. Check right panel tabs
+
+### Assertions
+
+- "Peppol attachments" tab is visible and is the active/default tab
+- Tab content shows the structured Peppol parsed preview (supplier info, amounts, line items) instead of attachment file list
+- The "Invoice preview" (uploader) tab shows the drag-drop upload zone (not PeppolParsedPreview)
+- `hideInlineAttachments` prevents duplicate rendering of the parsed preview in the uploader tab
+
+### Example Code
+
+```typescript
+test('E2E-014b: peppol without attachments shows parsed preview in tab', async ({ page }) => {
+  // ... (peppol form opened from invoice with no attachments) ...
+  const drawer = page.locator('[data-slot="sheet-content"]');
+
+  // "Peppol attachments" tab visible and active
+  await expect(
+    drawer.getByText(/peppol attachments/i),
+  ).toBeVisible();
+
+  // No PDF/XML file items — instead, the parsed preview is shown
+  // Look for structured preview elements (supplier name, amounts, line items)
+  await expect(
+    drawer.locator('[data-testid="peppol-parsed-preview"], .peppol-parsed-preview').first(),
+  ).toBeVisible();
+
+  // Verify the uploader tab shows the upload zone, not the parsed preview
+  await drawer.getByText(/invoice preview/i).click();
+  await expect(drawer.locator('[data-testid="upload-zone"], .dropzone')).toBeVisible();
 });
 ```
 

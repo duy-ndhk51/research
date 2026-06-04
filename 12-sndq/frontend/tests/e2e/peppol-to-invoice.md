@@ -224,7 +224,7 @@ test('E2E-032: duplicate warning shown in detail sheet', async ({ page }) => {
 - Amount lines populated from Peppol line items
 - Amounts are locked (lock indicator visible)
 - Remittance info populated if present in Peppol data
-- Right panel shows "Peppol attachments" tab as default
+- Right panel shows "Peppol attachments" tab as default (content varies: `PeppolAttachmentsTab` if attachment files exist, `PeppolParsedPreview` otherwise)
 
 ### Example Code
 

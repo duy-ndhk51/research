@@ -49,15 +49,18 @@ Grouped by feature area. Each checkbox tracks implementation status.
 
 ### Right Panel Tabs
 
-**Purpose**: Guard the tab defaulting logic that determines whether users see the file uploader or Peppol attachments first. Incorrect defaults cause users to miss attached documents.
+**Purpose**: Guard the tab defaulting logic that determines whether users see the file uploader or Peppol attachments first. The condition uses `hasPeppolData` (not `hasAttachments`) — the tab appears whenever Peppol data exists, with content varying based on whether attachment files are present.
 
-**Scope**: Tab selection priority (user override > Peppol default > uploader fallback), lock trigger on Peppol parse.
+**Scope**: Tab selection priority (user override > Peppol default > uploader fallback), content switching (PeppolAttachmentsTab vs PeppolParsedPreview), hideInlineAttachments, lock trigger on Peppol parse.
 
-**Risk without coverage**: Users see empty uploader instead of Peppol attachments. Or Peppol data parsing silently fails to trigger lock state.
+**Risk without coverage**: Users see empty uploader instead of Peppol data. PeppolParsedPreview rendered in both uploader and attachments tabs (duplicate). Tab disappears when it should still show parsed data.
 
-- [ ] Default tab is uploader when no peppol attachments
-- [ ] Default tab is attachments when peppol data has files
+- [ ] Default tab is uploader when no peppol data
+- [ ] Peppol data without attachment files → tab shows PeppolParsedPreview
+- [ ] Peppol data cleared → extra tab removed, falls back to uploader
+- [ ] Peppol data with attachment files → tab shows PeppolAttachmentsTab
 - [ ] User tab selection overrides peppol default
+- [ ] hideInlineAttachments is true when peppolData exists (regardless of attachments)
 - [ ] Peppol data parsed with amounts triggers lock state
 - [ ] Peppol data with no amounts does not trigger lock
 
@@ -92,6 +95,52 @@ Grouped by feature area. Each checkbox tracks implementation status.
 - [ ] Belgian OGM `+++123/4567/89002+++` parsed to digits, typed STRUCTURED
 - [ ] Lock total matches `sumTotalAmounts` of transformed Peppol amounts
 - [ ] Grouping strategy change preserves originalLines and lock total
+
+### Amount Distribution Sheet
+
+**Purpose**: Guard the distribution sheet UI: unit initialization, distribution type switching (share/percentage/free/split_later/DK), share/amount recalculation, ledger and DK suggestions, and validation.
+
+**Scope**: Sheet open/close, loading states, edit mode pre-fill, all 5 distribution types, whole building toggle, individual/bulk selection, amount redistribution, suggestion chips, total mismatch dialog, search/sort.
+
+**Risk without coverage**: Units not initialized, distribution type switch corrupts amounts, DK mode doesn't force whole building, amount mismatch undetected, suggestions don't populate fields.
+
+- [ ] Loading state shows spinner when properties pending
+- [ ] Properties loaded initializes units with zero amounts
+- [ ] Edit mode pre-fills form from editingItem
+- [ ] Share distribution type sets DEFAULT_SHARE and recalculates
+- [ ] Percentage distribution type sets PERCENTAGE_BASE_VALUE
+- [ ] Free distribution type enables per-unit amount inputs
+- [ ] Split later clears all unit allocations
+- [ ] Distribution key mode forces wholeBuilding + applies key shares
+- [ ] Changing distribution key recalculates shares from new key
+- [ ] Whole building toggle: ON selects all, OFF deselects and zeros
+- [ ] Individual unit deselect zeros its share and amount
+- [ ] Select all checkbox toggles all units
+- [ ] Changing totalAmount recalculates amounts for non-free types
+- [ ] Ledger suggestion chip click sets costAccount
+- [ ] DK suggestion chip switches to DK mode and applies key
+- [ ] Total mismatch triggers SplitErrorDialog
+- [ ] Unit search filters by name, address, and owner
+- [ ] Unit sort reorders by name, owner, or amount
+
+### Supplier Defaults — Backfill & Auto-save
+
+**Purpose**: Guard the integration between supplier default hooks and the form. `useBackfillSupplierDefaults` patches empty lines when defaults load; `useAutoSaveBuildingSupplierDefaults` persists settings on submit. Unit tests cover internal logic — these test form-level wiring.
+
+**Scope**: Backfill triggers, "never overwrite" policy, idempotency via ref guard, auto-save create vs update link, skip when all fields set.
+
+**Risk without coverage**: Defaults silently overwrite user values, backfill fires multiple times, auto-save creates duplicate links, settings lost on submit.
+
+- [ ] Backfill sets costAccount on empty lines when supplier selected
+- [ ] Backfill sets distributionKeyId on empty lines
+- [ ] Existing costAccount NOT overwritten by backfill
+- [ ] Existing distributionKeyId NOT overwritten by backfill
+- [ ] Changing supplier triggers backfill for new pair
+- [ ] Same supplier re-selected does NOT re-trigger backfill
+- [ ] Submit calls saveSupplierDefaults with line settings
+- [ ] Submit with no link creates new building-supplier link
+- [ ] Submit with existing link updates only empty fields
+- [ ] Submit with fully configured link fires no mutation
 
 ---
 
@@ -138,14 +187,16 @@ Grouped by feature area. Each checkbox tracks implementation status.
 
 ### Peppol Import — Basics
 
-**Purpose**: Validate the basic Peppol-to-form handoff: pre-fill, attachments, lock, and submission. These are the minimum tests for Peppol functionality.
+**Purpose**: Validate the basic Peppol-to-form handoff: pre-fill, attachments tab content, lock, and submission. The "Peppol Attachments" tab appears whenever `peppolData` exists — showing `PeppolAttachmentsTab` with files or `PeppolParsedPreview` without.
 
-**Scope**: Form data pre-fill from Peppol XML, attachment tab defaulting, amount lock application, `peppolInvoiceId` in POST payload.
+**Scope**: Form data pre-fill from Peppol XML, attachment tab defaulting and content switching, upload zone fallback, amount lock application, `peppolInvoiceId` in POST payload.
 
-**Risk without coverage**: Pre-fill broken (empty fields), attachments missing from view, amounts editable when they should be locked, Peppol link lost on submission.
+**Risk without coverage**: Pre-fill broken (empty fields), PeppolParsedPreview not shown when no attachments, duplicate parsed preview in uploader tab, amounts editable when they should be locked, Peppol link lost on submission.
 
 - [ ] Peppol pre-fills form data from detail sheet
-- [ ] Peppol attachments tab visible and defaulted
+- [ ] Peppol with attachment files → tab shows file list
+- [ ] Peppol without attachment files → tab shows PeppolParsedPreview
+- [ ] Peppol present → uploader tab shows upload zone (not parsed preview)
 - [ ] Peppol amounts locked after form opens
 - [ ] Submit Peppol invoice with peppolInvoiceId
 
@@ -216,3 +267,34 @@ Grouped by feature area. Each checkbox tracks implementation status.
 - [ ] Submit sends `peppolInvoiceId` in POST body (2xx, drawer closes)
 - [ ] Processed Peppol shows linked purchase invoice, no "Review" button
 - [ ] Reject flow with reason code, optional note, optional email broadcast
+
+### Amount Distribution
+
+**Purpose**: Validate the full user journey through the distribution sheet: opening from invoice lines, unit allocation, distribution types, suggestions, and persistence.
+
+**Scope**: Sheet open/close, partial/full unit selection, share/percentage/DK distribution, ledger suggestions, save/close, edit pre-fill.
+
+**Risk without coverage**: Sheet doesn't open, amounts miscalculated on type switch, allocations lost on save, edit mode doesn't restore state.
+
+- [ ] Add amount line opens distribution sheet with all building units
+- [ ] Partial unit selection reflected in allocation progress
+- [ ] Share mode distributes total across selected units
+- [ ] Switch to percentage mode recalculates shares
+- [ ] Apply distribution key with correct ratios
+- [ ] Ledger suggestion chip populates cost account
+- [ ] Save & close persists line to parent form
+- [ ] Edit existing line opens with saved allocations
+
+### Supplier Defaults — Auto-fill & Auto-save
+
+**Purpose**: Validate end-to-end flow of supplier defaults being backfilled on selection and auto-saved to the building-supplier link on submit.
+
+**Scope**: Cost account/DK backfill, "never overwrite" policy, link creation, link update.
+
+**Risk without coverage**: Defaults don't populate (silent failure), user values overwritten, link not created/updated after submit.
+
+- [ ] Supplier with defaults auto-fills cost account on line
+- [ ] Supplier with defaults auto-fills distribution key on line
+- [ ] Manual cost account NOT overwritten by supplier defaults
+- [ ] Submit with new supplier creates building-supplier link
+- [ ] Submit with existing supplier updates empty defaults only

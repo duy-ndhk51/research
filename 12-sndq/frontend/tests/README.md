@@ -24,12 +24,12 @@ Step-by-step execution guide for adding integration and E2E test coverage to the
 
 **Goal**: Add integration and E2E test coverage for `purchase-invoice-v3` form behaviors to catch regressions during refactors and verify end-to-end user flows.
 
-**Structure**: 2 PRs, covering 29 integration test cases and 39 E2E test cases.
+**Structure**: 2 PRs, covering 59 integration test cases and 53 E2E test cases.
 
 | PR | Scope | Risk level | Cases |
 |----|-------|------------|-------|
-| **PR 1** | Integration tests (Vitest + Testing Library) | Low | IT-001..IT-029 |
-| **PR 2** | E2E tests (Playwright) | Medium | E2E-001..E2E-039 |
+| **PR 1** | Integration tests (Vitest + Testing Library) | Low | IT-001..IT-057 + IT-013b, IT-013c |
+| **PR 2** | E2E tests (Playwright) | Medium | E2E-001..E2E-052 + E2E-014b |
 
 **Why 2 PRs**: Integration tests have no backend dependency and can be merged first. E2E tests require seed scenarios and staging API stability, making them a separate deliverable.
 
@@ -37,14 +37,15 @@ Step-by-step execution guide for adding integration and E2E test coverage to the
 
 ```
 ┌───────────────────────────────────────────────────┐
-│  E2E (Playwright) — 39 cases                      │
+│  E2E (Playwright) — 53 cases                      │
 │  Critical user journeys against staging API        │
 │  Catches: routing, auth, real API, network wiring  │
 ├───────────────────────────────────────────────────┤
-│  Integration (Vitest + Testing Library) — 29 cases │
+│  Integration (Vitest + Testing Library) — 59 cases │
 │  Form sections with real providers, mocked APIs    │
 │  Catches: context wiring, conditional render,      │
-│  state transitions, validation, mode switching     │
+│  state transitions, validation, mode switching,    │
+│  distribution sheet, supplier defaults wiring      │
 ├───────────────────────────────────────────────────┤
 │  Unit (existing) — 14 test files                   │
 │  Pure logic: pipeline, reducer, utils, hooks       │
@@ -135,6 +136,8 @@ See:
 - [integration/right-panel-tabs.md](./integration/right-panel-tabs.md) — IT-013..IT-016
 - [integration/invoice-fields.md](./integration/invoice-fields.md) — IT-017..IT-021
 - [integration/peppol-to-invoice.md](./integration/peppol-to-invoice.md) — IT-022..IT-029 (Peppol flow wiring)
+- [integration/amount-distribution-sheet.md](./integration/amount-distribution-sheet.md) — IT-030..IT-047 (distribution sheet UI)
+- [integration/supplier-defaults.md](./integration/supplier-defaults.md) — IT-048..IT-057 (backfill + auto-save wiring)
 
 ### Verification
 
@@ -161,6 +164,8 @@ See:
 - [e2e/partial-edit.md](./e2e/partial-edit.md) — E2E-023..E2E-025
 - [e2e/validation-errors.md](./e2e/validation-errors.md) — E2E-026..E2E-029
 - [e2e/peppol-to-invoice.md](./e2e/peppol-to-invoice.md) — E2E-030..E2E-039 (Peppol full flow)
+- [e2e/amount-distribution.md](./e2e/amount-distribution.md) — E2E-040..E2E-047 (distribution sheet journey)
+- [e2e/supplier-defaults.md](./e2e/supplier-defaults.md) — E2E-048..E2E-052 (auto-fill + auto-save flow)
 
 ### Verification
 

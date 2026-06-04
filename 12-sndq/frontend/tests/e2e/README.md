@@ -70,12 +70,14 @@ Each test suite requires specific backend seed data. These scenarios must be cre
 | `purchase-invoice-create` | Building with ledgers + distribution keys, supplier contact with IBAN, Ponto bank account for the building |
 | `purchase-invoice-edit` | Same as create + an existing approved invoice with 2 amount lines, supplier link, payment details |
 | `purchase-invoice-peppol` | Same as create + a pending Peppol invoice with XML data, 2 attachments (PDF + XML), pre-matched supplier |
+| `purchase-invoice-peppol-no-attachments` | Same as create + a pending Peppol invoice with XML data but no attachment files, pre-matched supplier |
 | `purchase-invoice-draft` | Same as create + a saved draft invoice with partial data (building + supplier + 1 amount, no payment) |
 | `purchase-invoice-partial-edit` | Same as edit + invoice is booked/partially paid (triggers partial edit mode) |
 | `peppol-invoice-matched` | Peppol invoice with matched building + matched supplier contact |
 | `peppol-invoice-unmatched` | Peppol invoice with unknown supplier (no `supplierPartyContactId`) |
 | `peppol-invoice-credit-note` | Peppol credit note (`typeCode: '381'`, `type: CREDIT_NOTE`) |
 | `peppol-invoice-duplicate` | Peppol invoice + existing purchase invoice with same supplier + invoice number |
+| `purchase-invoice-supplier-defaults` | Building with supplier link that has pre-configured `invoiceMotherId` + `distributionKeyId`, matching ledger and DK entities |
 
 ### Seed scenario data contract
 
@@ -199,14 +201,15 @@ pnpm test:e2e:codegen
 
 ### Peppol Import — Basics ([peppol-import.md](./peppol-import.md))
 
-**Purpose**: Validate the basic Peppol-to-form handoff: pre-fill, attachments, lock, and submission. Minimum tests for Peppol functionality.
-**Scope**: Form data pre-fill from Peppol XML, attachment tab defaulting, amount lock application, `peppolInvoiceId` in POST payload.
-**Risk**: Pre-fill broken (empty fields), attachments missing, amounts editable when they should be locked, Peppol link lost on submission.
+**Purpose**: Validate the basic Peppol-to-form handoff: pre-fill, attachments tab content switching, lock, and submission. The "Peppol Attachments" tab appears whenever `peppolData` exists — showing file list or `PeppolParsedPreview`.
+**Scope**: Form data pre-fill from Peppol XML, attachment tab defaulting and content switching, upload zone fallback, amount lock application, `peppolInvoiceId` in POST payload.
+**Risk**: Pre-fill broken (empty fields), PeppolParsedPreview not shown when no attachments, duplicate parsed preview in uploader tab, amounts editable when locked, Peppol link lost on submission.
 
 | ID | Description | User Flow | Status |
 |----|-------------|-----------|--------|
 | E2E-013 | Peppol pre-fills form data | Navigate to Peppol → select invoice → form opens with pre-filled fields | - [ ] |
-| E2E-014 | Peppol attachments tab visible and default | After form opens → right panel shows "Peppol attachments" tab active | - [ ] |
+| E2E-014 | Peppol with attachments shows file list | Peppol with PDF/XML → "Peppol attachments" tab active, file list shown | - [ ] |
+| E2E-014b | Peppol without attachments shows parsed preview | Peppol without files → "Peppol attachments" tab shows PeppolParsedPreview, uploader shows upload zone | - [ ] |
 | E2E-015 | Peppol amounts are locked | After form opens → lock indicator visible, total matches Peppol data | - [ ] |
 | E2E-016 | Submit Peppol invoice | Fill remaining fields → submit → POST with `peppolInvoiceId` → 2xx | - [ ] |
 
@@ -277,3 +280,34 @@ pnpm test:e2e:codegen
 | E2E-037 | Submit sends peppolInvoiceId | Submit form → POST body contains `peppolInvoiceId` → 2xx, drawer closes | - [ ] |
 | E2E-038 | Processed Peppol shows linked invoice | Re-open processed → linked invoice section, no "Review" button | - [ ] |
 | E2E-039 | Reject with reason and email | Click Reject → fill reason → confirm → PATCH 2xx, optional broadcast | - [ ] |
+
+### Amount Distribution ([amount-distribution.md](./amount-distribution.md))
+
+**Purpose**: Validate the full user journey through the amount distribution sheet: opening from invoice lines, selecting units, allocating amounts across distribution types, applying suggestions, and verifying persistence back to the parent form.
+**Scope**: Sheet open from invoice lines, unit selection (partial and full), distribution types (share/percentage/DK), ledger suggestion interaction, save/close persistence, edit mode pre-fill.
+**Risk**: Distribution sheet doesn't open, amounts miscalculated after distribution type switch, allocations lost on save, edit mode doesn't restore prior state.
+
+| ID | Description | User Flow | Status |
+|----|-------------|-----------|--------|
+| E2E-040 | Open distribution sheet | Add amount line → sheet opens with all building units | - [ ] |
+| E2E-041 | Partial unit selection | Select 3 of 5 units → progress shows partial, unselected zeroed | - [ ] |
+| E2E-042 | Share mode distributes total | Set 500 EUR → "Share" mode distributes across selected units | - [ ] |
+| E2E-043 | Switch to percentage mode | Switch → shares convert to percentages summing to 100% | - [ ] |
+| E2E-044 | Apply distribution key | Select DK → amounts match key ratios, whole building forced | - [ ] |
+| E2E-045 | Ledger suggestion chip | Click suggestion → cost account field populated | - [ ] |
+| E2E-046 | Save & close persists line | Save → line appears in parent form with correct total | - [ ] |
+| E2E-047 | Edit existing line | Click line → sheet opens with saved allocations pre-filled | - [ ] |
+
+### Supplier Defaults — Auto-fill & Auto-save ([supplier-defaults.md](./supplier-defaults.md))
+
+**Purpose**: Validate the end-to-end flow of supplier defaults: when a supplier with configured defaults is selected, empty invoice lines auto-fill with the default ledger and distribution key. On successful submit, settings from the invoice are auto-saved back to the building-supplier link.
+**Scope**: Cost account backfill, DK backfill, "never overwrite" policy, link creation on submit, link update on submit.
+**Risk**: Supplier defaults don't populate (silent failure), user-set values overwritten, supplier link not created/updated after submit.
+
+| ID | Description | User Flow | Status |
+|----|-------------|-----------|--------|
+| E2E-048 | Supplier defaults auto-fill cost account | Select supplier with defaults → line's cost account auto-fills | - [ ] |
+| E2E-049 | Supplier defaults auto-fill distribution key | Select supplier → line's DK auto-fills, whole building enabled | - [ ] |
+| E2E-050 | Manual cost account not overwritten | Set ledger manually, then select supplier → user value preserved | - [ ] |
+| E2E-051 | Submit creates supplier link | Submit with new supplier → POST to building-supplier API | - [ ] |
+| E2E-052 | Submit updates empty defaults | Submit with existing supplier → PATCH updates empty fields only | - [ ] |

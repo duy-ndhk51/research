@@ -1,0 +1,292 @@
+# Supplier Defaults — Auto-fill & Auto-save
+
+**File**: `tests/financial/purchase-invoices/011-supplier-defaults.spec.ts`
+**Seed scenarios**: `purchase-invoice-supplier-defaults` (supplier with pre-configured ledger + DK), `purchase-invoice-create` (supplier without defaults)
+
+Tests the end-to-end flow of supplier defaults: when a supplier with configured defaults is selected, empty invoice lines auto-fill with the default ledger and distribution key. On successful submit, settings from the invoice are auto-saved back to the building-supplier link.
+
+---
+
+## E2E-048: Supplier with defaults auto-fills cost account
+
+**Preconditions**: Seeded building-supplier link where supplier has `invoiceMotherId` configured. Create form open, no amount lines yet have a cost account.
+
+### Steps
+
+1. Navigate to `/financial/invoices/purchase`
+2. Click "Add invoice"
+3. Select the seeded building
+4. Select the supplier that has default ledger configured
+5. Add an amount line (open distribution sheet)
+6. Observe the cost account field
+
+### Assertions
+
+- Cost account field in the distribution sheet is pre-populated with the supplier's default ledger
+- The ledger name and code match the seeded supplier defaults
+
+### Example Code
+
+```typescript
+import { test, expect, requireEnv } from '../../test-base';
+
+const WORKSPACE_ID = requireEnv('QA_SYNDIC_WORKSPACE_ID');
+
+test.beforeAll(async ({ seedScenario }) => {
+  await seedScenario({
+    scenario: 'purchase-invoice-supplier-defaults',
+    workspaceId: WORKSPACE_ID,
+  });
+});
+
+test.afterAll(async ({ resetScenario }) => {
+  await resetScenario(WORKSPACE_ID);
+});
+
+test('E2E-048: supplier defaults auto-fill cost account on line', async ({ page }) => {
+  await page.goto('/financial/invoices/purchase');
+  await page.getByRole('button', { name: /add invoice/i }).click();
+
+  const drawer = page.locator('[data-slot="sheet-content"]');
+
+  // Select building with supplier that has defaults
+  await selectBuilding(page, drawer, 'Fixture Building One');
+  await selectSupplier(page, drawer, 'Fixture Supplier With Defaults');
+
+  // Wait for supplier defaults to load
+  await page.waitForTimeout(2_000);
+
+  // Add an amount line
+  await drawer.getByRole('button', { name: /add line|add amount/i }).click();
+
+  const distSheet = page.locator('[data-slot="sheet-content"]').last();
+  await expect(distSheet).toBeVisible();
+
+  // Cost account should be pre-filled from supplier defaults
+  const costAccountField = distSheet.locator('[data-testid="cost-account-select"]');
+  await expect(costAccountField).not.toContainText(/select/i, { timeout: 10_000 });
+});
+```
+
+---
+
+## E2E-049: Supplier with defaults auto-fills distribution key
+
+**Preconditions**: Seeded building-supplier link where supplier has `distributionKeyId` configured. Building has the referenced distribution key.
+
+### Steps
+
+1. Open create form, select building + supplier with DK defaults
+2. Add an amount line
+3. Observe the distribution method section
+
+### Assertions
+
+- Distribution key mode is auto-activated
+- The seeded distribution key is pre-selected in the dropdown
+- Units have shares matching the key's definition
+- Whole building is enabled
+
+### Example Code
+
+```typescript
+test('E2E-049: supplier defaults auto-fill distribution key', async ({ page }) => {
+  await page.goto('/financial/invoices/purchase');
+  await page.getByRole('button', { name: /add invoice/i }).click();
+
+  const drawer = page.locator('[data-slot="sheet-content"]');
+  await selectBuilding(page, drawer, 'Fixture Building One');
+  await selectSupplier(page, drawer, 'Fixture Supplier With Defaults');
+
+  await page.waitForTimeout(2_000);
+  await drawer.getByRole('button', { name: /add line|add amount/i }).click();
+
+  const distSheet = page.locator('[data-slot="sheet-content"]').last();
+
+  // Distribution key should be pre-selected
+  const dkSelect = distSheet.locator('[data-testid="distribution-key-select"]');
+  await expect(dkSelect).toBeVisible({ timeout: 10_000 });
+  await expect(dkSelect).not.toContainText(/select/i);
+
+  // Whole building should be on
+  await expect(distSheet.getByLabel(/whole building/i)).toBeChecked();
+});
+```
+
+---
+
+## E2E-050: User-set cost account NOT overwritten by supplier defaults
+
+**Preconditions**: Create form open. User manually selects a cost account on an amount line before selecting a supplier with defaults.
+
+### Steps
+
+1. Open create form, select building
+2. Add an amount line, manually select cost account "Office Supplies"
+3. Save the line, go back to parent form
+4. Select a supplier that has a different default ledger
+5. Re-open the amount line
+
+### Assertions
+
+- Cost account still shows "Office Supplies" (user's choice)
+- Supplier's default ledger did NOT overwrite the manual selection
+- "Never overwrite" policy enforced end-to-end
+
+### Example Code
+
+```typescript
+test('E2E-050: manual cost account not overwritten by supplier defaults', async ({ page }) => {
+  await page.goto('/financial/invoices/purchase');
+  await page.getByRole('button', { name: /add invoice/i }).click();
+
+  const drawer = page.locator('[data-slot="sheet-content"]');
+  await selectBuilding(page, drawer, 'Fixture Building One');
+
+  // Add line and manually set cost account BEFORE selecting supplier
+  await drawer.getByRole('button', { name: /add line|add amount/i }).click();
+  const distSheet = page.locator('[data-slot="sheet-content"]').last();
+
+  await distSheet.getByText(/select.*ledger|cost account/i).click();
+  await page.getByRole('option', { name: /office supplies/i }).click();
+  await distSheet.locator('input[name="totalAmount"]').fill('100');
+  await distSheet.getByLabel(/whole building/i).click();
+  await distSheet.getByRole('button', { name: /save.*close/i }).click();
+
+  // Now select supplier with different defaults
+  await selectSupplier(page, drawer, 'Fixture Supplier With Defaults');
+  await page.waitForTimeout(3_000);
+
+  // Re-open the line
+  await drawer.locator('[data-testid="amount-line-row"]').first().click();
+  const distSheet2 = page.locator('[data-slot="sheet-content"]').last();
+
+  // Cost account should still be the manually-set one
+  const costAccountField = distSheet2.locator('[data-testid="cost-account-select"]');
+  await expect(costAccountField).toContainText(/office supplies/i);
+});
+```
+
+---
+
+## E2E-051: Submit creates building-supplier link for new supplier
+
+**Preconditions**: Supplier has no existing building-supplier link. Invoice submitted with cost account and distribution key.
+
+### Steps
+
+1. Open create form, select building + NEW supplier (no prior link)
+2. Fill all required fields including amount with cost account
+3. Submit the invoice
+4. Intercept the building-supplier API call
+
+### Assertions
+
+- POST to `/purchase-invoices` returns 2xx
+- POST or PUT to building-supplier endpoint fired after invoice submit
+- Payload contains `contactId`, `invoiceMotherId` (or `invoiceLedgerId`), `distributionKeyId`
+
+### Example Code
+
+```typescript
+import { isOkResponse, pathnameIncludes } from '../../helpers/response';
+
+test('E2E-051: submit creates supplier link with defaults', async ({ page }) => {
+  await page.goto('/financial/invoices/purchase');
+  await page.getByRole('button', { name: /add invoice/i }).click();
+
+  const drawer = page.locator('[data-slot="sheet-content"]');
+  await selectBuilding(page, drawer, 'Fixture Building One');
+  await selectSupplier(page, drawer, 'Fixture New Supplier');
+
+  await fillInvoiceFields(page, drawer);
+  await addAmountLineWithLedger(page, drawer);
+
+  // Watch for both invoice submit and supplier link creation
+  const supplierLinkPromise = page.waitForResponse(
+    (res) =>
+      pathnameIncludes(res.url(), '/building-suppliers') &&
+      (res.request().method() === 'POST' || res.request().method() === 'PUT') &&
+      isOkResponse(res),
+    { timeout: 15_000 },
+  );
+
+  const [invoiceResponse] = await Promise.all([
+    page.waitForResponse(
+      (res) =>
+        res.request().method() === 'POST' &&
+        pathnameIncludes(res.url(), '/purchase-invoices') &&
+        isOkResponse(res),
+      { timeout: 30_000 },
+    ),
+    drawer.getByRole('button', { name: /submit|save/i }).click(),
+  ]);
+
+  expect(invoiceResponse.status()).toBeGreaterThanOrEqual(200);
+  expect(invoiceResponse.status()).toBeLessThan(300);
+
+  // Supplier link should also be created
+  const linkResponse = await supplierLinkPromise;
+  expect(linkResponse.status()).toBeGreaterThanOrEqual(200);
+});
+```
+
+---
+
+## E2E-052: Submit updates empty defaults on existing supplier link
+
+**Preconditions**: Supplier has existing building-supplier link with empty `invoiceMotherId` and `distributionKeyId`. Invoice submitted with both fields filled.
+
+### Steps
+
+1. Open create form, select building + existing supplier (link exists, defaults empty)
+2. Fill invoice with cost account and distribution key
+3. Submit
+4. Intercept the building-supplier update call
+
+### Assertions
+
+- PATCH/PUT to building-supplier endpoint fired
+- Payload contains the newly set `invoiceMotherId` and/or `distributionKeyId`
+- Only empty fields updated (existing values untouched)
+
+### Example Code
+
+```typescript
+test('E2E-052: submit updates empty defaults on existing link', async ({ page }) => {
+  await page.goto('/financial/invoices/purchase');
+  await page.getByRole('button', { name: /add invoice/i }).click();
+
+  const drawer = page.locator('[data-slot="sheet-content"]');
+  await selectBuilding(page, drawer, 'Fixture Building One');
+  await selectSupplier(page, drawer, 'Fixture Supplier Empty Defaults');
+
+  await fillInvoiceFields(page, drawer);
+  await addAmountLineWithLedger(page, drawer);
+
+  const supplierUpdatePromise = page.waitForResponse(
+    (res) =>
+      pathnameIncludes(res.url(), '/building-suppliers') &&
+      (res.request().method() === 'PUT' || res.request().method() === 'PATCH') &&
+      isOkResponse(res),
+    { timeout: 15_000 },
+  );
+
+  await Promise.all([
+    page.waitForResponse(
+      (res) =>
+        res.request().method() === 'POST' &&
+        pathnameIncludes(res.url(), '/purchase-invoices') &&
+        isOkResponse(res),
+      { timeout: 30_000 },
+    ),
+    drawer.getByRole('button', { name: /submit|save/i }).click(),
+  ]);
+
+  const updateResponse = await supplierUpdatePromise;
+  expect(updateResponse.status()).toBeGreaterThanOrEqual(200);
+
+  const body = JSON.parse(updateResponse.request().postData() || '{}');
+  expect(body.invoiceMotherId || body.invoiceLedgerId).toBeTruthy();
+});
+```
