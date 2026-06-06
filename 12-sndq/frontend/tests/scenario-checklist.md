@@ -96,13 +96,37 @@ Grouped by feature area. Each checkbox tracks implementation status.
 - [ ] Lock total matches `sumTotalAmounts` of transformed Peppol amounts
 - [ ] Grouping strategy change preserves originalLines and lock total
 
+### Invoice Lines Table — Orchestration
+
+**Purpose**: Guard the `InvoiceLinesTableV3` orchestration component that wires form context, CRUD state, grouping mode, and conditional rendering together. Sub-hooks are unit-tested; these verify the composed behavior in the rendered component.
+
+**Scope**: Add line button disabled state, individual vs simple mode rendering, mode toggle wiring, single delete dialog, duplicate, distribution sheet open/close, VAT rate change preserving totalAmount, footer totals + lock + credit note styling, `defaultOpen` on new vs edit, `isDeferredCost` flag.
+
+**Risk without coverage**: Add line possible without building, wrong view mode rendered, delete dialog not wired, distribution sheet doesn't open from line, footer shows wrong totals or lock state, first card collapsed on new invoice (bad UX).
+
+- [ ] Add line button disabled when no building selected
+- [ ] Add line button enabled when building set
+- [ ] Individual mode renders InvoiceLineCard per amount
+- [ ] Simple mode renders SingleTotalView, hides cards and add button
+- [ ] Mode toggle calls setGroupingStrategy
+- [ ] Delete button opens DeleteAmountDialog; confirm removes, cancel keeps
+- [ ] Duplicate calls pipeline DUPLICATE_LINE
+- [ ] Custom distribution opens sheet for correct line index
+- [ ] Footer shows VAT breakdown and computed total
+- [ ] Lock state reflected in footer (icon, lockedTotal, disabled in partial edit)
+- [ ] Credit note mode applies warning color to total
+- [ ] First card defaultOpen on new invoice, collapsed on edit
+- [ ] isDeferredCost disables distribution controls
+- [ ] Changing VAT rate recalculates subtotal but keeps totalAmount unchanged
+- [ ] Toggling VAT off sets subtotal equal to totalAmount
+
 ### Amount Distribution Sheet
 
-**Purpose**: Guard the distribution sheet UI: unit initialization, distribution type switching (share/percentage/free/split_later/DK), share/amount recalculation, ledger and DK suggestions, and validation.
+**Purpose**: Guard the distribution sheet UI: unit initialization, distribution type switching (share/percentage/free/split_later/distribution_key), share/amount recalculation, ledger and distribution key suggestions, and validation.
 
 **Scope**: Sheet open/close, loading states, edit mode pre-fill, all 5 distribution types, whole building toggle, individual/bulk selection, amount redistribution, suggestion chips, total mismatch dialog, search/sort.
 
-**Risk without coverage**: Units not initialized, distribution type switch corrupts amounts, DK mode doesn't force whole building, amount mismatch undetected, suggestions don't populate fields.
+**Risk without coverage**: Units not initialized, distribution type switch corrupts amounts, distribution key mode doesn't force whole building, amount mismatch undetected, suggestions don't populate fields.
 
 - [ ] Loading state shows spinner when properties pending
 - [ ] Properties loaded initializes units with zero amounts
@@ -118,7 +142,7 @@ Grouped by feature area. Each checkbox tracks implementation status.
 - [ ] Select all checkbox toggles all units
 - [ ] Changing totalAmount recalculates amounts for non-free types
 - [ ] Ledger suggestion chip click sets costAccount
-- [ ] DK suggestion chip switches to DK mode and applies key
+- [ ] Distribution key suggestion chip switches to distribution key mode and applies key
 - [ ] Total mismatch triggers SplitErrorDialog
 - [ ] Unit search filters by name, address, and owner
 - [ ] Unit sort reorders by name, owner, or amount
@@ -272,7 +296,7 @@ Grouped by feature area. Each checkbox tracks implementation status.
 
 **Purpose**: Validate the full user journey through the distribution sheet: opening from invoice lines, unit allocation, distribution types, suggestions, and persistence.
 
-**Scope**: Sheet open/close, partial/full unit selection, share/percentage/DK distribution, ledger suggestions, save/close, edit pre-fill.
+**Scope**: Sheet open/close, partial/full unit selection, share/percentage/distribution key distribution, ledger suggestions, save/close, edit pre-fill.
 
 **Risk without coverage**: Sheet doesn't open, amounts miscalculated on type switch, allocations lost on save, edit mode doesn't restore state.
 
@@ -289,7 +313,7 @@ Grouped by feature area. Each checkbox tracks implementation status.
 
 **Purpose**: Validate end-to-end flow of supplier defaults being backfilled on selection and auto-saved to the building-supplier link on submit.
 
-**Scope**: Cost account/DK backfill, "never overwrite" policy, link creation, link update.
+**Scope**: Cost account/distribution key backfill, "never overwrite" policy, link creation, link update.
 
 **Risk without coverage**: Defaults don't populate (silent failure), user values overwritten, link not created/updated after submit.
 

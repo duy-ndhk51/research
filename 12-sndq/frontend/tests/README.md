@@ -24,11 +24,11 @@ Step-by-step execution guide for adding integration and E2E test coverage to the
 
 **Goal**: Add integration and E2E test coverage for `purchase-invoice-v3` form behaviors to catch regressions during refactors and verify end-to-end user flows.
 
-**Structure**: 2 PRs, covering 59 integration test cases and 53 E2E test cases.
+**Structure**: 2 PRs, covering 79 integration test cases and 53 E2E test cases.
 
 | PR | Scope | Risk level | Cases |
 |----|-------|------------|-------|
-| **PR 1** | Integration tests (Vitest + Testing Library) | Low | IT-001..IT-057 + IT-013b, IT-013c |
+| **PR 1** | Integration tests (Vitest + Testing Library) | Low | IT-001..IT-071 (incl. IT-013b/c, IT-058b, IT-062b/c, IT-066b, IT-069b, IT-071b) |
 | **PR 2** | E2E tests (Playwright) | Medium | E2E-001..E2E-052 + E2E-014b |
 
 **Why 2 PRs**: Integration tests have no backend dependency and can be merged first. E2E tests require seed scenarios and staging API stability, making them a separate deliverable.
@@ -41,7 +41,7 @@ Step-by-step execution guide for adding integration and E2E test coverage to the
 │  Critical user journeys against staging API        │
 │  Catches: routing, auth, real API, network wiring  │
 ├───────────────────────────────────────────────────┤
-│  Integration (Vitest + Testing Library) — 59 cases │
+│  Integration (Vitest + Testing Library) — 79 cases │
 │  Form sections with real providers, mocked APIs    │
 │  Catches: context wiring, conditional render,      │
 │  state transitions, validation, mode switching,    │
@@ -133,11 +133,12 @@ See:
 - [integration/form-body-conditional.md](./integration/form-body-conditional.md) — IT-001..IT-004
 - [integration/lock-state-toggle.md](./integration/lock-state-toggle.md) — IT-005..IT-008
 - [integration/mode-switching.md](./integration/mode-switching.md) — IT-009..IT-012
-- [integration/right-panel-tabs.md](./integration/right-panel-tabs.md) — IT-013..IT-016
+- [integration/right-panel-tabs.md](./integration/right-panel-tabs.md) — IT-013..IT-016 (+ IT-013b, IT-013c)
 - [integration/invoice-fields.md](./integration/invoice-fields.md) — IT-017..IT-021
 - [integration/peppol-to-invoice.md](./integration/peppol-to-invoice.md) — IT-022..IT-029 (Peppol flow wiring)
 - [integration/amount-distribution-sheet.md](./integration/amount-distribution-sheet.md) — IT-030..IT-047 (distribution sheet UI)
 - [integration/supplier-defaults.md](./integration/supplier-defaults.md) — IT-048..IT-057 (backfill + auto-save wiring)
+- [integration/invoice-lines-table.md](./integration/invoice-lines-table.md) — IT-058..IT-071 (invoice lines table orchestration)
 
 ### Verification
 

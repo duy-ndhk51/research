@@ -3,7 +3,7 @@
 **File**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/supplier-defaults.test.tsx`
 **Logic under test**: `useBackfillSupplierDefaults` hook and `useAutoSaveBuildingSupplierDefaults` hook
 
-Tests verify the form-level integration of supplier default hooks: backfilling empty invoice lines when supplier defaults become available, and auto-saving ledger/DK settings to the building-supplier link on successful submit. Internal logic is already unit-tested — these tests focus on wiring with React Hook Form context and mocked API mutations.
+Tests verify the form-level integration of supplier default hooks: backfilling empty invoice lines when supplier defaults become available, and auto-saving ledger/distribution key settings to the building-supplier link on successful submit. Internal logic is already unit-tested — these tests focus on wiring with React Hook Form context and mocked API mutations.
 
 **Source reference**: `useBackfillSupplierDefaults.ts`, `useAutoSaveBuildingSupplierDefaults.ts`, `usePurchaseInvoiceForm.ts`
 
@@ -168,7 +168,7 @@ it('IT-050: does not overwrite existing costAccount', async () => {
 
 ### Steps
 
-1. Render with line that has existing DK
+1. Render with line that has existing distribution key
 
 ### Assertions
 
@@ -202,7 +202,7 @@ it('IT-051: does not overwrite existing distributionKeyId', async () => {
   );
 
   await waitFor(() => {
-    // Only costAccount should be patched, not DK
+    // Only costAccount should be patched, not distribution key
     const patchedAmounts = methods.setValue.mock.calls[0][1];
     expect(patchedAmounts[0].distributionKeyId).toBe('dk-existing');
     expect(patchedAmounts[0].costAccount.id).toBe('mother-1');
@@ -301,7 +301,7 @@ it('IT-053: same supplier does not re-trigger backfill', async () => {
 ### Steps
 
 1. Set up `useAutoSaveBuildingSupplierDefaults` with `hasSupplierLink: false`
-2. Call `saveSupplierDefaults({ amounts: [line with costAccount + DK] })`
+2. Call `saveSupplierDefaults({ amounts: [line with costAccount + distribution key] })`
 
 ### Assertions
 

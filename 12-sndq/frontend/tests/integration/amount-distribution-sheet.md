@@ -3,7 +3,7 @@
 **File**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/amount-distribution-sheet.test.tsx`
 **Logic under test**: `PurchaseInvoiceAmountDistributionSheet` component from `purchase-invoice-v2/components/`
 
-Tests verify the distribution sheet UI lifecycle: opening, unit initialization from building properties, distribution type switching, share/amount recalculation, ledger and DK suggestions, and validation. All API hooks (`usePropertiesV2`, `useDistributionKeys`, `useLedgerSuggestions`) are mocked.
+Tests verify the distribution sheet UI lifecycle: opening, unit initialization from building properties, distribution type switching, share/amount recalculation, ledger and distribution key suggestions, and validation. All API hooks (`usePropertiesV2`, `useDistributionKeys`, `useLedgerSuggestions`) are mocked.
 
 **Source reference**: `PurchaseInvoiceAmountDistributionSheet.tsx`, `useSplitAmounts.ts`, `distributionKeyForm.ts`
 
@@ -295,7 +295,7 @@ it('IT-036: split_later clears all unit allocations', async () => {
 ### Example Code
 
 ```typescript
-it('IT-037: DK mode forces wholeBuilding and applies key shares', async () => {
+it('IT-037: distribution key mode forces wholeBuilding and applies key shares', async () => {
   mockDistributionKeys([
     {
       id: 'dk-1',
@@ -324,7 +324,7 @@ it('IT-037: DK mode forces wholeBuilding and applies key shares', async () => {
 
 ## IT-038: Changing distribution key recalculates shares
 
-**Preconditions**: Already in DK mode with `dk-1` applied.
+**Preconditions**: Already in distribution key mode with `dk-1` applied.
 
 ### Steps
 
@@ -338,7 +338,7 @@ it('IT-037: DK mode forces wholeBuilding and applies key shares', async () => {
 ### Example Code
 
 ```typescript
-it('IT-038: switching DK recalculates all unit shares', async () => {
+it('IT-038: switching distribution key recalculates all unit shares', async () => {
   mockDistributionKeys([
     { id: 'dk-1', calculation: 'share', base: 1000, shares: [/*...*/] },
     { id: 'dk-2', calculation: 'percentage', base: 10000, shares: [/*...*/] },
@@ -529,9 +529,9 @@ it('IT-043: clicking ledger suggestion populates costAccount', async () => {
 
 ---
 
-## IT-044: DK suggestion chip switches to DK mode
+## IT-044: Distribution key suggestion chip switches to distribution key mode
 
-**Preconditions**: Sheet open in share mode, DK suggestions available.
+**Preconditions**: Sheet open in share mode, distribution key suggestions available.
 
 ### Steps
 
@@ -546,7 +546,7 @@ it('IT-043: clicking ledger suggestion populates costAccount', async () => {
 ### Example Code
 
 ```typescript
-it('IT-044: clicking DK suggestion enables DK mode and applies key', async () => {
+it('IT-044: clicking distribution key suggestion enables distribution key mode and applies key', async () => {
   mockDistributionKeySuggestions([
     { value: 'dk-1', name: 'Equal shares' },
   ]);

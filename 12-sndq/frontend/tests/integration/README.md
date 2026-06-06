@@ -335,11 +335,40 @@ pnpm test:watch src/modules/financial/forms/purchase-invoice-v3/__tests__/integr
 | IT-028 | Lock total matches Peppol amounts sum | Multi-line Peppol → `sumTotalAmounts` → config `{ locked: true, lockedTotal }` | - [ ] |
 | IT-029 | Grouping preserves originalLines and total | Switch individual → group by VAT → same total, `originalLines` preserved | - [ ] |
 
+### Invoice Lines Table — Orchestration ([invoice-lines-table.md](./invoice-lines-table.md))
+
+**Purpose**: Guard the `InvoiceLinesTableV3` orchestration that wires form context, CRUD state, grouping mode toggle, and conditional rendering. Sub-hooks are unit-tested; these verify the composed rendering behavior.
+**Scope**: Add line disabled state, individual vs simple mode, mode toggle, delete dialog (single), duplicate, distribution sheet trigger, VAT rate change preserving totalAmount, footer totals + lock + credit note styling, `defaultOpen`, `isDeferredCost`.
+**Risk**: Add line possible without building, wrong view rendered, delete not wired, distribution sheet doesn't open, footer shows wrong totals/lock, first card collapsed on new invoice.
+
+| ID | Description | User Flow | Status |
+|----|-------------|-----------|--------|
+| IT-058 | Add line disabled (no building) | No `buildingId` → button disabled with tooltip | - [ ] |
+| IT-058b | Add line enabled (building set) | `buildingId` set → button enabled | - [ ] |
+| IT-059 | Individual mode renders line cards | `NONE` + 2 amounts → 2 `InvoiceLineCard`s rendered | - [ ] |
+| IT-060 | Simple mode renders SingleTotalView | `ALL` + 1 amount → `SingleTotalView` shown, no cards/add button | - [ ] |
+| IT-061 | Mode toggle switches strategy | Click "Single total" → `setGroupingStrategy(ALL)` called | - [ ] |
+| IT-062 | Single delete opens dialog | Delete on card → `DeleteAmountDialog` opens | - [ ] |
+| IT-062b | Confirm delete removes line | Confirm → dialog closes, line removed | - [ ] |
+| IT-062c | Cancel delete keeps line | Cancel → dialog closes, line unchanged | - [ ] |
+| IT-063 | Duplicate triggers pipeline | Duplicate button → `pipeline.execute(DUPLICATE_LINE)` | - [ ] |
+| IT-064 | Custom distribution opens sheet | Distribution button → sheet opens with line index | - [ ] |
+| IT-065 | Footer shows VAT breakdown + total | 2 VAT lines → subtotal, per-rate VAT, total displayed | - [ ] |
+| IT-066 | Footer lock reflects state | `locked: true` → lock icon, `lockedTotal` used | - [ ] |
+| IT-066b | Lock disabled in partial edit | `isPartialEditMode: true` → lock button disabled | - [ ] |
+| IT-067 | Credit note warning color | `mode: 'credit_note'` → total has `text-warning-700` | - [ ] |
+| IT-068 | Description auto-fill props | Context values → `DescriptionSection` receives correct auto-fill | - [ ] |
+| IT-069 | First card expanded on new invoice | `invoiceId: null` → first card `defaultOpen` | - [ ] |
+| IT-069b | First card collapsed on edit | `invoiceId` set → first card collapsed | - [ ] |
+| IT-070 | isDeferredCost disables distribution | `isDeferredCost: true` → distribution controls disabled | - [ ] |
+| IT-071 | VAT rate change keeps totalAmount | Change VAT 21% → 6% → subtotal recalculated, totalAmount unchanged | - [ ] |
+| IT-071b | VAT toggle off equalizes amounts | Toggle VAT off → subtotal = totalAmount | - [ ] |
+
 ### Amount Distribution Sheet ([amount-distribution-sheet.md](./amount-distribution-sheet.md))
 
-**Purpose**: Guard the distribution sheet UI lifecycle: unit initialization from building properties, distribution type switching (share/percentage/free/split_later/DK), share/amount recalculation, ledger and DK suggestions, and form validation.
-**Scope**: Sheet open/close, loading states, edit mode pre-fill, all 5 distribution types, whole building toggle, individual/bulk selection, amount redistribution on total change, suggestion chip interactions, total mismatch validation dialog, unit search/sort.
-**Risk**: Units not initialized on sheet open, distribution type switch corrupts amounts, DK mode doesn't force whole building, amount mismatch undetected, suggestions don't populate form fields.
+**Purpose**: Guard the distribution sheet UI lifecycle: unit initialization from building properties, distribution type switching (share/percentage/free/split_later/distribution_key), share/amount recalculation, ledger and distribution key suggestions, and form validation.
+**Scope**: Sheet open/close, loading states, edit mode pre-fill, all 5 distribution types, whole building toggle, individual/unit selection, amount redistribution on total change, suggestion chip interactions, total mismatch validation dialog, unit search/sort.
+**Risk**: Units not initialized on sheet open, distribution type switch corrupts amounts, distribution key mode doesn't force whole building, amount mismatch undetected, suggestions don't populate form fields.
 
 | ID | Description | User Flow | Status |
 |----|-------------|-----------|--------|
@@ -350,14 +379,14 @@ pnpm test:watch src/modules/financial/forms/purchase-invoice-v3/__tests__/integr
 | IT-034 | Percentage mode sets PERCENTAGE_BASE_VALUE | Select "Percentage" → `totalShare: 10000` | - [ ] |
 | IT-035 | Free mode enables per-unit inputs | Select "Free" → unit amount inputs editable, shares hidden | - [ ] |
 | IT-036 | Split later clears all allocations | Select "Split later" → all shares/amounts zeroed | - [ ] |
-| IT-037 | DK mode forces wholeBuilding + applies shares | Select "Distribution key" → all units selected, key shares applied | - [ ] |
-| IT-038 | Changing DK recalculates shares | Switch from dk-1 to dk-2 → shares update to new key ratios | - [ ] |
+| IT-037 | Distribution key mode forces wholeBuilding + applies shares | Select "Distribution key" → all units selected, key shares applied | - [ ] |
+| IT-038 | Changing distribution key recalculates shares | Switch from dk-1 to dk-2 → shares update to new key ratios | - [ ] |
 | IT-039 | Whole building toggle controls selection | ON → all checked; OFF → all unchecked + amounts zeroed | - [ ] |
 | IT-040 | Individual unit deselect zeros its values | Deselect one unit → its share and amount become 0 | - [ ] |
 | IT-041 | Select all checkbox toggles all units | Header checkbox → all checked; click again → all unchecked | - [ ] |
 | IT-042 | totalAmount change recalculates amounts | Change total with non-free mode → proportional redistribution | - [ ] |
 | IT-043 | Ledger suggestion chip sets costAccount | Click suggestion → costAccount field populated with ledger | - [ ] |
-| IT-044 | DK suggestion chip switches to DK mode | Click DK suggestion → DK mode enabled, key applied | - [ ] |
+| IT-044 | Distribution key suggestion chip switches to distribution key mode | Click distribution key suggestion → distribution key mode enabled, key applied | - [ ] |
 | IT-045 | Total mismatch shows SplitErrorDialog | Submit with sum != total → error dialog with "divide equally" | - [ ] |
 | IT-046 | Unit search filters by name/address/owner | Type "Apt" → only matching units shown | - [ ] |
 | IT-047 | Unit sort reorders list | Sort by amount → units ordered ascending/descending | - [ ] |
@@ -371,9 +400,9 @@ pnpm test:watch src/modules/financial/forms/purchase-invoice-v3/__tests__/integr
 | ID | Description | User Flow | Status |
 |----|-------------|-----------|--------|
 | IT-048 | Backfill sets costAccount on empty lines | Select supplier with defaults → empty lines patched | - [ ] |
-| IT-049 | Backfill sets distributionKeyId on empty lines | Supplier defaults with DK → empty lines get key applied | - [ ] |
+| IT-049 | Backfill sets distributionKeyId on empty lines | Supplier defaults with distribution key → empty lines get key applied | - [ ] |
 | IT-050 | Backfill does NOT overwrite existing costAccount | Line has user-set ledger → stays untouched | - [ ] |
-| IT-051 | Backfill does NOT overwrite existing DK | Line has existing DK → stays untouched | - [ ] |
+| IT-051 | Backfill does NOT overwrite existing distribution key | Line has existing distribution key → stays untouched | - [ ] |
 | IT-052 | Changing supplier triggers new backfill | Switch from supplier A to B → backfill fires for new pair | - [ ] |
 | IT-053 | Same supplier does NOT re-trigger backfill | Re-render with same pair → setValue called only once | - [ ] |
 | IT-054 | Auto-save extracts settings from amounts | Submit → `saveSupplierDefaults` called with first line's data | - [ ] |

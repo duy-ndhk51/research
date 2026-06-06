@@ -13,6 +13,7 @@
 - Auto-generated invoice number format and toggle behavior
 - AI confidence indicator lifecycle
 - Peppol-to-form field population wiring (the "last mile" after transform)
+- Invoice lines table orchestration: mode toggle, line CRUD, delete/duplicate, distribution sheet, footer
 - Amount distribution sheet: unit selection, distribution types, share recalculation
 - Supplier defaults: backfill empty lines on selection, auto-save settings on submit
 
@@ -107,44 +108,66 @@ Verifies the last mile between `transformPeppolToFormData` output and React Hook
 | Multi-line Peppol (12100 + 5000) → `lockedTotal: 17100`, config `{ locked: true, lockedTotal: 17100 }` | Lock total computed correctly from multiple lines | - [ ] |
 | Grouping individual→VAT: 3 entries become 2, same total (21330), each group has `originalLines` preserved | Regrouping preserves total and original line detail | - [ ] |
 
-## 7. Amount Distribution Sheet
+## 7. Invoice Lines Table — Orchestration
 
-Guards the distribution sheet UI: opening/closing, unit initialization, distribution type switching, share/amount recalculation, ledger and DK suggestions, and validation. Tests render the component with mocked `usePropertiesV2`, `useDistributionKeys`, and `useLedgerSuggestions`.
+Guards the `InvoiceLinesTableV3` orchestration component that wires form context, CRUD state, grouping mode, and conditional rendering together. The sub-hooks (`useLineCrud`, `useLineGrouping`, `useAmountPipeline`) are unit-tested — these integration tests verify the composed rendering behavior.
 
 | Test case | Description | Status |
 |-----------|-------------|--------|
-| Sheet open with loading state → spinner shown | Properties/DK APIs pending shows loading spinner instead of form | - [ ] |
+| No `buildingId` → "Add line" button disabled with tooltip | Prevents adding lines before building prerequisite met | - [ ] |
+| `buildingId` set → "Add line" button enabled | Button becomes interactive when building selected | - [ ] |
+| `groupingStrategy: NONE` + 2 amounts → 2 `InvoiceLineCard` collapsibles rendered | Individual mode shows one card per line | - [ ] |
+| `groupingStrategy: ALL` + 1 amount → `SingleTotalView` rendered, no cards or add button | Simple mode shows single total input with hint | - [ ] |
+| Mode toggle click → `setGroupingStrategy` called with `ALL` or `NONE` | Toggle switches between single total and line-by-line | - [ ] |
+| Delete button on card → `DeleteAmountDialog` opens; confirm → line removed; cancel → line kept | Single-line delete confirmation flow | - [ ] |
+| Duplicate button → `pipeline.execute({ type: 'DUPLICATE_LINE' })` called | Line duplication via pipeline | - [ ] |
+| Custom distribution button → distribution sheet opens for that line index | Sheet opens with correct `editingItem` | - [ ] |
+| Footer shows VAT breakdown + total from `grouping.totals` | Computed totals displayed in footer | - [ ] |
+| `lockState.locked: true` → lock icon shown, `lockedTotal` displayed; `isPartialEditMode` → lock disabled | Lock state reflected in footer UI | - [ ] |
+| `mode: 'credit_note'` → total text uses warning color class | Credit note styling applied | - [ ] |
+| `invoiceId: null` → first card `defaultOpen`; `invoiceId` set → first card collapsed | Auto-expand first card only on new invoice | - [ ] |
+| `isDeferredCost: true` → distribution controls disabled | Deferred cost flag disables distribution | - [ ] |
+| Change VAT rate on line → `totalAmount` unchanged, `amount` (subtotal) recalculated | VAT rate change preserves gross total, derives net amount | - [ ] |
+| Toggle VAT off → `amount` equals `totalAmount` | Disabling VAT removes tax deduction from subtotal | - [ ] |
+
+## 8. Amount Distribution Sheet
+
+Guards the distribution sheet UI: opening/closing, unit initialization, distribution type switching, share/amount recalculation, ledger and distribution key suggestions, and validation. Tests render the component with mocked `usePropertiesV2`, `useDistributionKeys`, and `useLedgerSuggestions`.
+
+| Test case | Description | Status |
+|-----------|-------------|--------|
+| Sheet open with loading state → spinner shown | Properties/distribution key APIs pending shows loading spinner instead of form | - [ ] |
 | Sheet open with properties loaded → units initialized with `selected: false, amount: 0` | Building properties map to `UnitData[]` on first open | - [ ] |
 | Edit mode → form pre-fills from `editingItem` | Opening with saved line resets form to prior values | - [ ] |
 | Distribution type "share" → `totalShare` = `DEFAULT_SHARE`, amounts recalculated | Share mode distributes proportionally using default base | - [ ] |
 | Distribution type "percentage" → `totalShare` = `PERCENTAGE_BASE_VALUE` | Percentage mode uses 10000 as base | - [ ] |
 | Distribution type "free" → per-unit amount inputs enabled | Free mode allows manual per-unit amounts | - [ ] |
 | Distribution type "split_later" → all allocations cleared | Split later zeros out all unit shares/amounts | - [ ] |
-| Distribution type "distribution_key" → forces `wholeBuilding` + applies key shares | DK mode selects all units and applies key's share ratios | - [ ] |
-| Select distribution key → shares from key applied, amounts computed | Changing DK recalculates all unit shares from key definition | - [ ] |
+| Distribution type "distribution_key" → forces `wholeBuilding` + applies key shares | Distribution key mode selects all units and applies key's share ratios | - [ ] |
+| Select distribution key → shares from key applied, amounts computed | Changing distribution key recalculates all unit shares from key definition | - [ ] |
 | Whole building ON → all units selected; OFF → all deselected with amounts zeroed | Toggle controls bulk unit selection state | - [ ] |
 | Select/deselect individual unit → share and amount updated | Deselecting a unit zeros its share and amount | - [ ] |
 | Select all checkbox → toggles all units | Header checkbox controls all unit selection states | - [ ] |
 | Change `totalAmount` → amounts recalculated for non-free types | Amount change triggers proportional redistribution | - [ ] |
 | Ledger suggestion chip click → `costAccount` field set | Clicking suggestion populates cost account | - [ ] |
-| DK suggestion chip click → switches to DK mode + applies key | DK suggestion enables distribution key mode automatically | - [ ] |
+| Distribution key suggestion chip click → switches to distribution key mode + applies key | Distribution key suggestion enables distribution key mode automatically | - [ ] |
 | Submit with total mismatch → `SplitErrorDialog` shown | Validation error triggers error dialog with "divide equally" option | - [ ] |
 | Unit search filters by name/address/owner | Debounced search narrows visible unit list | - [ ] |
 | Unit sort by name/owner/amount | Sort controls reorder the unit list | - [ ] |
 
-## 8. Supplier Defaults — Backfill & Auto-save
+## 9. Supplier Defaults — Backfill & Auto-save
 
 Guards the integration between supplier default hooks and the form. `useBackfillSupplierDefaults` patches empty lines when supplier defaults load; `useAutoSaveBuildingSupplierDefaults` persists settings on submit. Unit tests exist for internal logic — these integration tests verify form-level wiring.
 
 | Test case | Description | Status |
 |-----------|-------------|--------|
 | Select building + supplier with defaults → empty lines get `costAccount` backfilled | Backfill triggers when supplier defaults load, patches empty fields | - [ ] |
-| Select building + supplier with defaults → empty lines get `distributionKeyId` backfilled | DK default applied to lines missing distribution key | - [ ] |
+| Select building + supplier with defaults → empty lines get `distributionKeyId` backfilled | Distribution key default applied to lines missing distribution key | - [ ] |
 | Lines with existing `costAccount` → NOT overwritten by backfill | "Never overwrite" policy preserved for user/Peppol-set values | - [ ] |
-| Lines with existing `distributionKeyId` → NOT overwritten by backfill | Existing DK stays untouched during backfill | - [ ] |
+| Lines with existing `distributionKeyId` → NOT overwritten by backfill | Existing distribution key stays untouched during backfill | - [ ] |
 | Change supplier → backfill fires again for new pair | Ref guard resets when `buildingId`+`senderId` changes | - [ ] |
 | Same supplier re-selected → backfill does NOT fire twice | Idempotency: same pair key skips re-application | - [ ] |
-| Submit invoice → `saveSupplierDefaults` called with first line's `costAccount` + DK | Auto-save extracts settings from amount lines on successful submit | - [ ] |
+| Submit invoice → `saveSupplierDefaults` called with first line's `costAccount` + distribution key | Auto-save extracts settings from amount lines on successful submit | - [ ] |
 | Submit with no existing link → `linkSupplier` mutation called | Creates new building-supplier association | - [ ] |
 | Submit with existing link (empty fields) → `updateSupplier` called | Updates only the missing fields on existing link | - [ ] |
 | Submit with existing link (all fields set) → no mutation fired | "Never overwrite" skips API call entirely | - [ ] |

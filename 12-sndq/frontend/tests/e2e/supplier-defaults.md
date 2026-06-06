@@ -1,7 +1,7 @@
 # Supplier Defaults — Auto-fill & Auto-save
 
 **File**: `tests/financial/purchase-invoices/011-supplier-defaults.spec.ts`
-**Seed scenarios**: `purchase-invoice-supplier-defaults` (supplier with pre-configured ledger + DK), `purchase-invoice-create` (supplier without defaults)
+**Seed scenarios**: `purchase-invoice-supplier-defaults` (supplier with pre-configured ledger + distribution key), `purchase-invoice-create` (supplier without defaults)
 
 Tests the end-to-end flow of supplier defaults: when a supplier with configured defaults is selected, empty invoice lines auto-fill with the default ledger and distribution key. On successful submit, settings from the invoice are auto-saved back to the building-supplier link.
 
@@ -76,7 +76,7 @@ test('E2E-048: supplier defaults auto-fill cost account on line', async ({ page 
 
 ### Steps
 
-1. Open create form, select building + supplier with DK defaults
+1. Open create form, select building + supplier with distribution key defaults
 2. Add an amount line
 3. Observe the distribution method section
 

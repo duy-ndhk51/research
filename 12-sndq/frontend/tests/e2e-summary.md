@@ -160,7 +160,7 @@ Full user journey for the distribution sheet: opening from invoice lines, select
 | Select 3 of 5 units → allocation progress shows partial, unselected units zeroed | Partial selection reflected in progress indicator | - [ ] |
 | Set total amount 500 EUR → "Share" mode distributes across selected units | Proportional distribution computed and displayed | - [ ] |
 | Switch to "Percentage" → shares convert to percentages summing to 100% | Mode switch recalculates display values | - [ ] |
-| Apply distribution key from dropdown → amounts match key ratios | DK-based distribution produces correct per-unit amounts | - [ ] |
+| Apply distribution key from dropdown → amounts match key ratios | Distribution key-based distribution produces correct per-unit amounts | - [ ] |
 | Click ledger suggestion chip → cost account field populated | Suggestion shortcut works in real browser | - [ ] |
 | Save & close → line appears in invoice with correct total | Distribution data persists back to parent form | - [ ] |
 | Edit existing line → sheet opens with saved allocations pre-filled | Re-opening sheet restores prior distribution state | - [ ] |
@@ -169,12 +169,12 @@ Full user journey for the distribution sheet: opening from invoice lines, select
 
 End-to-end flow of supplier defaults being backfilled into invoice lines on supplier selection and auto-saved to the building-supplier link on successful submit.
 
-**Seeds**: `purchase-invoice-supplier-defaults` (supplier with pre-configured ledger + DK), `purchase-invoice-create` (supplier without defaults)
+**Seeds**: `purchase-invoice-supplier-defaults` (supplier with pre-configured ledger + distribution key), `purchase-invoice-create` (supplier without defaults)
 
 | Test case | Description | Status |
 |-----------|-------------|--------|
 | Select supplier with defaults → first line's cost account auto-fills | Backfill populates empty ledger from supplier config | - [ ] |
-| Select supplier with defaults → first line's distribution key auto-fills | Backfill populates empty DK from supplier config | - [ ] |
+| Select supplier with defaults → first line's distribution key auto-fills | Backfill populates empty distribution key from supplier config | - [ ] |
 | Manually set cost account, then select supplier with defaults → account NOT overwritten | User-set values preserved despite supplier defaults | - [ ] |
 | Submit invoice (new supplier) → supplier link created in backend | POST to building-supplier API after successful invoice submit | - [ ] |
 | Submit invoice (existing supplier, empty defaults) → supplier defaults updated | PATCH updates only empty fields on existing supplier link | - [ ] |

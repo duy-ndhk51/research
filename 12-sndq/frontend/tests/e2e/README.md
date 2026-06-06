@@ -77,7 +77,7 @@ Each test suite requires specific backend seed data. These scenarios must be cre
 | `peppol-invoice-unmatched` | Peppol invoice with unknown supplier (no `supplierPartyContactId`) |
 | `peppol-invoice-credit-note` | Peppol credit note (`typeCode: '381'`, `type: CREDIT_NOTE`) |
 | `peppol-invoice-duplicate` | Peppol invoice + existing purchase invoice with same supplier + invoice number |
-| `purchase-invoice-supplier-defaults` | Building with supplier link that has pre-configured `invoiceMotherId` + `distributionKeyId`, matching ledger and DK entities |
+| `purchase-invoice-supplier-defaults` | Building with supplier link that has pre-configured `invoiceMotherId` + `distributionKeyId`, matching ledger and distribution key entities |
 
 ### Seed scenario data contract
 
@@ -284,7 +284,7 @@ pnpm test:e2e:codegen
 ### Amount Distribution ([amount-distribution.md](./amount-distribution.md))
 
 **Purpose**: Validate the full user journey through the amount distribution sheet: opening from invoice lines, selecting units, allocating amounts across distribution types, applying suggestions, and verifying persistence back to the parent form.
-**Scope**: Sheet open from invoice lines, unit selection (partial and full), distribution types (share/percentage/DK), ledger suggestion interaction, save/close persistence, edit mode pre-fill.
+**Scope**: Sheet open from invoice lines, unit selection (partial and full), distribution types (share/percentage/distribution key), ledger suggestion interaction, save/close persistence, edit mode pre-fill.
 **Risk**: Distribution sheet doesn't open, amounts miscalculated after distribution type switch, allocations lost on save, edit mode doesn't restore prior state.
 
 | ID | Description | User Flow | Status |
@@ -293,7 +293,7 @@ pnpm test:e2e:codegen
 | E2E-041 | Partial unit selection | Select 3 of 5 units → progress shows partial, unselected zeroed | - [ ] |
 | E2E-042 | Share mode distributes total | Set 500 EUR → "Share" mode distributes across selected units | - [ ] |
 | E2E-043 | Switch to percentage mode | Switch → shares convert to percentages summing to 100% | - [ ] |
-| E2E-044 | Apply distribution key | Select DK → amounts match key ratios, whole building forced | - [ ] |
+| E2E-044 | Apply distribution key | Select distribution key → amounts match key ratios, whole building forced | - [ ] |
 | E2E-045 | Ledger suggestion chip | Click suggestion → cost account field populated | - [ ] |
 | E2E-046 | Save & close persists line | Save → line appears in parent form with correct total | - [ ] |
 | E2E-047 | Edit existing line | Click line → sheet opens with saved allocations pre-filled | - [ ] |
@@ -301,13 +301,13 @@ pnpm test:e2e:codegen
 ### Supplier Defaults — Auto-fill & Auto-save ([supplier-defaults.md](./supplier-defaults.md))
 
 **Purpose**: Validate the end-to-end flow of supplier defaults: when a supplier with configured defaults is selected, empty invoice lines auto-fill with the default ledger and distribution key. On successful submit, settings from the invoice are auto-saved back to the building-supplier link.
-**Scope**: Cost account backfill, DK backfill, "never overwrite" policy, link creation on submit, link update on submit.
+**Scope**: Cost account backfill, distribution key backfill, "never overwrite" policy, link creation on submit, link update on submit.
 **Risk**: Supplier defaults don't populate (silent failure), user-set values overwritten, supplier link not created/updated after submit.
 
 | ID | Description | User Flow | Status |
 |----|-------------|-----------|--------|
 | E2E-048 | Supplier defaults auto-fill cost account | Select supplier with defaults → line's cost account auto-fills | - [ ] |
-| E2E-049 | Supplier defaults auto-fill distribution key | Select supplier → line's DK auto-fills, whole building enabled | - [ ] |
+| E2E-049 | Supplier defaults auto-fill distribution key | Select supplier → line's distribution key auto-fills, whole building enabled | - [ ] |
 | E2E-050 | Manual cost account not overwritten | Set ledger manually, then select supplier → user value preserved | - [ ] |
 | E2E-051 | Submit creates supplier link | Submit with new supplier → POST to building-supplier API | - [ ] |
 | E2E-052 | Submit updates empty defaults | Submit with existing supplier → PATCH updates empty fields only | - [ ] |
