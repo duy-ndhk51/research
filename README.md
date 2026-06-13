@@ -55,6 +55,7 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 | 27 | [FloatingSheet Architecture Review](./12-sndq/frontend/refactoring/floating-sheet-review/floating-sheet-architecture-review.md) | SNDQ | `sndq`, `floating-sheet`, `component-review`, `architecture` |
 | 28 | [ByteByteGo — Behavioral Interview](./10-soft-skills/interviewing/bytebytego-behavioral-interview/README.md) | Soft Skills | `behavioral-interview`, `storytelling`, `career` |
 | 29 | [SNDQ DataTable — Architecture](./12-sndq/frontend/features/design-system/table/architecture.md) | SNDQ | `sndq`, `design-system`, `table`, `tanstack`, `architecture` |
+| 30 | [Design System Token Architecture](./04-frontend/design-systems/token-architecture/README.md) | Frontend | `design-system`, `tokens`, `dark-mode`, `theming`, `architecture` |
 <!-- TOPIC-INDEX-END -->
 
 **Playground experiments:**
