@@ -33,7 +33,6 @@ Add line possible without building, wrong view rendered for grouping mode, delet
 | Add line enabled (building set) | Button enabled |
 | Individual mode renders line cards | 2 `InvoiceLineCard`s rendered |
 | Simple mode renders SingleTotalView | `SingleTotalView` shown, no cards/add button |
-| Mode toggle switches strategy | `setGroupingStrategy(ALL)` called |
 | Single delete opens dialog | `DeleteAmountDialog` opens |
 | Confirm delete removes line | Dialog closes, line removed |
 | Cancel delete keeps line | Dialog closes, line unchanged |
@@ -65,7 +64,7 @@ Add line possible without building, wrong view rendered for grouping mode, delet
 
 - Distribution sheet: [amount-distribution-sheet.md](./amount-distribution-sheet.md) — sheet lifecycle
 - Lock state & reconciliation: [lock-state-toggle.md](./lock-state-toggle.md) — footer lock UI, lock disabled in partial edit, and reconciliation behavior during add/duplicate
-- Grouping strategy: [grouping-strategy.md](./grouping-strategy.md) — mode toggle, save/restore originals, merge conflicts
+- Grouping strategy: [grouping-strategy.md](./grouping-strategy.md) — mode toggle (single/individual switching), save/restore originals, merge conflicts
 - Supplier defaults: [supplier-defaults.md](./supplier-defaults.md) — add line defaults
 - Mode switching: [mode-switching.md](./mode-switching.md) — credit note styling
 
@@ -250,47 +249,6 @@ it('simple mode renders SingleTotalView', () => {
 
   // Add line button should NOT be visible in simple mode
   expect(screen.queryByRole('button', { name: /add line/i })).not.toBeInTheDocument();
-});
-```
-
----
-
-## AmountModeToggle switches between single and individual
-
-**Preconditions**: Rendered with `groupingStrategy: NONE`.
-
-### Steps
-
-1. Render with `NONE` strategy
-2. Click the "Single total" tab in the mode toggle
-3. Verify `onGroupingStrategyChange` is called
-
-### Expected Outcome
-
-- The mode toggle renders both "Single total" and "Line by line" segments
-- Clicking "Single total" calls `setGroupingStrategy(GroupingStrategy.ALL)`
-- Clicking "Line by line" calls `setGroupingStrategy(GroupingStrategy.NONE)`
-
-### Example Code
-
-```typescript
-import userEvent from '@testing-library/user-event';
-
-it('mode toggle switches between single and individual', async () => {
-  const setGroupingStrategy = vi.fn();
-
-  renderWithProviders(<InvoiceLinesTableV3 />, {
-    formDefaults: { buildingId: 'b-1', amounts: [{ id: 'l-1', totalAmount: 1000 }] },
-    contextOverrides: {
-      groupingStrategy: 'NONE',
-      setGroupingStrategy,
-    },
-  });
-
-  const singleTab = screen.getByRole('tab', { name: /single total/i });
-  await userEvent.click(singleTab);
-
-  expect(setGroupingStrategy).toHaveBeenCalledWith('ALL');
 });
 ```
 

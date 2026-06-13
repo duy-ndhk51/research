@@ -322,8 +322,6 @@ See `sndq-fe/.cursor/skills/frontend-testing/` for the full testing skill refere
 | Footer shows lockedTotal when locked | `lockedTotal: 12000` displayed, not computed total | - [ ] |
 | Footer shows computed total when unlocked | `totals.totalInclVat` displayed | - [ ] |
 | Lock tooltip changes based on state | Locked/unlocked/disabled → different tooltip text | - [ ] |
-| Footer lock button reflects lock state | `Lock` icon visible in full table context | - [ ] |
-| Footer lock disabled in partial edit mode | Button disabled in partial edit in full table context | - [ ] |
 | Add line when locked → remainder | Lock 10000, existing 7000 → new line 3000 | - [ ] |
 | Add line when locked → zero | Lock 10000, lines sum ≥ 10000 → new line 0 | - [ ] |
 | Duplicate when locked → fits | Lock 20000, dup 5000 with 7000 remaining → copy 5000 | - [ ] |
@@ -406,7 +404,6 @@ See `sndq-fe/.cursor/skills/frontend-testing/` for the full testing skill refere
 | Add line enabled (building set) | `buildingId` set → button enabled | - [ ] |
 | Individual mode renders line cards | `NONE` + 2 amounts → 2 `InvoiceLineCard`s rendered | - [ ] |
 | Simple mode renders SingleTotalView | `ALL` + 1 amount → `SingleTotalView` shown, no cards/add button | - [ ] |
-| Mode toggle switches strategy | Click "Single total" → `setGroupingStrategy(ALL)` called | - [ ] |
 | Single delete opens dialog | Delete on card → `DeleteAmountDialog` opens | - [ ] |
 | Confirm delete removes line | Confirm → dialog closes, line removed | - [ ] |
 | Cancel delete keeps line | Cancel → dialog closes, line unchanged | - [ ] |
@@ -540,7 +537,6 @@ See `sndq-fe/.cursor/skills/frontend-testing/` for the full testing skill refere
 | Lock icon shows when locked | `locked: true` → lock icon visible | - [ ] |
 | Lock icon hidden when unlocked | `locked: false` → lock icon absent | - [ ] |
 | Draft badge visible for drafts | `isDraft: true` → "Draft" badge | - [ ] |
-| Mode toggle calls setMode | Click credit-note → `setMode('credit_note')` | - [ ] |
 
 ### Form Dialogs (MEDIUM) ([form-dialogs.md](./form-dialogs.md))
 

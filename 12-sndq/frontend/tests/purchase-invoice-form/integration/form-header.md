@@ -31,12 +31,11 @@ Save button stays enabled during submission (double-submit), total displays stal
 | Lock icon shows when locked | `lockState.locked: true` -> lock icon visible |
 | Lock icon hidden when unlocked | `lockState.locked: false` -> lock icon not in document |
 | Draft badge visible for drafts | `isDraft: true` -> badge with "Draft" text |
-| Mode toggle calls setMode | Click credit-note -> `setMode('credit_note')` called |
 
 ## Related Specs
 
 - Lock state: [lock-state-toggle.md](./lock-state-toggle.md) — lock state machine
-- Mode switching: [mode-switching.md](./mode-switching.md) — type code mapping
+- Mode switching: [mode-switching.md](./mode-switching.md) — full mode toggle tests (setMode + invoiceTypeCode)
 - Invoice lines footer: [invoice-lines-table.md](./invoice-lines-table.md) — footer total/lock
 
 ## Mocking Strategy
@@ -247,32 +246,3 @@ it('draft badge visible for drafts', () => {
 });
 ```
 
----
-
-## Mode toggle calls setMode
-
-**Preconditions**: Form in `'invoice'` mode.
-
-### Steps
-
-1. Render with `mode: 'invoice'`
-2. Click the credit-note option in the mode toggle
-
-### Expected Outcome
-
-- `setMode` called with `'credit_note'`
-
-### Example Code
-
-```typescript
-it('should call setMode when switching to credit note', async () => {
-  const user = userEvent.setup();
-  const { contextValue } = renderWithProviders(<FormHeader />, {
-    contextOverrides: { mode: 'invoice' },
-  });
-
-  await user.click(screen.getByRole('button', { name: /credit/i }));
-
-  expect(contextValue.setMode).toHaveBeenCalledWith('credit_note');
-});
-```

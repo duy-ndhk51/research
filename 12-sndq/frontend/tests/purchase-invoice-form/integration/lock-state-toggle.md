@@ -313,8 +313,6 @@ Guard the reconciliation logic that adjusts amounts when lines are added or dupl
 
 | Test Name | Expected Outcome |
 |-----------|------------------|
-| Footer lock button reflects lock state | `Lock` icon visible, total shows `lockedTotal` |
-| Footer lock disabled in partial edit mode | Button disabled, tooltip shows "Total locked" |
 | Add line when locked → new line gets remainder | New line `totalAmount` = `lockedTotal - sumOfOthers` |
 | Add line when locked → zero if no remainder | New line `totalAmount` = 0 |
 | Duplicate when locked → copy gets source amount if fits | Copy `totalAmount` = source amount |
