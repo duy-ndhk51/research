@@ -1,0 +1,353 @@
+# FormBody Conditional Rendering
+
+**Status**: Not started
+**Priority**: HIGH (gates all form sections behind building + supplier prerequisite)
+**Test tier**: Component integration
+**Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/form-body.test.tsx`
+**Component(s) under test**: `FormBody` from `../sections/FormBody.tsx`
+
+## Purpose
+
+Guard the building + supplier prerequisite gate and partial-edit boundaries that control which form sections are visible and editable.
+
+## Risk
+
+Form exposes payment/amount fields before supplier is selected (causing validation errors on submit). Partial edit mode allows editing locked-down fields on booked invoices.
+
+## Bugs Guarded
+
+- "placeholder" test guards **B3** (partial edit boundary) -- ensures the `hasRequiredInfo` gate (`!!buildingId && !!senderId && !supplierDefaults.isLoading`) hides gated sections (lines, payment, due date, other) while keeping always-visible sections (building/supplier selects, invoice fields) rendered
+- "full form" test guards section completeness -- regression catches missing sections after refactors; verifies all 4 gated sections render AND all always-visible sections remain present
+- "partial edit disables building/supplier/payment only" test guards **B3** -- verifies disabled fieldsets match what users can actually change in partial edit; `fieldset disabled` only wraps building/supplier + payment, not amounts/dates
+- "AI extraction overlay during extraction" test guards the AI overlay lifecycle -- prevents stale overlay remaining after extraction completes
+
+## Scenarios
+
+| Test Name | Expected Outcome |
+|-----------|------------------|
+| Placeholder when no building/supplier | Hint text visible; gated sections (lines, payment, due date, other) NOT rendered; always-visible sections (info card, building/supplier selects, invoice fields) still rendered |
+| Full form when building + supplier selected | Placeholder gone; all sections rendered: info card (building select, supplier select, invoice number, invoice date), amount lines, payment details (payment method, due date), other (deferred cost, utility toggle) |
+| Partial edit disables building/supplier/payment only | Exactly 2 disabled fieldsets; invoice fields, lines, due date, other remain editable |
+| AI extraction overlay during extraction | Overlay element rendered when `isExtracting: true` |
+
+## Related Specs
+
+- Lock state in form: [lock-state-toggle.md](./lock-state-toggle.md)
+- AI extraction: [form-orchestration.md](./form-orchestration.md) — banner lifecycle
+
+## Mocking Strategy
+
+```typescript
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
+  useLocale: () => 'en',
+}));
+
+vi.mock('../components/InlineBuildingSelect', () => ({
+  InlineBuildingSelect: () => <div data-testid="building-select">Building Select</div>,
+}));
+
+vi.mock('../components/InlineSupplierSelect', () => ({
+  ConnectedInlineSupplierSelect: () => <div data-testid="supplier-select">Supplier Select</div>,
+}));
+
+vi.mock('./InvoiceFieldsSection', () => ({
+  InvoiceFieldsSection: () => (
+    <div data-testid="invoice-fields-section">
+      <div data-testid="invoice-number-field">Invoice Number</div>
+      <div data-testid="invoice-date-field">Invoice Date</div>
+    </div>
+  ),
+}));
+
+vi.mock('./CreditNoteSection', () => ({
+  CreditNoteSection: () => <div data-testid="credit-note-section" />,
+}));
+
+vi.mock('../components/invoice-lines', () => ({
+  InvoiceLinesTableV3: () => <div data-testid="invoice-lines-table">Invoice Lines</div>,
+}));
+
+vi.mock('./PaymentDetailsSection', () => ({
+  PaymentDetailsSection: () => <div data-testid="payment-section">Payment Details</div>,
+}));
+
+vi.mock('./DueDateField', () => ({
+  ConnectedDueDateField: () => <div data-testid="due-date-field">Due Date</div>,
+}));
+
+vi.mock('./OtherSection', () => ({
+  OtherSection: () => <div data-testid="other-section">Other Section</div>,
+}));
+
+vi.mock('./AiExtractionOverlay', () => ({
+  AiExtractionOverlay: ({ isExtracting }: { isExtracting: boolean }) =>
+    isExtracting ? <div data-testid="ai-extraction-overlay" /> : null,
+}));
+```
+
+## Shared Setup
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../utils';
+import { FormBody } from '../../sections/FormBody';
+import { defaultInvoiceFormV3Values } from '../../constants';
+
+const withBuildingAndSupplier = {
+  contextOverrides: {
+    buildingId: 'building-123',
+    senderId: 'sender-456',
+    supplierDefaults: { isLoading: false, defaults: {} },
+  },
+  formDefaults: {
+    ...defaultInvoiceFormV3Values,
+    buildingId: 'building-123',
+    senderId: 'sender-456',
+  },
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+```
+
+---
+
+## Shows placeholder when building/supplier not selected
+
+**Preconditions**: Form loaded with default values (no `buildingId`, no `senderId`).
+
+### Steps
+
+1. Render `<FormBody />` with default context (no buildingId, no senderId, `supplierDefaults.isLoading = false`)
+
+### Expected Outcome
+
+**Placeholder visible:**
+- Placeholder hint text is visible (translation key: `purchase_invoice.select_building_supplier_hint`)
+
+**Gated sections NOT rendered** (behind `hasRequiredInfo` gate):
+- `InvoiceLinesTableV3` is NOT rendered
+- `PaymentDetailsSection` is NOT rendered
+- `ConnectedDueDateField` is NOT rendered
+- `OtherSection` is NOT rendered
+
+**Always-visible sections still rendered** (outside gate):
+- `InlineBuildingSelect` is rendered
+- `ConnectedInlineSupplierSelect` is rendered
+- `InvoiceFieldsSection` is rendered (invoice number + invoice date)
+- `CreditNoteSection` is rendered (returns null for non-credit-note mode, but the component is mounted)
+
+### Example Code
+
+```typescript
+describe('FormBody conditional rendering', () => {
+  it('shows placeholder when building/supplier not selected', () => {
+    renderWithProviders(<FormBody />, {
+      contextOverrides: {
+        buildingId: undefined,
+        senderId: undefined,
+        supplierDefaults: { isLoading: false, defaults: {} },
+      },
+    });
+
+    // --- Placeholder visible ---
+    expect(
+      screen.getByText(/purchase_invoice.select_building_supplier_hint/),
+    ).toBeInTheDocument();
+
+    // --- Gated sections NOT rendered ---
+    expect(screen.queryByTestId('invoice-lines-table')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('payment-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('due-date-field')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('other-section')).not.toBeInTheDocument();
+
+    // --- Always-visible sections still rendered ---
+    expect(screen.getByTestId('building-select')).toBeInTheDocument();
+    expect(screen.getByTestId('supplier-select')).toBeInTheDocument();
+    expect(screen.getByTestId('invoice-fields-section')).toBeInTheDocument();
+    expect(screen.getByTestId('credit-note-section')).toBeInTheDocument();
+  });
+});
+```
+
+---
+
+## Shows full form when building + supplier selected
+
+**Preconditions**: Form loaded with `buildingId` and `senderId` set, supplier defaults loaded.
+
+### Steps
+
+1. Render `<FormBody />` with both IDs set and `supplierDefaults.isLoading = false`
+
+### Expected Outcome
+
+**Placeholder hidden:**
+- Placeholder hint text is NOT visible
+
+**Always-visible sections (Info card):**
+- Building select rendered
+- Supplier select rendered
+- Invoice number field rendered
+- Invoice date field rendered
+- Credit note section rendered (returns null in invoice mode)
+
+**Gated sections (visible because `hasRequiredInfo = true`):**
+- `InvoiceLinesTableV3` -- amount lines section
+- `PaymentDetailsSection` -- payment method (bank payment / direct debit)
+- `ConnectedDueDateField` -- due date picker (inside payment card, outside the disabled fieldset)
+- `OtherSection` -- deferred cost toggle + utility toggle
+
+**Section card headings visible:**
+- Info card: `general.info_short`
+- Amount card: heading via `InvoiceLinesTableV3` (renders `general.amount`)
+- Payment card: `purchase_invoice.payment_details`
+- Other card: `general.other`
+
+### Example Code
+
+```typescript
+it('shows full form when building + supplier selected', () => {
+  renderWithProviders(<FormBody />, {
+    ...withBuildingAndSupplier,
+  });
+
+  // --- Placeholder hidden ---
+  expect(
+    screen.queryByText(/purchase_invoice.select_building_supplier_hint/),
+  ).not.toBeInTheDocument();
+
+  // --- Always-visible sections (Info card) ---
+  expect(screen.getByTestId('building-select')).toBeInTheDocument();
+  expect(screen.getByTestId('supplier-select')).toBeInTheDocument();
+  expect(screen.getByTestId('invoice-number-field')).toBeInTheDocument();
+  expect(screen.getByTestId('invoice-date-field')).toBeInTheDocument();
+  expect(screen.getByTestId('credit-note-section')).toBeInTheDocument();
+
+  // --- Gated sections (now visible) ---
+  expect(screen.getByTestId('invoice-lines-table')).toBeInTheDocument();
+  expect(screen.getByTestId('payment-section')).toBeInTheDocument();
+  expect(screen.getByTestId('due-date-field')).toBeInTheDocument();
+  expect(screen.getByTestId('other-section')).toBeInTheDocument();
+
+  // --- Section card headings ---
+  expect(screen.getByText(/general.info_short/)).toBeInTheDocument();
+  expect(screen.getByText(/purchase_invoice.payment_details/)).toBeInTheDocument();
+  expect(screen.getByText(/general.other/)).toBeInTheDocument();
+});
+```
+
+---
+
+## Partial edit disables building/supplier/payment but keeps invoice fields, lines, due date, and other editable
+
+**Preconditions**: `isPartialEditMode = true`, buildingId + senderId set.
+
+### Steps
+
+1. Render `<FormBody />` with `isPartialEditMode: true`
+
+### Expected Outcome
+
+- Warning banner visible with text matching `purchase_invoice.partial_edit_mode_title`
+- Exactly 2 `<fieldset>` elements have the `disabled` attribute (building/supplier fieldset + payment fieldset)
+- Building select label is inside a disabled fieldset
+- Supplier select label is inside a disabled fieldset
+- Payment method label is inside a disabled fieldset
+- Invoice number input is NOT inside a disabled fieldset
+- Invoice date label is NOT inside a disabled fieldset
+- Due date label is NOT inside a disabled fieldset
+
+### Example Code
+
+```typescript
+it('disables building/supplier/payment but keeps invoice fields, lines, due date, and other editable', () => {
+  renderWithProviders(<FormBody />, {
+    ...withBuildingAndSupplier,
+    contextOverrides: {
+      ...withBuildingAndSupplier.contextOverrides,
+      isPartialEditMode: true,
+    },
+  });
+
+  // Warning banner is visible
+  expect(screen.getByText(/partial edit mode/i)).toBeInTheDocument();
+
+  // Exactly 2 disabled fieldsets (building/supplier + payment)
+  const disabledFieldsets = document.querySelectorAll('fieldset[disabled]');
+  expect(disabledFieldsets).toHaveLength(2);
+
+  // Building select is inside a disabled fieldset
+  const buildingLabel = screen.getByText(/building/i);
+  expect(buildingLabel.closest('fieldset')).toHaveAttribute('disabled');
+
+  // Supplier select is inside a disabled fieldset
+  const supplierLabel = screen.getByText(/supplier/i);
+  expect(supplierLabel.closest('fieldset')).toHaveAttribute('disabled');
+
+  // Payment method section is inside a disabled fieldset
+  const paymentMethodLabel = screen.getByText(/payment method/i);
+  expect(paymentMethodLabel.closest('fieldset')).toHaveAttribute('disabled');
+
+  // --- Fields that MUST remain editable ---
+
+  // Invoice number input is NOT inside a disabled fieldset
+  const invoiceNumberInput = screen.getByPlaceholderText(/placeholder/i);
+  expect(invoiceNumberInput.closest('fieldset[disabled]')).toBeNull();
+
+  // Invoice date is NOT disabled
+  const invoiceDateLabel = screen.getByText(/invoice date/i);
+  expect(invoiceDateLabel.closest('fieldset[disabled]')).toBeNull();
+
+  // Due date is NOT disabled
+  const dueDateLabel = screen.getByText(/due date/i);
+  expect(dueDateLabel.closest('fieldset[disabled]')).toBeNull();
+});
+```
+
+---
+
+## Shows AI extraction overlay when extracting
+
+**Preconditions**: AI extraction is in progress (`isExtracting = true`).
+
+### Steps
+
+1. Render `<FormBody />` with `aiExtraction.isExtracting = true`, buildingId + senderId set
+
+### Expected Outcome
+
+- `AiExtractionOverlay` is present (`data-testid="ai-extraction-overlay"`)
+- All form sections still render underneath the overlay
+
+### Example Code
+
+```typescript
+it('shows AI extraction overlay when extracting', () => {
+  renderWithProviders(<FormBody />, {
+    ...withBuildingAndSupplier,
+    contextOverrides: {
+      ...withBuildingAndSupplier.contextOverrides,
+      aiExtraction: {
+        isExtracting: true,
+        isExtracted: false,
+        triggerExtraction: vi.fn(),
+        dismissBanner: vi.fn(),
+        getFieldConfidence: vi.fn(),
+        markFieldReviewed: vi.fn(),
+        supplierVatNumber: undefined,
+        customerVatNumber: undefined,
+      },
+    },
+  });
+
+  expect(screen.getByTestId('ai-extraction-overlay')).toBeInTheDocument();
+
+  // Form sections still render underneath
+  expect(screen.getByTestId('invoice-lines-table')).toBeInTheDocument();
+  expect(screen.getByTestId('payment-section')).toBeInTheDocument();
+});
+```

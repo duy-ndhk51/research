@@ -1,44 +1,64 @@
-# Peppol to Invoice — Integration Tests
+# Peppol to Invoice
 
-**Priority**: HIGH (daily-use flow)
-**Files under test**:
-- `usePeppolFormPopulate.ts` — `handlePeppolDataParsed` callback that populates form fields
-- `PeppolInvoiceSheetRoute.tsx` — lock computation and form handoff (lines 102-111)
-- `PeppolInvoiceFloatingSheetContent.tsx` — `handleEditInvoice` callback (lines 143-163)
-- `transformPeppolToFormData.ts` — pure data transformation (already unit-tested, but wiring is not)
+**Status**: Not started
+**Priority**: HIGH (daily-use flow, #1 invoice entry path)
+**Test tier**: Hook
+**Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/peppol-to-invoice.test.ts`
+**Component(s) under test**: `usePeppolFormPopulate` from `hooks/usePeppolFormPopulate.ts`, `transformPeppolToFormData` from `purchase-invoice-v2/utils/`, `PeppolInvoiceSheetRoute` lock computation
 
-**Implementation target**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/peppol-to-invoice.test.ts`
+## Purpose
 
-These scenarios test the **wiring** between the well-unit-tested `transformPeppolToFormData` function and the form state. The unit tests verify the transform outputs correct data; these integration tests verify that data actually reaches the form fields.
+Verify the last-mile wiring between `transformPeppolToFormData` and React Hook Form `setValue` calls, catching field-mapping regressions and truthy-filter bugs.
 
----
+## Risk
 
-## IT-022: handlePeppolDataParsed populates all form fields
+Peppol invoices open with empty/wrong fields, unmatched suppliers get stale `senderId`, credit notes treated as invoices, OGM references lost, lock total miscalculated.
 
-**Preconditions**: React Hook Form instance with default values. Peppol data with all fields populated.
+## Bugs Guarded
 
-### Steps
+- **Peppol populates all form fields** guards **B4** (Peppol truthy filter) -- `if (value)` in `usePeppolFormPopulate` skips `0`, `false`, `''`; all field types must be populated correctly
+- **Empty Peppol amounts produce zero-lock** guards **B1** (lock state) -- empty amounts must not produce phantom lock total; `sumTotalAmounts([])` should yield 0, which then drives UX edge case
+- **Unmatched supplier resets senderId** / **Matched supplier sets senderId** guard **B13** (inline select clearing) -- supplier clearing must use proper value; `resetField('senderId')` vs `setValue('senderId', '')` for UUID validation
+- **Peppol credit note typeCode flows to form** guards **B2** (mode switching) -- Peppol credit note `typeCode: '381'` must flow to form `invoiceTypeCode`
+- **Lock total matches Peppol amounts sum** guards **B1** -- lock total must match exact sum of Peppol amounts; `sumTotalAmounts` uses integer cents
+- **Grouping preserves originalLines and total** guards **B7/B8** (grouping stale snapshot / totals) -- grouping must preserve `originalLines` and not change total under lock
 
-1. Create a mock `methods` object with `setValue`, `getValues`, `resetField`, `trigger`
-2. Call `handlePeppolDataParsed` with a full Peppol invoice response
-3. Verify `setValue` was called for each field
+## Scenarios
 
-### Assertions
+| Test Name | Expected Outcome |
+|-----------|-------------------|
+| Peppol populates all form fields | All fields set via `setValue`, `trigger()` called |
+| Empty Peppol amounts produce zero-lock | `lockedTotal: 0` (known UX edge case) |
+| Unmatched supplier resets senderId | `resetField('senderId')` called, supplier data stored |
+| Matched supplier sets senderId | `setValue('senderId')` called, supplier data cleared |
+| Peppol credit note typeCode flows to form | `invoiceTypeCode` is `'381'` |
+| Belgian OGM structured remittance | Parsed to digits, typed STRUCTURED |
+| Lock total matches Peppol amounts sum | `sumTotalAmounts` matches multi-line total |
+| Grouping preserves originalLines and total | Same total after grouping, `originalLines` preserved |
 
-- `setValue('peppolData', peppolData)` called first
-- `setValue('senderId', 'supplier-contact-123')` called
-- `setValue('invoiceNumber', 'PEPINV-001')` called
-- `setValue('invoiceDate', '2026-01-15')` called
-- `setValue('amounts', [...])` called with transformed lines
-- `setValue('invoiceTypeCode', '380')` called
-- `setValue('remittanceType', ...)` called
-- `trigger()` called after all setValue calls
+## Related Specs
 
-### Example Code
+- Lock state: [lock-state-toggle.md](./lock-state-toggle.md) — lock state machine
+- Mode switching: [mode-switching.md](./mode-switching.md) — type code mapping
+- Inline selects: [inline-selects.md](./inline-selects.md) — supplier selection/clearing
+- Invoice lines: [invoice-lines-table.md](./invoice-lines-table.md) — amount rendering
+
+## Mocking Strategy
+
+```typescript
+// Hook-level tests -- mock React Hook Form methods, not components.
+// transformPeppolToFormData is imported directly (pure function).
+```
+
+## Shared Setup
 
 ```typescript
 import { describe, it, expect, vi } from 'vitest';
+import type { UseFormReturn } from 'react-hook-form';
 import { usePeppolFormPopulate } from '../../hooks/usePeppolFormPopulate';
+import { sumTotalAmounts } from '../../components/invoice-lines/pipeline';
+import { transformPeppolToFormData } from '../../../purchase-invoice-v2/utils/transformPeppolToFormData';
+import type { PurchaseInvoiceFormV2Data } from '../../../purchase-invoice-v2/schema';
 import type { PeppolInvoiceResponse } from '@/common/api/resources/financial/peppolApi';
 import {
   PeppolInvoiceDirection,
@@ -91,17 +111,113 @@ const basePeppolData: PeppolInvoiceResponse = {
   paymentMeans: [{ code: '30', id: 'REF-2026-001' }],
 };
 
-function createMockMethods() {
+type MockMethods = Pick<UseFormReturn<PurchaseInvoiceFormV2Data>, 'setValue' | 'getValues' | 'resetField' | 'trigger'>;
+
+function createMockMethods(): MockMethods {
   return {
     setValue: vi.fn(),
     getValues: vi.fn().mockReturnValue(undefined),
     resetField: vi.fn(),
     trigger: vi.fn(),
-  } as any;
+  };
+}
+```
+
+---
+
+## handlePeppolDataParsed populates all form fields
+
+**Preconditions**: React Hook Form instance with default values. Peppol data with all fields populated.
+
+### Steps
+
+1. Create a mock `methods` object with `setValue`, `getValues`, `resetField`, `trigger`
+2. Call `handlePeppolDataParsed` with a full Peppol invoice response
+3. Verify `setValue` was called for each field
+
+### Expected Outcome
+
+- `setValue('peppolData', peppolData)` called first
+- `setValue('senderId', 'supplier-contact-123')` called
+- `setValue('invoiceNumber', 'PEPINV-001')` called
+- `setValue('invoiceDate', '2026-01-15')` called
+- `setValue('amounts', [...])` called with transformed lines
+- `setValue('invoiceTypeCode', '380')` called
+- `setValue('remittanceType', ...)` called
+- `trigger()` called after all setValue calls
+
+### Example Code
+
+```typescript
+import { describe, it, expect, vi } from 'vitest';
+import type { UseFormReturn } from 'react-hook-form';
+import { usePeppolFormPopulate } from '../../hooks/usePeppolFormPopulate';
+import type { PurchaseInvoiceFormV2Data } from '../../../purchase-invoice-v2/schema';
+import type { PeppolInvoiceResponse } from '@/common/api/resources/financial/peppolApi';
+import {
+  PeppolInvoiceDirection,
+  PeppolInvoiceType,
+  PeppolInvoiceStatus,
+  PeppolInvoiceSource,
+} from '@/common/models/peppolInvoice';
+
+type MockMethods = Pick<UseFormReturn<PurchaseInvoiceFormV2Data>, 'setValue' | 'getValues' | 'resetField' | 'trigger'>;
+
+const basePeppolData: PeppolInvoiceResponse = {
+  id: 'peppol-1',
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+  workspaceId: 'ws-1',
+  direction: PeppolInvoiceDirection.INBOUND,
+  invoiceNumber: 'PEPINV-001',
+  issueDate: '2026-01-15',
+  typeCode: '380',
+  type: PeppolInvoiceType.INVOICE,
+  supplierParty: { scheme: '0208', endpointId: '0123456789', name: 'Test NV' },
+  customerParty: { scheme: '0208', endpointId: '9876543210' },
+  supplierPartyContactId: 'supplier-contact-123',
+  customerPartyBuildingId: 'building-456',
+  lines: [
+    {
+      id: 'line-1',
+      name: 'Maintenance',
+      description: 'Monthly maintenance Q1',
+      baseQuantity: 1,
+      basePrice: 10000,
+      quantity: 1,
+      vatIncluded: true,
+      vatRate: 0.21,
+      subtotal: 10000,
+      total: 12100,
+      currency: 'EUR',
+    },
+  ],
+  lineExtensionAmount: 10000,
+  allowanceTotalAmount: 0,
+  chargeTotalAmount: 0,
+  taxInclusiveAmount: 12100,
+  taxExclusiveAmount: 10000,
+  prepaidAmount: 0,
+  payableRoundingAmount: 0,
+  payableAmount: 12100,
+  currency: 'EUR',
+  status: PeppolInvoiceStatus.RECEIVED,
+  source: PeppolInvoiceSource.SNDQ,
+  hasAttachments: false,
+  paymentMeans: [{ code: '30', id: 'REF-2026-001' }],
+};
+
+function createMockMethods(): MockMethods {
+  return {
+    setValue: vi.fn(),
+    getValues: vi.fn().mockReturnValue(undefined),
+    resetField: vi.fn(),
+    trigger: vi.fn(),
+  };
 }
 
-describe('Peppol to Invoice — handlePeppolDataParsed', () => {
-  it('IT-022: populates all form fields via setValue', async () => {
+describe('Peppol to Invoice — field population', () => {
+  it('populates all form fields via setValue', async () => {
     const methods = createMockMethods();
     const { handlePeppolDataParsed } = usePeppolFormPopulate({
       methods,
@@ -136,7 +252,7 @@ describe('Peppol to Invoice — handlePeppolDataParsed', () => {
 
 ---
 
-## IT-023: Empty amounts from Peppol — no zero-lock
+## Empty amounts from Peppol — no zero-lock
 
 **Preconditions**: Peppol invoice with no lines (empty `lines` array).
 **Bug vector**: `PeppolInvoiceSheetRoute.tsx` lines 102-108 always sets `locked: true`. With empty amounts, `lockedTotal` is 0, creating an unusable locked form.
@@ -146,7 +262,7 @@ describe('Peppol to Invoice — handlePeppolDataParsed', () => {
 1. Call `transformPeppolToFormData` with Peppol data that has `lines: []`
 2. Simulate the `onCreatePurchaseInvoice` callback from `PeppolInvoiceSheetRoute`
 
-### Assertions
+### Expected Outcome
 
 - `transformedData.amounts` is an empty array
 - `sumTotalAmounts([])` returns `0`
@@ -158,7 +274,7 @@ describe('Peppol to Invoice — handlePeppolDataParsed', () => {
 import { sumTotalAmounts } from '../../components/invoice-lines/pipeline';
 import { transformPeppolToFormData } from '../../../purchase-invoice-v2/utils/transformPeppolToFormData';
 
-it('IT-023: empty peppol lines produce empty amounts and zero lock total', () => {
+it('empty peppol lines produce empty amounts and zero lock total', () => {
   const emptyLinesPeppol = { ...basePeppolData, lines: [] };
   const transformed = transformPeppolToFormData(emptyLinesPeppol);
 
@@ -182,7 +298,7 @@ it('IT-023: empty peppol lines produce empty amounts and zero lock total', () =>
 
 ---
 
-## IT-024: Unmatched supplier — peppolSupplierData set, senderId reset
+## Unmatched supplier — peppolSupplierData set, senderId reset
 
 **Preconditions**: Peppol invoice with `supplierPartyContactId: null/undefined` and `supplierParty` present.
 
@@ -190,7 +306,7 @@ it('IT-023: empty peppol lines produce empty amounts and zero lock total', () =>
 
 1. Call `handlePeppolDataParsed` with Peppol data where `supplierPartyContactId` is undefined
 
-### Assertions
+### Expected Outcome
 
 - `resetField('senderId')` called (clears any previous supplier)
 - `setPeppolSupplierData` receives `invoice.supplierParty` object (name, VAT, etc.)
@@ -199,7 +315,7 @@ it('IT-023: empty peppol lines produce empty amounts and zero lock total', () =>
 ### Example Code
 
 ```typescript
-it('IT-024: unmatched supplier resets senderId and sets peppolSupplierData', async () => {
+it('unmatched supplier resets senderId and sets peppolSupplierData', async () => {
   const methods = createMockMethods();
   const setPeppolSupplierDataSpy = vi.fn();
 
@@ -218,7 +334,7 @@ it('IT-024: unmatched supplier resets senderId and sets peppolSupplierData', asy
     methods,
   });
 
-  await handlePeppolDataParsed(unmatchedPeppol as any);
+  await handlePeppolDataParsed(unmatchedPeppol);
 
   // senderId should be reset, not set
   expect(methods.resetField).toHaveBeenCalledWith('senderId');
@@ -233,7 +349,7 @@ it('IT-024: unmatched supplier resets senderId and sets peppolSupplierData', asy
 
 ---
 
-## IT-025: Matched supplier — senderId set, peppolSupplierData cleared
+## Matched supplier — senderId set, peppolSupplierData cleared
 
 **Preconditions**: Peppol invoice with `supplierPartyContactId: 'contact-123'`.
 
@@ -241,7 +357,7 @@ it('IT-024: unmatched supplier resets senderId and sets peppolSupplierData', asy
 
 1. Call `handlePeppolDataParsed` with Peppol data where `supplierPartyContactId` is set
 
-### Assertions
+### Expected Outcome
 
 - `setValue('senderId', 'contact-123')` called
 - `setPeppolSupplierData(null)` called (clears unmatched state)
@@ -250,7 +366,7 @@ it('IT-024: unmatched supplier resets senderId and sets peppolSupplierData', asy
 ### Example Code
 
 ```typescript
-it('IT-025: matched supplier sets senderId and clears peppolSupplierData', async () => {
+it('matched supplier sets senderId and clears peppolSupplierData', async () => {
   const methods = createMockMethods();
 
   const matchedPeppol = {
@@ -262,7 +378,7 @@ it('IT-025: matched supplier sets senderId and clears peppolSupplierData', async
     methods,
   });
 
-  await handlePeppolDataParsed(matchedPeppol as any);
+  await handlePeppolDataParsed(matchedPeppol);
 
   expect(methods.setValue).toHaveBeenCalledWith('senderId', 'contact-123');
   expect(methods.resetField).not.toHaveBeenCalledWith('senderId');
@@ -271,7 +387,7 @@ it('IT-025: matched supplier sets senderId and clears peppolSupplierData', async
 
 ---
 
-## IT-026: Peppol credit note — typeCode flows to invoiceTypeCode
+## Peppol credit note — typeCode flows to invoiceTypeCode
 
 **Preconditions**: Peppol invoice with `typeCode: '381'` (CREDIT_NOTE).
 
@@ -280,7 +396,7 @@ it('IT-025: matched supplier sets senderId and clears peppolSupplierData', async
 1. Transform Peppol data with `typeCode: '381'`
 2. Verify the form receives `invoiceTypeCode: '381'`
 
-### Assertions
+### Expected Outcome
 
 - `transformedData.invoiceTypeCode` is `'381'`
 - When `handlePeppolDataParsed` runs, `setValue('invoiceTypeCode', '381')` is called
@@ -288,7 +404,7 @@ it('IT-025: matched supplier sets senderId and clears peppolSupplierData', async
 ### Example Code
 
 ```typescript
-it('IT-026: peppol credit note sets invoiceTypeCode to 381', async () => {
+it('peppol credit note sets invoiceTypeCode to 381', async () => {
   const methods = createMockMethods();
 
   const creditNotePeppol = {
@@ -301,7 +417,7 @@ it('IT-026: peppol credit note sets invoiceTypeCode to 381', async () => {
     methods,
   });
 
-  await handlePeppolDataParsed(creditNotePeppol as any);
+  await handlePeppolDataParsed(creditNotePeppol);
 
   const typeCodeCalls = methods.setValue.mock.calls.filter(
     ([key]: [string]) => key === 'invoiceTypeCode',
@@ -313,7 +429,7 @@ it('IT-026: peppol credit note sets invoiceTypeCode to 381', async () => {
 
 ---
 
-## IT-027: Belgian OGM structured remittance detection
+## Belgian OGM structured remittance detection
 
 **Preconditions**: Peppol invoice with `paymentMeans[0].id = '+++123/4567/89002+++'`.
 
@@ -322,7 +438,7 @@ it('IT-026: peppol credit note sets invoiceTypeCode to 381', async () => {
 1. Transform Peppol data with the formatted OGM reference
 2. Verify remittance type and cleaned reference
 
-### Assertions
+### Expected Outcome
 
 - `remittanceType` is `PaymentMessageTypeEnum.STRUCTURED`
 - `remittanceInfo` is `'123456789002'` (digits only, checksum valid)
@@ -333,7 +449,7 @@ it('IT-026: peppol credit note sets invoiceTypeCode to 381', async () => {
 import { PaymentMessageTypeEnum } from '@/common/models/payment';
 import { transformPeppolToFormData } from '../../../purchase-invoice-v2/utils/transformPeppolToFormData';
 
-it('IT-027: Belgian OGM is detected and cleaned to digits', () => {
+it('Belgian OGM is detected and cleaned to digits', () => {
   const ogmPeppol = {
     ...basePeppolData,
     paymentMeans: [{ code: '30', id: '+++123/4567/89002+++' }],
@@ -348,7 +464,7 @@ it('IT-027: Belgian OGM is detected and cleaned to digits', () => {
 
 ---
 
-## IT-028: Lock total computation in onCreatePurchaseInvoice
+## Lock total computation in onCreatePurchaseInvoice
 
 **Preconditions**: Peppol detail sheet fires `onCreatePurchaseInvoice` with transformed data.
 
@@ -358,7 +474,7 @@ it('IT-027: Belgian OGM is detected and cleaned to digits', () => {
 2. Simulate `onCreatePurchaseInvoice` callback from `PeppolInvoiceSheetRoute`
 3. Verify lock state config
 
-### Assertions
+### Expected Outcome
 
 - `sumTotalAmounts(amounts)` equals the expected total from Peppol lines
 - Config is `{ initialLockState: { locked: true, lockedTotal: <computed> } }`
@@ -371,7 +487,7 @@ import { sumTotalAmounts } from '../../components/invoice-lines/pipeline';
 import { transformPeppolToFormData } from '../../../purchase-invoice-v2/utils/transformPeppolToFormData';
 import type { AmountWithDistributionData } from '../../../purchase-invoice-v2/schema';
 
-it('IT-028: lock total matches sum of transformed peppol amounts', () => {
+it('lock total matches sum of transformed peppol amounts', () => {
   const multiLinePeppol = {
     ...basePeppolData,
     lines: [
@@ -405,7 +521,7 @@ it('IT-028: lock total matches sum of transformed peppol amounts', () => {
 
 ---
 
-## IT-029: Grouping strategy preserves originalLines and lock total
+## Grouping strategy preserves originalLines and lock total
 
 **Preconditions**: Peppol data with multiple lines at different VAT rates.
 
@@ -415,7 +531,7 @@ it('IT-028: lock total matches sum of transformed peppol amounts', () => {
 2. Apply `groupAmountsByVatRate` to re-group
 3. Verify `originalLines` are preserved and `sumTotalAmounts` stays the same
 
-### Assertions
+### Expected Outcome
 
 - Individual: 3 amount entries, total = sum of all three
 - Grouped by VAT: 2 entries (21% group + 6% group), same total
@@ -431,7 +547,7 @@ import {
   groupAmountsByVatRate,
 } from '../../../purchase-invoice-v2/utils/transformPeppolToFormData';
 
-it('IT-029: grouping preserves originalLines and lock total', () => {
+it('grouping preserves originalLines and lock total', () => {
   const multiVatPeppol = {
     ...basePeppolData,
     lines: [

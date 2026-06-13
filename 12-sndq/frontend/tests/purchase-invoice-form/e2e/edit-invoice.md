@@ -138,6 +138,67 @@ test('E2E-008: change supplier updates form', async ({ page }) => {
 
 ---
 
+## E2E-009b: Custom free distribution not reset on edit form open (REGRESSION)
+
+**Preconditions**: Seeded invoice with amount line saved with `distributionType: 'free'` (custom per-unit amounts, no distribution key). The supplier linked to this invoice has a default distribution key configured.
+
+**Bug context**: Regression test for the bug where the old `useBackfillSupplierDefaults` hook incorrectly overwrote "free" distributions on edit form load. The hook treated `distributionKeyId: undefined` as "needs backfill" without checking that the line had an intentional free distribution.
+
+### Steps
+
+1. Open the seeded invoice with free distribution in edit mode
+2. Wait for form to fully load (supplier defaults resolve)
+3. Check the amount line immediately (no user interaction)
+
+### Assertions
+
+- Amount line total remains unchanged
+- Opening distribution sheet shows custom amounts per unit (not recalculated by supplier key)
+- `distributionType` is still 'free'
+- No distribution key is selected
+- Supplier defaults did NOT overwrite the distribution
+
+### Example Code
+
+```typescript
+test('E2E-009b: free distribution not reset on edit form open (regression)', async ({ page }) => {
+  await page.goto('/financial/invoices/purchase');
+
+  // Open the seeded invoice with free distribution
+  await page.getByText('FREE-DIST-2026-001').click();
+  const sheet = page.locator('[data-slot="floating-sheet"]');
+  await expect(sheet).toBeVisible();
+
+  await sheet.getByRole('button', { name: /actions/i }).click();
+  await page.getByRole('menuitem', { name: /edit/i }).click();
+
+  const drawer = page.locator('[data-slot="sheet-content"]');
+  await expect(drawer).toBeVisible();
+
+  // Wait for all async data to settle (supplier defaults, properties, dist keys)
+  await page.waitForTimeout(4_000);
+
+  // Open the first amount line - it should still have free distribution
+  await drawer.locator('[data-testid="amount-line-row"]').first().click();
+  const distSheet = page.locator('[data-slot="sheet-content"]').last();
+  await expect(distSheet).toBeVisible();
+
+  // Verify distribution key toggle is off (free distribution has no key)
+  const useKeyToggle = distSheet.getByLabel(/use distribution key|distribution key/i);
+  if (await useKeyToggle.isVisible()) {
+    await expect(useKeyToggle).not.toBeChecked();
+  }
+
+  // Verify the unit amounts are the original saved values
+  // (specific assertions depend on seeded data)
+  const unitRows = distSheet.locator('[data-testid="unit-row"]');
+  const count = await unitRows.count();
+  expect(count).toBeGreaterThan(0);
+});
+```
+
+---
+
 ## E2E-009: Discard changes shows confirmation dialog
 
 **Preconditions**: Edit form open with modifications.

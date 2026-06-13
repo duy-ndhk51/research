@@ -1,15 +1,69 @@
 # Right Panel Tabs
 
-**File**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/right-panel-tabs.test.ts`
-**Component under test**: `InvoiceRightPanelConnected` (internal to `PurchaseInvoiceFormV3.tsx`)
+**Status**: Not started
+**Priority**: MEDIUM (wrong default tab hides Peppol data from user)
+**Test tier**: Pure logic
+**Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/right-panel-tabs.test.tsx`
+**Component(s) under test**: `InvoiceRightPanelConnected` (internal to `PurchaseInvoiceFormV3.tsx`)
 
-Tests verify tab defaulting behavior based on Peppol data presence and user selection. The tab logic uses `hasPeppolData` (not `hasAttachments`) as the primary condition — the Peppol Attachments tab appears whenever `peppolData` exists, regardless of whether there are attachment files.
+## Purpose
+
+Guard the tab defaulting logic that determines whether users see the file uploader or Peppol data first, and the lock trigger on Peppol parse.
+
+## Risk
+
+Users see empty uploader instead of Peppol data. Tab persists stale selection after Peppol clear. Lock never triggers from Peppol amounts.
+
+## Bugs Guarded
+
+- Default tab / peppol cleared — stale `userSelectedTab` not reset when `peppolData` appears/disappears; condition uses `hasPeppolData` (not `hasAttachments`)
+- Peppol content switching — `PeppolParsedPreview` vs `PeppolAttachmentsTab` depends on attachment file presence
+- Peppol auto-lock (**B1**, lock state vs form amounts) — Peppol auto-lock pathway must compute correct `lockedTotal` from `safePeppolDataParsed` amounts
+- User tab override — forced tab switch must not override explicit user selection
+
+## Scenarios
+
+| Test Name | Expected Outcome |
+|-----------|------------------|
+| Default tab is uploader (no peppol) | `rightPanelTab` is `'uploader'`, no extra tabs |
+| Peppol without attachments shows PeppolParsedPreview | Tab content is `PeppolParsedPreview`, `hideInlineAttachments: true` |
+| Peppol cleared removes tab, falls back to uploader | Extra tabs empty, `rightPanelTab` is `'uploader'` |
+| Peppol with attachments shows PeppolAttachmentsTab | Tab content is `PeppolAttachmentsTab` |
+| User tab selection overrides default | User selects `'uploader'` despite peppol -> stays `'uploader'` |
+| Peppol amounts parsed triggers lock | `setLockState({ locked: true, lockedTotal })` called |
+| Peppol with no amounts skips lock | `setLockState` NOT called |
+
+## Mocking Strategy
+
+```typescript
+// Pure logic tests -- tab selection is computed from state variables.
+// No component mocking needed for the tab selection logic itself.
+```
+
+## Shared Setup
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { sumTotalAmounts } from '../../components/invoice-lines/pipeline';
+import type { PeppolInvoiceResponse } from '@/common/api/resources/financial/peppolApi';
+import type { AmountWithDistributionData } from '../../../purchase-invoice-v2/schema';
+
+type AmountLine = Pick<AmountWithDistributionData, 'totalAmount'>;
+
+function computeRightPanelTab({
+  peppolData = undefined as PeppolInvoiceResponse | undefined,
+  userSelectedTab = null as string | null,
+}) {
+  const hasPeppolData = !!peppolData;
+  return userSelectedTab ?? (hasPeppolData ? 'attachments' : 'uploader');
+}
+```
 
 **Source reference**: `PurchaseInvoiceFormV3.tsx` lines 171-250
 
 ---
 
-## IT-013: Default tab is uploader when no peppol data
+## Default tab is uploader when no peppol data
 
 **Preconditions**: No `peppolData` (undefined or null).
 
@@ -17,7 +71,7 @@ Tests verify tab defaulting behavior based on Peppol data presence and user sele
 
 1. Evaluate the tab selection logic with `peppolData = undefined`
 
-### Assertions
+### Expected Outcome
 
 - Active tab is `'uploader'`
 - No extra tabs generated
@@ -26,24 +80,19 @@ Tests verify tab defaulting behavior based on Peppol data presence and user sele
 ### Example Code
 
 ```typescript
-import { describe, it, expect } from 'vitest';
-
 describe('Right panel tabs', () => {
-  it('IT-013: default tab is uploader when no peppol data', () => {
+  it('default tab is uploader when no peppol data', () => {
     const peppolData = undefined;
     const hasPeppolData = !!peppolData;
     const userSelectedTab: string | null = null;
 
-    const rightPanelTab =
-      userSelectedTab ?? (hasPeppolData ? 'attachments' : 'uploader');
+    const rightPanelTab = computeRightPanelTab({ peppolData, userSelectedTab });
 
     expect(rightPanelTab).toBe('uploader');
 
-    // No extra tabs when no peppol data
     const extraTabs = !peppolData ? [] : [{ value: 'attachments' }];
     expect(extraTabs).toHaveLength(0);
 
-    // Inline attachments NOT hidden (no peppol data)
     expect(hasPeppolData).toBe(false);
   });
 });
@@ -51,16 +100,16 @@ describe('Right panel tabs', () => {
 
 ---
 
-## IT-013b: Default tab is attachments when peppol data exists without attachment files
+## Default tab is attachments when peppol data exists without attachment files
 
-**Preconditions**: `peppolData` exists but has no attachment files (empty or undefined `attachments` array). This is the common case when a Peppol XML is uploaded without embedded PDF/XML attachments.
+**Preconditions**: `peppolData` exists but has no attachment files (empty or undefined `attachments` array).
 
 ### Steps
 
 1. Set `peppolData` with no attachments (or empty array)
 2. Evaluate tab selection and extra tab content
 
-### Assertions
+### Expected Outcome
 
 - Active tab defaults to `'attachments'`
 - Extra tabs array contains one entry with `PeppolParsedPreview` as content (not `PeppolAttachmentsTab`)
@@ -70,44 +119,35 @@ describe('Right panel tabs', () => {
 ### Example Code
 
 ```typescript
-it('IT-013b: peppol data without attachments shows PeppolParsedPreview in attachments tab', () => {
+it('peppol data without attachments shows PeppolParsedPreview in attachments tab', () => {
   const peppolData = {
     invoiceNumber: 'PEPINV-001',
     attachments: [],
-    // ...other peppol fields
   };
   const attachments = peppolData.attachments ?? [];
   const hasAttachments = attachments.length > 0;
   const hasPeppolData = !!peppolData;
   const userSelectedTab: string | null = null;
 
-  const rightPanelTab =
-    userSelectedTab ?? (hasPeppolData ? 'attachments' : 'uploader');
+  const rightPanelTab = computeRightPanelTab({ peppolData, userSelectedTab });
 
   expect(rightPanelTab).toBe('attachments');
   expect(hasPeppolData).toBe(true);
   expect(hasAttachments).toBe(false);
 
-  // Extra tab created with PeppolParsedPreview (not PeppolAttachmentsTab)
-  // because hasAttachments is false
   const extraTabs = !peppolData
     ? []
     : [{
         value: 'attachments',
         label: 'Peppol attachments',
-        // content: hasAttachments
-        //   ? <PeppolAttachmentsTab />
-        //   : <PeppolParsedPreview />
         contentType: hasAttachments ? 'PeppolAttachmentsTab' : 'PeppolParsedPreview',
       }];
   expect(extraTabs).toHaveLength(1);
   expect(extraTabs[0].contentType).toBe('PeppolParsedPreview');
 
-  // hideInlineAttachments prevents duplicate rendering in uploader tab
   const hideInlineAttachments = hasPeppolData;
   expect(hideInlineAttachments).toBe(true);
 
-  // Tab order puts attachments first
   const tabOrder = hasPeppolData
     ? ['attachments', 'uploader', 'allocation']
     : undefined;
@@ -117,17 +157,17 @@ it('IT-013b: peppol data without attachments shows PeppolParsedPreview in attach
 
 ---
 
-## IT-013c: Peppol data cleared removes extra tab and falls back to uploader
+## Peppol data cleared removes extra tab and falls back to uploader
 
 **Preconditions**: User previously uploaded a Peppol XML (tab was showing), then deletes the file.
 
 ### Steps
 
 1. Start with `peppolData` set (extra tab exists)
-2. Simulate clearing peppol data (user deletes file → `peppolData` becomes null)
+2. Simulate clearing peppol data (user deletes file -> `peppolData` becomes null)
 3. Evaluate tab state
 
-### Assertions
+### Expected Outcome
 
 - Extra tabs array is empty
 - Active tab falls back to `'uploader'` (user hadn't explicitly selected a tab)
@@ -137,14 +177,12 @@ it('IT-013b: peppol data without attachments shows PeppolParsedPreview in attach
 ### Example Code
 
 ```typescript
-it('IT-013c: clearing peppol data removes extra tab and falls back to uploader', () => {
-  // Simulate peppol data being cleared
+it('clearing peppol data removes extra tab and falls back to uploader', () => {
   const peppolData = null;
   const hasPeppolData = !!peppolData;
   const userSelectedTab: string | null = null;
 
-  const rightPanelTab =
-    userSelectedTab ?? (hasPeppolData ? 'attachments' : 'uploader');
+  const rightPanelTab = computeRightPanelTab({ peppolData, userSelectedTab });
 
   expect(rightPanelTab).toBe('uploader');
 
@@ -162,7 +200,7 @@ it('IT-013c: clearing peppol data removes extra tab and falls back to uploader',
 
 ---
 
-## IT-014: Default tab is attachments when peppol has attachment files
+## Default tab is attachments when peppol has attachment files
 
 **Preconditions**: `peppolData.attachments` has 2 items (PDF + XML).
 
@@ -170,7 +208,7 @@ it('IT-013c: clearing peppol data removes extra tab and falls back to uploader',
 
 1. Set `peppolData` with attachments array containing entries
 
-### Assertions
+### Expected Outcome
 
 - Active tab defaults to `'attachments'`
 - Extra tabs array contains one entry with `PeppolAttachmentsTab` as content (not `PeppolParsedPreview`)
@@ -179,7 +217,7 @@ it('IT-013c: clearing peppol data removes extra tab and falls back to uploader',
 ### Example Code
 
 ```typescript
-it('IT-014: peppol with attachments shows PeppolAttachmentsTab in attachments tab', () => {
+it('peppol with attachments shows PeppolAttachmentsTab in attachments tab', () => {
   const peppolData = {
     attachments: [
       { filename: 'doc.pdf', mimetype: 'application/pdf' },
@@ -191,14 +229,12 @@ it('IT-014: peppol with attachments shows PeppolAttachmentsTab in attachments ta
   const hasPeppolData = !!peppolData;
   const userSelectedTab: string | null = null;
 
-  const rightPanelTab =
-    userSelectedTab ?? (hasPeppolData ? 'attachments' : 'uploader');
+  const rightPanelTab = computeRightPanelTab({ peppolData, userSelectedTab });
 
   expect(rightPanelTab).toBe('attachments');
   expect(hasPeppolData).toBe(true);
   expect(hasAttachments).toBe(true);
 
-  // Extra tab uses PeppolAttachmentsTab when attachments exist
   const extraTabs = !peppolData
     ? []
     : [{
@@ -209,7 +245,6 @@ it('IT-014: peppol with attachments shows PeppolAttachmentsTab in attachments ta
   expect(extraTabs).toHaveLength(1);
   expect(extraTabs[0].contentType).toBe('PeppolAttachmentsTab');
 
-  // hideInlineAttachments based on peppolData existence
   const hideInlineAttachments = hasPeppolData;
   expect(hideInlineAttachments).toBe(true);
 });
@@ -217,7 +252,7 @@ it('IT-014: peppol with attachments shows PeppolAttachmentsTab in attachments ta
 
 ---
 
-## IT-015: User tab selection overrides default
+## User tab selection overrides default
 
 **Preconditions**: Peppol data present, user explicitly selects `'uploader'`.
 
@@ -226,7 +261,7 @@ it('IT-014: peppol with attachments shows PeppolAttachmentsTab in attachments ta
 1. Set peppolData (with or without attachments)
 2. Simulate user selecting `'uploader'` tab via `setUserSelectedTab`
 
-### Assertions
+### Expected Outcome
 
 - Active tab is `'uploader'` despite peppol data being present
 - The `userSelectedTab` takes precedence over the automatic default
@@ -234,12 +269,11 @@ it('IT-014: peppol with attachments shows PeppolAttachmentsTab in attachments ta
 ### Example Code
 
 ```typescript
-it('IT-015: user tab selection overrides peppol default', () => {
-  const hasPeppolData = true;
-  const userSelectedTab = 'uploader';
-
-  const rightPanelTab =
-    userSelectedTab ?? (hasPeppolData ? 'attachments' : 'uploader');
+it('user tab selection overrides peppol default', () => {
+  const rightPanelTab = computeRightPanelTab({
+    peppolData: { invoiceNumber: 'X' },
+    userSelectedTab: 'uploader',
+  });
 
   expect(rightPanelTab).toBe('uploader');
 });
@@ -247,7 +281,7 @@ it('IT-015: user tab selection overrides peppol default', () => {
 
 ---
 
-## IT-016: Peppol data parsed with amounts triggers lock
+## Peppol data parsed with amounts triggers lock
 
 **Preconditions**: Peppol data parsed callback fires with amounts.
 
@@ -256,7 +290,7 @@ it('IT-015: user tab selection overrides peppol default', () => {
 1. Call `safePeppolDataParsed` with data containing amount lines
 2. Verify `setLockState` is called with computed total
 
-### Assertions
+### Expected Outcome
 
 - `setLockState` called with `{ locked: true, lockedTotal: <sum> }`
 - `sumTotalAmounts` correctly computes the total
@@ -264,20 +298,16 @@ it('IT-015: user tab selection overrides peppol default', () => {
 ### Example Code
 
 ```typescript
-import { sumTotalAmounts } from '../../components/invoice-lines/pipeline';
-
-it('IT-016: peppol data parsed with amounts sets lock state', () => {
-  const parsedAmounts = [
+it('peppol data parsed with amounts sets lock state', () => {
+  const parsedAmounts: AmountLine[] = [
     { totalAmount: 5000 },
     { totalAmount: 3000 },
-  ] as any[];
+  ];
 
   const lockedTotal = sumTotalAmounts(parsedAmounts);
 
   expect(lockedTotal).toBe(8000);
 
-  // In the component, safePeppolDataParsed calls:
-  // setLockState({ locked: true, lockedTotal });
   const expectedLockState = { locked: true, lockedTotal: 8000 };
   expect(expectedLockState.locked).toBe(true);
   expect(expectedLockState.lockedTotal).toBe(8000);
@@ -286,7 +316,7 @@ it('IT-016: peppol data parsed with amounts sets lock state', () => {
 
 ---
 
-## IT-016b: Peppol data parsed with no amounts does not lock
+## Peppol data parsed with no amounts does not lock
 
 **Preconditions**: Peppol data parsed returns empty amounts array.
 
@@ -294,19 +324,22 @@ it('IT-016: peppol data parsed with amounts sets lock state', () => {
 
 1. Call `safePeppolDataParsed` with data that yields empty amounts
 
-### Assertions
+### Expected Outcome
 
 - `setLockState` is NOT called (the guard `parsedAmounts.length > 0` prevents it)
 
 ### Example Code
 
 ```typescript
-it('IT-016b: peppol data with no amounts does not trigger lock', () => {
-  const parsedAmounts: any[] = [];
+it('peppol data with no amounts does not trigger lock', () => {
+  const parsedAmounts: AmountLine[] = [];
 
-  // Guard in safePeppolDataParsed:
-  // if (parsedAmounts.length > 0) { setLockState(...) }
   const shouldLock = parsedAmounts.length > 0;
   expect(shouldLock).toBe(false);
 });
 ```
+
+## Related Specs
+
+- Lock state: [lock-state-toggle.md](./lock-state-toggle.md) — lock state machine
+- Peppol wiring: [peppol-to-invoice.md](./peppol-to-invoice.md) — field population

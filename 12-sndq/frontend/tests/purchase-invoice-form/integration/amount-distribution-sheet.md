@@ -1,15 +1,108 @@
 # Amount Distribution Sheet
 
-**File**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/amount-distribution-sheet.test.tsx`
-**Logic under test**: `PurchaseInvoiceAmountDistributionSheet` component from `purchase-invoice-v2/components/`
+**Status**: Not started
+**Priority**: HIGH (corrupted allocations bypass lock validation and cause accounting errors)
+**Test tier**: Component integration
+**Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/amount-distribution-sheet.test.tsx`
+**Component(s) under test**: `PurchaseInvoiceAmountDistributionSheet` from `purchase-invoice-v2/components/`
 
-Tests verify the distribution sheet UI lifecycle: opening, unit initialization from building properties, distribution type switching, share/amount recalculation, ledger and distribution key suggestions, and validation. All API hooks (`usePropertiesV2`, `useDistributionKeys`, `useLedgerSuggestions`) are mocked.
+## Purpose
+
+Guard the distribution sheet lifecycle: unit initialization, distribution type switching, proportional recalculation, suggestion application, and validation. Prevents corrupted allocations that bypass lock validation.
+
+## Risk
+
+Units not initialized on sheet open, distribution type switch corrupts amounts, distribution key mode doesn't force whole building, amount mismatch undetected at submit, suggestions don't populate form fields.
+
+## Bugs Guarded
+
+- "loading spinner" / "properties initialize units" tests guard initialization — properties must be loaded before rendering form; premature render shows broken state
+- "distribution key forces wholeBuilding" / "switching key recalculates" tests guard **B8** (grouping changes totals without lock update) — distribution key changes shares; combined with lock, total must stay consistent after `replace()`
+- "totalAmount recalculation" / "splitAmount rounding" tests guard proportional redistribution — rounding errors in integer cents math can lose/gain cents across units; `splitAmount` uses `Math.floor` + remainder distribution to guarantee exact sum, but the remainder allocation across same-share groups can break equality
+- "total mismatch validation" test guards **B9** (draft save skips lock validation) — mismatch dialog prevents draft save with inconsistent allocations; `SplitErrorDialog` must catch sum != total before submit
+- distribution type switching tests guard the state machine — each type has unique constraints (`DEFAULT_SHARE`, `PERCENTAGE_BASE_VALUE`, editable inputs, zeroed allocations)
+
+## Scenarios
+
+| Test Name | Expected Outcome |
+|-----------|-----------------|
+| Loading state shows spinner | Spinner visible, no form fields |
+| Properties loaded initializes units | 3 properties -> 3 unit rows, all unselected |
+| Edit mode pre-fills from editingItem | Form resets to prior saved values |
+| Share mode sets DEFAULT_SHARE | `totalShare: 1000`, amounts redistributed |
+| Percentage mode sets PERCENTAGE_BASE_VALUE | `totalShare: 10000` |
+| Free mode enables per-unit inputs | Unit amount inputs editable, shares hidden |
+| Split later clears all allocations | All shares/amounts zeroed |
+| Distribution key forces wholeBuilding + applies shares | All units selected, key shares applied |
+| Changing distribution key recalculates shares | Shares update to new key ratios |
+| Whole building toggle controls selection | ON -> all checked; OFF -> all unchecked |
+| Individual unit deselect zeros its values | Share and amount become 0 |
+| Select all checkbox toggles all units | Header checkbox toggles all |
+| totalAmount change recalculates amounts | Proportional redistribution |
+| splitAmount rounding: 3 equal shares, non-divisible total | Parts sum exactly to total, no cent lost |
+| splitAmount rounding: 2 equal shares, odd total | One unit gets +1 cent, sum still exact |
+| Ledger suggestion chip sets costAccount | costAccount field populated |
+| Distribution key suggestion switches mode | Distribution key mode enabled, key applied |
+| Total mismatch shows SplitErrorDialog | Error dialog with "divide equally" |
+| Unit search filters by name/address/owner | Only matching units shown |
+| Unit sort reorders list | Units ordered ascending/descending |
+
+## Related Specs
+
+- Lock state: [lock-state-toggle.md](./lock-state-toggle.md) — lock total must stay consistent after distribution
+- Supplier defaults: [supplier-defaults.md](./supplier-defaults.md) — distribution key defaults
+- Invoice lines: [invoice-lines-table.md](./invoice-lines-table.md) — distribution sheet trigger
+
+## Mocking Strategy
+
+```typescript
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
+  useLocale: () => 'en',
+}));
+
+vi.mock('@/hooks/patrimony/useProperties', () => ({
+  usePropertiesV2: vi.fn(),
+}));
+
+vi.mock('@/hooks/financial/useBuildingSuppliers', () => ({
+  useBuildingSupplierSuggestions: vi.fn(() => ({
+    ledgerSuggestion: null,
+    distributionKeySuggestion: null,
+  })),
+}));
+```
+
+## Shared Setup
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { renderWithProviders } from '../utils';
+
+const mockProperties = [
+  { id: 'unit-1', name: 'Apt 1', address: 'Street 1', ownerName: 'Owner A' },
+  { id: 'unit-2', name: 'Apt 2', address: 'Street 2', ownerName: 'Owner B' },
+  { id: 'unit-3', name: 'Apt 3', address: 'Street 3', ownerName: 'Owner C' },
+];
+
+const mockDistributionKey = (id: string, shares: number[] = [500, 300, 200]) => ({
+  id,
+  name: `Key ${id}`,
+  items: shares.map((share, i) => ({ propertyId: mockProperties[i].id, share })),
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+```
 
 **Source reference**: `PurchaseInvoiceAmountDistributionSheet.tsx`, `useSplitAmounts.ts`, `distributionKeyForm.ts`
 
 ---
 
-## IT-030: Loading state shows spinner
+## Loading state shows spinner
 
 **Preconditions**: `open: true`, `usePropertiesV2` returns `isPending: true`.
 
@@ -17,7 +110,7 @@ Tests verify the distribution sheet UI lifecycle: opening, unit initialization f
 
 1. Render `PurchaseInvoiceAmountDistributionSheet` with `open: true` and mocked pending properties
 
-### Assertions
+### Expected Outcome
 
 - `LoadingSpinner` is visible inside the sheet
 - No unit list or form fields are rendered
@@ -37,7 +130,7 @@ vi.mock('@/hooks/useDistributionKeys', () => ({
 }));
 
 describe('Amount Distribution Sheet', () => {
-  it('IT-030: shows spinner while properties are loading', () => {
+  it('shows spinner while properties are loading', () => {
     render(
       <PurchaseInvoiceAmountDistributionSheet
         open={true}
@@ -58,7 +151,7 @@ describe('Amount Distribution Sheet', () => {
 
 ---
 
-## IT-031: Properties loaded initializes units
+## Properties loaded initializes units
 
 **Preconditions**: `open: true`, `usePropertiesV2` returns 3 properties, no `editingItem`.
 
@@ -67,7 +160,7 @@ describe('Amount Distribution Sheet', () => {
 1. Render with loaded properties
 2. Wait for units to be initialized via the `useEffect`
 
-### Assertions
+### Expected Outcome
 
 - 3 unit rows rendered in the table
 - All units have `selected: false` and `amount: 0`
@@ -76,7 +169,7 @@ describe('Amount Distribution Sheet', () => {
 ### Example Code
 
 ```typescript
-it('IT-031: initializes units from building properties', async () => {
+it('initializes units from building properties', async () => {
   mockProperties([
     { id: 'unit-1', name: 'Apt 1' },
     { id: 'unit-2', name: 'Apt 2' },
@@ -98,7 +191,7 @@ it('IT-031: initializes units from building properties', async () => {
 
 ---
 
-## IT-032: Edit mode pre-fills from editingItem
+## Edit mode pre-fills from editingItem
 
 **Preconditions**: `open: true`, `editingItem` contains saved distribution data with 2 selected units.
 
@@ -107,7 +200,7 @@ it('IT-031: initializes units from building properties', async () => {
 1. Render with `editingItem` that has `totalAmount: 50000`, `distributionType: 'share'`, 2 units with shares
 2. Verify form resets to editing values
 
-### Assertions
+### Expected Outcome
 
 - Total amount field shows the saved value
 - Distribution type reflects `'share'`
@@ -116,7 +209,7 @@ it('IT-031: initializes units from building properties', async () => {
 ### Example Code
 
 ```typescript
-it('IT-032: pre-fills form from editingItem', async () => {
+it('pre-fills form from editingItem', async () => {
   const editingItem = {
     id: 'line-1',
     amount: 50000,
@@ -144,7 +237,7 @@ it('IT-032: pre-fills form from editingItem', async () => {
 
 ---
 
-## IT-033: Share distribution type sets DEFAULT_SHARE
+## Share distribution type sets DEFAULT_SHARE
 
 **Preconditions**: Sheet open with 3 properties, `wholeBuilding: true`.
 
@@ -153,7 +246,7 @@ it('IT-032: pre-fills form from editingItem', async () => {
 1. Select distribution type "Share"
 2. Observe `totalShare` and unit amount recalculation
 
-### Assertions
+### Expected Outcome
 
 - `totalShare` is set to `DEFAULT_SHARE` (1000)
 - `applySharesDistribution` called with `DEFAULT_SHARE` and `SHARE` calculation
@@ -162,7 +255,7 @@ it('IT-032: pre-fills form from editingItem', async () => {
 ### Example Code
 
 ```typescript
-it('IT-033: share mode sets DEFAULT_SHARE and recalculates', async () => {
+it('share mode sets DEFAULT_SHARE and recalculates', async () => {
   render(<DistributionSheet open={true} />);
   await selectWholeBuilding();
 
@@ -177,7 +270,7 @@ it('IT-033: share mode sets DEFAULT_SHARE and recalculates', async () => {
 
 ---
 
-## IT-034: Percentage distribution type sets PERCENTAGE_BASE_VALUE
+## Percentage distribution type sets PERCENTAGE_BASE_VALUE
 
 **Preconditions**: Sheet open with properties, `wholeBuilding: true`.
 
@@ -185,7 +278,7 @@ it('IT-033: share mode sets DEFAULT_SHARE and recalculates', async () => {
 
 1. Select distribution type "Percentage"
 
-### Assertions
+### Expected Outcome
 
 - `totalShare` is set to `PERCENTAGE_BASE_VALUE` (10000)
 - Unit shares reflect percentage values
@@ -193,7 +286,7 @@ it('IT-033: share mode sets DEFAULT_SHARE and recalculates', async () => {
 ### Example Code
 
 ```typescript
-it('IT-034: percentage mode sets PERCENTAGE_BASE_VALUE', async () => {
+it('percentage mode sets PERCENTAGE_BASE_VALUE', async () => {
   render(<DistributionSheet open={true} />);
   await selectWholeBuilding();
 
@@ -208,7 +301,7 @@ it('IT-034: percentage mode sets PERCENTAGE_BASE_VALUE', async () => {
 
 ---
 
-## IT-035: Free distribution type enables per-unit inputs
+## Free distribution type enables per-unit inputs
 
 **Preconditions**: Sheet open, units selected.
 
@@ -216,7 +309,7 @@ it('IT-034: percentage mode sets PERCENTAGE_BASE_VALUE', async () => {
 
 1. Select distribution type "Free"
 
-### Assertions
+### Expected Outcome
 
 - Per-unit amount inputs become editable (not read-only)
 - `totalShare` is set to `totalAmount`
@@ -225,7 +318,7 @@ it('IT-034: percentage mode sets PERCENTAGE_BASE_VALUE', async () => {
 ### Example Code
 
 ```typescript
-it('IT-035: free mode enables manual per-unit amount editing', async () => {
+it('free mode enables manual per-unit amount editing', async () => {
   render(<DistributionSheet open={true} />);
   await selectWholeBuilding();
 
@@ -240,7 +333,7 @@ it('IT-035: free mode enables manual per-unit amount editing', async () => {
 
 ---
 
-## IT-036: Split later clears all allocations
+## Split later clears all allocations
 
 **Preconditions**: Sheet open with units that have existing shares and amounts.
 
@@ -249,7 +342,7 @@ it('IT-035: free mode enables manual per-unit amount editing', async () => {
 1. Set some units with shares and amounts
 2. Switch to "Split later"
 
-### Assertions
+### Expected Outcome
 
 - All units have `share: 0` and `amount: 0`
 - `useDistributionKey` is `false`
@@ -259,7 +352,7 @@ it('IT-035: free mode enables manual per-unit amount editing', async () => {
 ### Example Code
 
 ```typescript
-it('IT-036: split_later clears all unit allocations', async () => {
+it('split_later clears all unit allocations', async () => {
   render(<DistributionSheet open={true} editingItem={itemWithShares} />);
 
   await userEvent.click(screen.getByLabelText(/split later/i));
@@ -275,7 +368,7 @@ it('IT-036: split_later clears all unit allocations', async () => {
 
 ---
 
-## IT-037: Distribution key mode forces wholeBuilding and applies shares
+## Distribution key mode forces wholeBuilding and applies shares
 
 **Preconditions**: Sheet open with 3 properties, distribution keys available.
 
@@ -284,7 +377,7 @@ it('IT-036: split_later clears all unit allocations', async () => {
 1. Select distribution type "Distribution key"
 2. Observe `wholeBuilding`, unit selection, and share values
 
-### Assertions
+### Expected Outcome
 
 - `wholeBuilding` set to `true`
 - All units marked `selected: true`
@@ -295,7 +388,7 @@ it('IT-036: split_later clears all unit allocations', async () => {
 ### Example Code
 
 ```typescript
-it('IT-037: distribution key mode forces wholeBuilding and applies key shares', async () => {
+it('distribution key mode forces wholeBuilding and applies key shares', async () => {
   mockDistributionKeys([
     {
       id: 'dk-1',
@@ -322,7 +415,7 @@ it('IT-037: distribution key mode forces wholeBuilding and applies key shares', 
 
 ---
 
-## IT-038: Changing distribution key recalculates shares
+## Changing distribution key recalculates shares
 
 **Preconditions**: Already in distribution key mode with `dk-1` applied.
 
@@ -330,7 +423,7 @@ it('IT-037: distribution key mode forces wholeBuilding and applies key shares', 
 
 1. Switch to `dk-2` which has different share ratios
 
-### Assertions
+### Expected Outcome
 
 - Unit shares update to match `dk-2`'s definitions
 - Amounts recalculated based on new shares
@@ -338,7 +431,7 @@ it('IT-037: distribution key mode forces wholeBuilding and applies key shares', 
 ### Example Code
 
 ```typescript
-it('IT-038: switching distribution key recalculates all unit shares', async () => {
+it('switching distribution key recalculates all unit shares', async () => {
   mockDistributionKeys([
     { id: 'dk-1', calculation: 'share', base: 1000, shares: [/*...*/] },
     { id: 'dk-2', calculation: 'percentage', base: 10000, shares: [/*...*/] },
@@ -358,7 +451,7 @@ it('IT-038: switching distribution key recalculates all unit shares', async () =
 
 ---
 
-## IT-039: Whole building toggle controls bulk selection
+## Whole building toggle controls bulk selection
 
 **Preconditions**: Sheet open with 3 units, none selected.
 
@@ -367,7 +460,7 @@ it('IT-038: switching distribution key recalculates all unit shares', async () =
 1. Toggle "Whole building" ON → all units selected
 2. Toggle "Whole building" OFF → all units deselected with amounts zeroed
 
-### Assertions
+### Expected Outcome
 
 - ON: all checkboxes checked
 - OFF: all checkboxes unchecked, all `share: 0`, all `amount: 0`
@@ -376,7 +469,7 @@ it('IT-038: switching distribution key recalculates all unit shares', async () =
 ### Example Code
 
 ```typescript
-it('IT-039: whole building toggle controls bulk selection', async () => {
+it('whole building toggle controls bulk selection', async () => {
   render(<DistributionSheet open={true} />);
 
   // Toggle ON
@@ -393,7 +486,7 @@ it('IT-039: whole building toggle controls bulk selection', async () => {
 
 ---
 
-## IT-040: Individual unit selection zeros share on deselect
+## Individual unit selection zeros share on deselect
 
 **Preconditions**: Sheet open, whole building ON, share mode with amounts distributed.
 
@@ -401,7 +494,7 @@ it('IT-039: whole building toggle controls bulk selection', async () => {
 
 1. Deselect one unit
 
-### Assertions
+### Expected Outcome
 
 - Deselected unit has `share: 0` and `amount: 0`
 - Other units retain their values
@@ -409,7 +502,7 @@ it('IT-039: whole building toggle controls bulk selection', async () => {
 ### Example Code
 
 ```typescript
-it('IT-040: deselecting a unit zeros its share and amount', async () => {
+it('deselecting a unit zeros its share and amount', async () => {
   render(<DistributionSheet open={true} />);
   await selectWholeBuilding();
   await setTotalAmount(30000);
@@ -426,7 +519,7 @@ it('IT-040: deselecting a unit zeros its share and amount', async () => {
 
 ---
 
-## IT-041: Select all checkbox toggles all units
+## Select all checkbox toggles all units
 
 **Preconditions**: Sheet open with 3 units, none selected.
 
@@ -434,7 +527,7 @@ it('IT-040: deselecting a unit zeros its share and amount', async () => {
 
 1. Click the header "select all" checkbox
 
-### Assertions
+### Expected Outcome
 
 - All unit checkboxes become checked
 - Clicking again unchecks all
@@ -442,7 +535,7 @@ it('IT-040: deselecting a unit zeros its share and amount', async () => {
 ### Example Code
 
 ```typescript
-it('IT-041: header select-all toggles all units', async () => {
+it('header select-all toggles all units', async () => {
   render(<DistributionSheet open={true} />);
 
   await userEvent.click(screen.getByLabelText(/select all/i));
@@ -457,7 +550,7 @@ it('IT-041: header select-all toggles all units', async () => {
 
 ---
 
-## IT-042: Changing totalAmount recalculates amounts for non-free types
+## Changing totalAmount recalculates amounts for non-free types
 
 **Preconditions**: Sheet open, share mode, 2 units with equal shares, `totalAmount: 20000`.
 
@@ -465,7 +558,7 @@ it('IT-041: header select-all toggles all units', async () => {
 
 1. Change `totalAmount` to `40000`
 
-### Assertions
+### Expected Outcome
 
 - Unit amounts double (from 10000 each to 20000 each)
 - Shares stay the same
@@ -474,7 +567,7 @@ it('IT-041: header select-all toggles all units', async () => {
 ### Example Code
 
 ```typescript
-it('IT-042: totalAmount change triggers proportional redistribution', async () => {
+it('totalAmount change triggers proportional redistribution', async () => {
   render(<DistributionSheet open={true} />);
   await selectWholeBuilding();
   await setTotalAmount(20000);
@@ -496,7 +589,96 @@ it('IT-042: totalAmount change triggers proportional redistribution', async () =
 
 ---
 
-## IT-043: Ledger suggestion chip sets costAccount
+## splitAmount rounding -- 3 equal shares with non-divisible total
+
+> Documents that `splitAmount` guarantees parts sum exactly to the total, even when the total is not evenly divisible. Uses `Math.floor` per part then distributes the remainder 1 cent at a time.
+
+**Preconditions**: Pure calculation test using `splitAmount` directly.
+
+### Steps
+
+1. Call `splitAmount(10000, [333, 333, 334], 1000)` (near-equal shares, total not divisible by 3)
+2. Call `splitAmount(10001, [333, 333, 334], 1000)` (odd total)
+3. Call `splitAmount(10000, [333, 333, 333], 999)` (exactly equal shares, non-divisible)
+
+### Expected Outcome (current behavior)
+
+- In all cases, `parts.reduce((a, b) => a + b, 0)` equals the original `total` exactly
+- No part is negative
+- For equal shares, the difference between any two parts is at most 1 cent
+
+### Example Code
+
+```typescript
+it('splitAmount with near-equal shares sums exactly to total', () => {
+  // 3 near-equal shares, total 10000
+  const result1 = splitAmount(10000, [333, 333, 334], 1000);
+  expect(result1.reduce((a, b) => a + b, 0)).toBe(10000);
+  expect(result1.every((p) => p >= 0)).toBe(true);
+
+  // Odd total
+  const result2 = splitAmount(10001, [333, 333, 334], 1000);
+  expect(result2.reduce((a, b) => a + b, 0)).toBe(10001);
+  expect(result2.every((p) => p >= 0)).toBe(true);
+
+  // Exactly equal shares, non-divisible (10000 / 3 = 3333.33...)
+  const result3 = splitAmount(10000, [333, 333, 333], 999);
+  expect(result3.reduce((a, b) => a + b, 0)).toBe(10000);
+  expect(result3.every((p) => p >= 0)).toBe(true);
+
+  // Equal shares should produce at most 1 cent difference between parts
+  const maxPart3 = Math.max(...result3);
+  const minPart3 = Math.min(...result3);
+  expect(maxPart3 - minPart3).toBeLessThanOrEqual(1);
+});
+```
+
+---
+
+## splitAmount rounding -- 2 equal shares with odd total
+
+> Documents that when 2 units have identical shares and the total is odd, one unit receives +1 cent. The `splitAmount` function groups by share value and distributes remainder to groups, which may break equality when the remainder is smaller than the group size.
+
+**Preconditions**: Pure calculation test using `splitAmount` directly.
+
+### Steps
+
+1. Call `splitAmount(10001, [500, 500], 1000)` (2 equal shares, odd total)
+2. Call `splitAmount(9999, [500, 500], 1000)` (same but different odd total)
+3. Call `splitAmount(10000, [500, 500], 1000)` (even total, should be perfectly equal)
+
+### Expected Outcome (current behavior)
+
+- Odd total: one unit gets `5001`, the other `5000` -- sum is `10001`
+- Even total: both units get `5000` -- sum is `10000`
+- In the odd case, which unit gets +1 depends on the group remainder distribution logic (Pass 2 in `splitAmount`)
+
+### Example Code
+
+```typescript
+it('splitAmount with 2 equal shares and odd total', () => {
+  // Odd total: 10001 split into 2 equal shares
+  const odd = splitAmount(10001, [500, 500], 1000);
+  expect(odd.reduce((a, b) => a + b, 0)).toBe(10001);
+  expect(odd).toHaveLength(2);
+  // One unit gets the extra cent
+  expect(odd.toSorted((a, b) => a - b)).toEqual([5000, 5001]);
+
+  // Odd total
+  const odd2 = splitAmount(9999, [500, 500], 1000);
+  expect(odd2.reduce((a, b) => a + b, 0)).toBe(9999);
+  expect(odd2.toSorted((a, b) => a - b)).toEqual([4999, 5000]);
+
+  // Even total: perfectly equal
+  const even = splitAmount(10000, [500, 500], 1000);
+  expect(even.reduce((a, b) => a + b, 0)).toBe(10000);
+  expect(even).toEqual([5000, 5000]);
+});
+```
+
+---
+
+## Ledger suggestion chip sets costAccount
 
 **Preconditions**: Sheet open, `useLedgerSuggestions` returns suggestions.
 
@@ -504,7 +686,7 @@ it('IT-042: totalAmount change triggers proportional redistribution', async () =
 
 1. Click a ledger suggestion chip
 
-### Assertions
+### Expected Outcome
 
 - `costAccount` form field set with `id`, `type`, `code`, `name` from suggestion
 - Suggestion chip shows as selected
@@ -512,7 +694,7 @@ it('IT-042: totalAmount change triggers proportional redistribution', async () =
 ### Example Code
 
 ```typescript
-it('IT-043: clicking ledger suggestion populates costAccount', async () => {
+it('clicking ledger suggestion populates costAccount', async () => {
   mockLedgerSuggestions([
     { value: 'ledger-1', code: '6100', name: 'Maintenance', parentMotherName: 'Costs' },
   ]);
@@ -529,7 +711,7 @@ it('IT-043: clicking ledger suggestion populates costAccount', async () => {
 
 ---
 
-## IT-044: Distribution key suggestion chip switches to distribution key mode
+## Distribution key suggestion chip switches to distribution key mode
 
 **Preconditions**: Sheet open in share mode, distribution key suggestions available.
 
@@ -537,7 +719,7 @@ it('IT-043: clicking ledger suggestion populates costAccount', async () => {
 
 1. Click a distribution key suggestion chip
 
-### Assertions
+### Expected Outcome
 
 - `useDistributionKey` set to `true`
 - `distributionKeyId` set to the clicked suggestion's value
@@ -546,7 +728,7 @@ it('IT-043: clicking ledger suggestion populates costAccount', async () => {
 ### Example Code
 
 ```typescript
-it('IT-044: clicking distribution key suggestion enables distribution key mode and applies key', async () => {
+it('clicking distribution key suggestion enables distribution key mode and applies key', async () => {
   mockDistributionKeySuggestions([
     { value: 'dk-1', name: 'Equal shares' },
   ]);
@@ -563,7 +745,7 @@ it('IT-044: clicking distribution key suggestion enables distribution key mode a
 
 ---
 
-## IT-045: Total mismatch validation shows SplitErrorDialog
+## Total mismatch validation shows SplitErrorDialog
 
 **Preconditions**: Sheet open, free mode, unit amounts don't sum to `totalAmount`.
 
@@ -573,7 +755,7 @@ it('IT-044: clicking distribution key suggestion enables distribution key mode a
 2. Set unit-1 amount to `20000`, unit-2 amount to `5000` (sum = 25000, mismatch)
 3. Click submit
 
-### Assertions
+### Expected Outcome
 
 - `SplitErrorDialog` opens with expected vs actual amounts
 - Dialog offers "Divide equally" action
@@ -581,7 +763,7 @@ it('IT-044: clicking distribution key suggestion enables distribution key mode a
 ### Example Code
 
 ```typescript
-it('IT-045: total mismatch triggers SplitErrorDialog', async () => {
+it('total mismatch triggers SplitErrorDialog', async () => {
   render(<DistributionSheet open={true} />);
   await selectWholeBuilding();
   await selectFreeMode();
@@ -600,7 +782,7 @@ it('IT-045: total mismatch triggers SplitErrorDialog', async () => {
 
 ---
 
-## IT-046: Unit search filters by name, address, and owner
+## Unit search filters by name, address, and owner
 
 **Preconditions**: Sheet open with 3 units: "Apt 101", "Apt 202", "Garage B1".
 
@@ -609,7 +791,7 @@ it('IT-045: total mismatch triggers SplitErrorDialog', async () => {
 1. Type "Apt" in search input
 2. Observe filtered list
 
-### Assertions
+### Expected Outcome
 
 - Only "Apt 101" and "Apt 202" visible
 - "Garage B1" hidden
@@ -618,7 +800,7 @@ it('IT-045: total mismatch triggers SplitErrorDialog', async () => {
 ### Example Code
 
 ```typescript
-it('IT-046: search filters units by name', async () => {
+it('search filters units by name', async () => {
   mockProperties([
     { id: 'u1', name: 'Apt 101' },
     { id: 'u2', name: 'Apt 202' },
@@ -639,7 +821,7 @@ it('IT-046: search filters units by name', async () => {
 
 ---
 
-## IT-047: Unit sort reorders by name, owner, or amount
+## Unit sort reorders by name, owner, or amount
 
 **Preconditions**: Sheet open with 3 units in arbitrary order.
 
@@ -648,7 +830,7 @@ it('IT-046: search filters units by name', async () => {
 1. Click sort by "amount" ascending
 2. Observe order
 
-### Assertions
+### Expected Outcome
 
 - Units ordered by amount ascending
 - Switching to descending reverses order
@@ -656,7 +838,7 @@ it('IT-046: search filters units by name', async () => {
 ### Example Code
 
 ```typescript
-it('IT-047: sort by amount reorders unit list', async () => {
+it('sort by amount reorders unit list', async () => {
   render(<DistributionSheet open={true} editingItem={itemWithVariousAmounts} />);
 
   await userEvent.click(screen.getByText(/amount/i));

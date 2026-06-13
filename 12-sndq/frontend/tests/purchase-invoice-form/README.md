@@ -3,7 +3,8 @@
 Step-by-step execution guide for adding integration and E2E test coverage to the purchase invoice v3 form. Each commit should be independently verifiable and revertable.
 
 **Created**: 2026-06-03
-**Status**: Not started
+**Updated**: 2026-06-12
+**Status**: Planning complete — ready for reimplementation
 **Architecture**: [purchase-invoice-v3-tests-planning.md](../refactoring/purchase-invoice-v3-tests-planning.md)
 **Branch**: `test/purchase-invoice-v3-coverage`
 
@@ -24,11 +25,11 @@ Step-by-step execution guide for adding integration and E2E test coverage to the
 
 **Goal**: Add integration and E2E test coverage for `purchase-invoice-v3` form behaviors to catch regressions during refactors and verify end-to-end user flows.
 
-**Structure**: 2 PRs, covering 79 integration test cases and 53 E2E test cases.
+**Structure**: 2 PRs, covering 126 integration test cases (IT-001..IT-126) and 53 E2E test cases.
 
 | PR | Scope | Risk level | Cases |
 |----|-------|------------|-------|
-| **PR 1** | Integration tests (Vitest + Testing Library) | Low | IT-001..IT-071 (incl. IT-013b/c, IT-058b, IT-062b/c, IT-066b, IT-069b, IT-071b) |
+| **PR 1** | Integration tests (Vitest + Testing Library) | Low | IT-001..IT-126 (incl. sub-scenarios) |
 | **PR 2** | E2E tests (Playwright) | Medium | E2E-001..E2E-052 + E2E-014b |
 
 **Why 2 PRs**: Integration tests have no backend dependency and can be merged first. E2E tests require seed scenarios and staging API stability, making them a separate deliverable.
@@ -41,11 +42,13 @@ Step-by-step execution guide for adding integration and E2E test coverage to the
 │  Critical user journeys against staging API        │
 │  Catches: routing, auth, real API, network wiring  │
 ├───────────────────────────────────────────────────┤
-│  Integration (Vitest + Testing Library) — 79 cases │
+│  Integration (Vitest + Testing Library) — 126 cases│
 │  Form sections with real providers, mocked APIs    │
 │  Catches: context wiring, conditional render,      │
 │  state transitions, validation, mode switching,    │
-│  distribution sheet, supplier defaults wiring      │
+│  distribution sheet, supplier defaults wiring,     │
+│  grouping strategy, lock reconciliation,           │
+│  merge resolution, period input                    │
 ├───────────────────────────────────────────────────┤
 │  Unit (existing) — 14 test files                   │
 │  Pure logic: pipeline, reducer, utils, hooks       │
@@ -75,15 +78,16 @@ Step-by-step execution guide for adding integration and E2E test coverage to the
 - Node.js 20+, pnpm installed
 - `sndq-fe/.env` with QA credentials configured
 - `@testing-library/react` (already in devDependencies)
-- `@testing-library/user-event` (needs to be added for integration tests)
+- `@testing-library/user-event` (already in devDependencies)
+- `@testing-library/jest-dom` (configured globally via `vitest.setup.ts`)
 - Playwright installed for E2E (`pnpm exec playwright install`)
 
 ### Known constraints
 
 - `vitest.config.mts` includes only `src/**/*.test.{js,ts,jsx,tsx}` — integration tests must follow this pattern
+- `vitest.setup.ts` registers `@testing-library/jest-dom` globally — use `toBeInTheDocument()`, `toHaveClass()`, etc.
 - E2E Playwright config uses `tests/` directory with serial execution (`workers: 1`)
 - Seed scenarios referenced in E2E docs do not exist yet — backend work required
-- `@testing-library/user-event` is not currently in `package.json` — must be added
 
 ---
 
@@ -129,16 +133,21 @@ Integration tests render form sub-sections with real React Hook Form + real cont
 **File location**: `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/`
 
 See:
-- [integration/README.md](./integration/README.md) — setup patterns, shared wrapper
+- [integration/README.md](./integration/README.md) — setup patterns, shared wrapper, assertion conventions
 - [integration/form-body-conditional.md](./integration/form-body-conditional.md) — IT-001..IT-004
-- [integration/lock-state-toggle.md](./integration/lock-state-toggle.md) — IT-005..IT-008
-- [integration/mode-switching.md](./integration/mode-switching.md) — IT-009..IT-012
-- [integration/right-panel-tabs.md](./integration/right-panel-tabs.md) — IT-013..IT-016 (+ IT-013b, IT-013c)
-- [integration/invoice-fields.md](./integration/invoice-fields.md) — IT-017..IT-021
-- [integration/peppol-to-invoice.md](./integration/peppol-to-invoice.md) — IT-022..IT-029 (Peppol flow wiring)
-- [integration/amount-distribution-sheet.md](./integration/amount-distribution-sheet.md) — IT-030..IT-047 (distribution sheet UI)
-- [integration/supplier-defaults.md](./integration/supplier-defaults.md) — IT-048..IT-057 (backfill + auto-save wiring)
-- [integration/invoice-lines-table.md](./integration/invoice-lines-table.md) — IT-058..IT-071 (invoice lines table orchestration)
+- [integration/lock-state-toggle.md](./integration/lock-state-toggle.md) — IT-005..IT-018
+- [integration/mode-switching.md](./integration/mode-switching.md) — IT-019..IT-023
+- [integration/right-panel-tabs.md](./integration/right-panel-tabs.md) — IT-024..IT-030
+- [integration/invoice-fields.md](./integration/invoice-fields.md) — IT-031..IT-038
+- [integration/peppol-to-invoice.md](./integration/peppol-to-invoice.md) — IT-039..IT-046
+- [integration/amount-distribution-sheet.md](./integration/amount-distribution-sheet.md) — IT-047..IT-064
+- [integration/supplier-defaults.md](./integration/supplier-defaults.md) — IT-065..IT-074
+- [integration/invoice-lines-table.md](./integration/invoice-lines-table.md) — IT-075..IT-105
+- [integration/grouping-strategy.md](./integration/grouping-strategy.md) — IT-106..IT-125
+- [integration/form-orchestration.md](./integration/form-orchestration.md) — IT-126..IT-132
+- [integration/form-header.md](./integration/form-header.md) — IT-133..IT-139
+- [integration/form-dialogs.md](./integration/form-dialogs.md) — IT-140..IT-144
+- [integration/inline-selects.md](./integration/inline-selects.md) — IT-145..IT-150
 
 ### Verification
 
@@ -157,7 +166,7 @@ E2E tests use Playwright against a running dev server (or staging via BrowserSta
 See:
 - [e2e/README.md](./e2e/README.md) — seed scenarios, helpers, selectors
 - [e2e/create-invoice.md](./e2e/create-invoice.md) — E2E-001..E2E-005
-- [e2e/edit-invoice.md](./e2e/edit-invoice.md) — E2E-006..E2E-009
+- [e2e/edit-invoice.md](./e2e/edit-invoice.md) — E2E-006..E2E-009 (+ E2E-009b)
 - [e2e/credit-note.md](./e2e/credit-note.md) — E2E-010..E2E-012
 - [e2e/peppol-import.md](./e2e/peppol-import.md) — E2E-013..E2E-016
 - [e2e/draft-save-resume.md](./e2e/draft-save-resume.md) — E2E-017..E2E-019
@@ -166,7 +175,7 @@ See:
 - [e2e/validation-errors.md](./e2e/validation-errors.md) — E2E-026..E2E-029
 - [e2e/peppol-to-invoice.md](./e2e/peppol-to-invoice.md) — E2E-030..E2E-039 (Peppol full flow)
 - [e2e/amount-distribution.md](./e2e/amount-distribution.md) — E2E-040..E2E-047 (distribution sheet journey)
-- [e2e/supplier-defaults.md](./e2e/supplier-defaults.md) — E2E-048..E2E-052 (auto-fill + auto-save flow)
+- [e2e/supplier-defaults.md](./e2e/supplier-defaults.md) — E2E-048..E2E-052 (+ E2E-050b) (auto-fill + auto-save flow)
 
 ### Verification
 

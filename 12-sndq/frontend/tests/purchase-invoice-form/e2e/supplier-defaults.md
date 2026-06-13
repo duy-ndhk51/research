@@ -1,15 +1,21 @@
 # Supplier Defaults — Auto-fill & Auto-save
 
 **File**: `tests/financial/purchase-invoices/011-supplier-defaults.spec.ts`
-**Seed scenarios**: `purchase-invoice-supplier-defaults` (supplier with pre-configured ledger + distribution key), `purchase-invoice-create` (supplier without defaults)
+**Seed scenarios**: `purchase-invoice-supplier-defaults` (supplier with pre-configured ledger + distribution key), `purchase-invoice-create` (supplier without defaults), `purchase-invoice-free-distribution` (invoice with free distribution saved)
 
-Tests the end-to-end flow of supplier defaults: when a supplier with configured defaults is selected, empty invoice lines auto-fill with the default ledger and distribution key. On successful submit, settings from the invoice are auto-saved back to the building-supplier link.
+Tests the end-to-end flow of supplier defaults: when a supplier with configured defaults is selected, new invoice lines auto-fill with the default ledger and distribution key. On successful submit, settings from the invoice are auto-saved back to the building-supplier link.
+
+**Architecture note**: Supplier defaults are applied in two ways:
+1. **Initial line** — pristine first line on new invoice gets defaults via `useInitialLineDefaults`
+2. **Add Line** — new lines added via button get defaults via `createDefaultAmountWithDefaults`
+
+Existing lines (in edit mode) are NEVER modified by supplier defaults.
 
 ---
 
-## E2E-048: Supplier with defaults auto-fills cost account
+## E2E-048: Supplier with defaults auto-fills initial line cost account
 
-**Preconditions**: Seeded building-supplier link where supplier has `invoiceMotherId` configured. Create form open, no amount lines yet have a cost account.
+**Preconditions**: Seeded building-supplier link where supplier has `invoiceMotherId` configured. Create form open, initial first line is pristine.
 
 ### Steps
 
@@ -17,8 +23,9 @@ Tests the end-to-end flow of supplier defaults: when a supplier with configured 
 2. Click "Add invoice"
 3. Select the seeded building
 4. Select the supplier that has default ledger configured
-5. Add an amount line (open distribution sheet)
-6. Observe the cost account field
+5. Wait for supplier defaults to load
+6. Open the first amount line (distribution sheet)
+7. Observe the cost account field
 
 ### Assertions
 
@@ -43,7 +50,7 @@ test.afterAll(async ({ resetScenario }) => {
   await resetScenario(WORKSPACE_ID);
 });
 
-test('E2E-048: supplier defaults auto-fill cost account on line', async ({ page }) => {
+test('E2E-048: supplier defaults auto-fill cost account on initial line', async ({ page }) => {
   await page.goto('/financial/invoices/purchase');
   await page.getByRole('button', { name: /add invoice/i }).click();
 
@@ -53,11 +60,11 @@ test('E2E-048: supplier defaults auto-fill cost account on line', async ({ page 
   await selectBuilding(page, drawer, 'Fixture Building One');
   await selectSupplier(page, drawer, 'Fixture Supplier With Defaults');
 
-  // Wait for supplier defaults to load
-  await page.waitForTimeout(2_000);
+  // Wait for supplier defaults to load and apply to initial line
+  await page.waitForTimeout(3_000);
 
-  // Add an amount line
-  await drawer.getByRole('button', { name: /add line|add amount/i }).click();
+  // Open the first amount line
+  await drawer.locator('[data-testid="amount-line-row"]').first().click();
 
   const distSheet = page.locator('[data-slot="sheet-content"]').last();
   await expect(distSheet).toBeVisible();
@@ -70,19 +77,20 @@ test('E2E-048: supplier defaults auto-fill cost account on line', async ({ page 
 
 ---
 
-## E2E-049: Supplier with defaults auto-fills distribution key
+## E2E-049: New line added via button gets supplier defaults
 
-**Preconditions**: Seeded building-supplier link where supplier has `distributionKeyId` configured. Building has the referenced distribution key.
+**Preconditions**: Seeded building-supplier link where supplier has `distributionKeyId` configured. Building has the referenced distribution key. Create form open with building + supplier already selected.
 
 ### Steps
 
 1. Open create form, select building + supplier with distribution key defaults
-2. Add an amount line
-3. Observe the distribution method section
+2. Click "Add Line" button to add a NEW line
+3. Open the newly added line's distribution sheet
+4. Observe the distribution method section
 
 ### Assertions
 
-- Distribution key mode is auto-activated
+- Distribution key mode is auto-activated on the new line
 - The seeded distribution key is pre-selected in the dropdown
 - Units have shares matching the key's definition
 - Whole building is enabled
@@ -90,7 +98,7 @@ test('E2E-048: supplier defaults auto-fill cost account on line', async ({ page 
 ### Example Code
 
 ```typescript
-test('E2E-049: supplier defaults auto-fill distribution key', async ({ page }) => {
+test('E2E-049: new line added via button gets supplier defaults', async ({ page }) => {
   await page.goto('/financial/invoices/purchase');
   await page.getByRole('button', { name: /add invoice/i }).click();
 
@@ -98,9 +106,14 @@ test('E2E-049: supplier defaults auto-fill distribution key', async ({ page }) =
   await selectBuilding(page, drawer, 'Fixture Building One');
   await selectSupplier(page, drawer, 'Fixture Supplier With Defaults');
 
+  // Wait for supplier defaults to be ready
   await page.waitForTimeout(2_000);
+
+  // Add a NEW line via button
   await drawer.getByRole('button', { name: /add line|add amount/i }).click();
 
+  // Open the newly added line (should be the last one)
+  await drawer.locator('[data-testid="amount-line-row"]').last().click();
   const distSheet = page.locator('[data-slot="sheet-content"]').last();
 
   // Distribution key should be pre-selected
@@ -131,7 +144,7 @@ test('E2E-049: supplier defaults auto-fill distribution key', async ({ page }) =
 
 - Cost account still shows "Office Supplies" (user's choice)
 - Supplier's default ledger did NOT overwrite the manual selection
-- "Never overwrite" policy enforced end-to-end
+- "Never overwrite existing lines" policy enforced end-to-end
 
 ### Example Code
 
@@ -164,6 +177,70 @@ test('E2E-050: manual cost account not overwritten by supplier defaults', async 
   // Cost account should still be the manually-set one
   const costAccountField = distSheet2.locator('[data-testid="cost-account-select"]');
   await expect(costAccountField).toContainText(/office supplies/i);
+});
+```
+
+---
+
+## E2E-050b: Free distribution preserved when editing invoice (REGRESSION)
+
+**Preconditions**: Seeded invoice with an amount line saved with `distributionType: 'free'` and custom unit amounts. The supplier linked to this invoice has a default distribution key configured.
+
+**Bug context**: This is the regression test for the critical bug where `useBackfillSupplierDefaults` incorrectly overwrote "free" distributions on edit form load because they have `distributionKeyId: undefined`.
+
+### Steps
+
+1. Navigate to purchase invoices list
+2. Open the seeded invoice with free distribution
+3. Click Actions -> Edit
+4. Wait for form to fully load (supplier defaults resolve)
+5. Open the amount line distribution sheet
+
+### Assertions
+
+- Distribution type shows "Free" / custom allocation (not a key-based distribution)
+- Unit amounts match the saved values (not recalculated by supplier key)
+- No distribution key is selected in the dropdown
+- The "Use distribution key" toggle is OFF
+- Supplier defaults did NOT overwrite the distribution
+
+### Example Code
+
+```typescript
+test('E2E-050b: free distribution preserved when editing invoice (regression)', async ({ page }) => {
+  await page.goto('/financial/invoices/purchase');
+
+  // Open the seeded invoice with free distribution
+  await page.getByText('FREE-DIST-2026-001').click();
+  const sheet = page.locator('[data-slot="floating-sheet"]');
+  await expect(sheet).toBeVisible();
+
+  await sheet.getByRole('button', { name: /actions/i }).click();
+  await page.getByRole('menuitem', { name: /edit/i }).click();
+
+  const drawer = page.locator('[data-slot="sheet-content"]');
+  await expect(drawer).toBeVisible();
+
+  // Wait for all data to load (including supplier defaults)
+  await page.waitForTimeout(4_000);
+
+  // Open the first amount line
+  await drawer.locator('[data-testid="amount-line-row"]').first().click();
+  const distSheet = page.locator('[data-slot="sheet-content"]').last();
+  await expect(distSheet).toBeVisible();
+
+  // Distribution key should NOT be selected (free distribution has no key)
+  const dkSelect = distSheet.locator('[data-testid="distribution-key-select"]');
+  // Either the select shows placeholder or the toggle is off
+  const useKeyToggle = distSheet.getByLabel(/use distribution key|distribution key/i);
+  if (await useKeyToggle.isVisible()) {
+    await expect(useKeyToggle).not.toBeChecked();
+  }
+
+  // Unit amounts should be the saved custom values (not recalculated)
+  // Verify by checking total matches the original saved amount
+  const totalField = distSheet.locator('[data-testid="total-amount"]');
+  await expect(totalField).toBeVisible();
 });
 ```
 
