@@ -4,7 +4,7 @@ Comprehensive architecture for a unified table component that replaces 7 fragmen
 
 ## TL;DR
 
-Build a 4-layer DataTable system: semantic HTML primitives, a `useDataTable` hook wrapping TanStack Table v8 with SNDQ state management, a compound component feature shell, and domain-level column definitions. This consolidates CommonTable (~35 screens), CompactTable (~31 screens), EnrichTable (~20 screens), and others into one composable API that covers all 35 features demonstrated in the RawTable prototype.
+A 4-layer DataTable system has been built in `sndq-clone/apps/ui-v2-dev/`: semantic HTML primitives (Layer 1), a `useDataTable` hook wrapping TanStack Table v8 with SNDQ state management (Layer 2), a compound component feature shell (Layer 3), and demo domain-level column definitions (Layer 4 showcase). Phase 0 is complete. This system consolidates CommonTable (~35 screens), CompactTable (~31 screens), EnrichTable (~20 screens), and others into one composable API that covers all 35 features demonstrated in the RawTable prototype. Production migration (Phases 1-4) is future work.
 
 ## Table of Contents
 
@@ -211,6 +211,8 @@ graph TB
 
 ## 3. Chosen Architecture
 
+> **Implementation status**: Phase 0 complete. Layers 1-3 are built and demoed in `sndq-clone/apps/ui-v2-dev/`. Components follow the `@sndq/ui-v2` design system rules (`ui-v2-usage.mdc`).
+
 ### Four-layer model
 
 ```mermaid
@@ -305,6 +307,8 @@ The 7-table problem exists because different screens need different toolbar layo
 
 ## 4. Layer 1: Table Primitives
 
+> **Status**: Implemented in `apps/ui-v2-dev/src/components/ui-v2/Table.tsx`. Includes `Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`, `TableFooter`, `TableGroupHeader`, `TableSummaryRow`, and density context.
+
 ### Existing foundation
 
 `apps/ui-v2-dev/src/components/ui-v2/Table.tsx` already provides:
@@ -333,6 +337,8 @@ These remain purely presentational — no data logic, no TanStack dependency.
 ---
 
 ## 5. Layer 2: useDataTable Hook
+
+> **Status**: Implemented in `apps/ui-v2-dev/src/lib/hooks/useDataTable.ts`. Supports all `enable*` flags, two-tier state model, `config.serverSide` mode, and `onStateChange` callback.
 
 ### Core hook pipeline
 
@@ -522,6 +528,8 @@ interface DataTableInstance<TData> extends Table<TData> {
 
 ## 6. Layer 3: DataTable Feature Shell
 
+> **Status**: Implemented in `apps/ui-v2-dev/src/components/ui-v2/DataTable/`. All 14 compound sub-components are built: `DataTable`, `Content`, `Toolbar`, `Search`, `FilterMenu`, `ActiveFilters`, `SelectionBar`, `Settings`, `ColumnConfig`, `SavedViews`, `Pagination`, `Footer`, `EditableCell`, `RowContextMenu`, `EmptyState`.
+
 ### Compound component — rendering flow
 
 ```mermaid
@@ -637,6 +645,8 @@ All components share the table instance via `DataTableContext`. Each is independ
 ---
 
 ## 7. Layer 4: Domain Tables
+
+> **Status**: Exists as demo/showcase only in `DataTableSection.tsx` (payment invoice domain). Production domain tables (building, contact, invoice modules in sndq-fe) are Phase 1-3 migration work. The `SNDQ table/` directory contains vanilla JSX cell components that serve as source material for Layer 4 domain tables.
 
 ### Column definition strategy
 
@@ -777,7 +787,9 @@ Every feature from the RawTable prototype (`3-raw-table-v2/RawTable.tsx`, 2,491 
 
 ## 9. Identified Gaps and Solutions
 
-### Gap 1: Two-level sub-grouping
+> **Status**: All 5 gaps identified during design have been resolved in the Phase 0 implementation.
+
+### Gap 1: Two-level sub-grouping — RESOLVED
 
 **Problem**: The RawTable prototype supports group + sub-group (e.g., group by building, then sub-group by status within each building).
 
@@ -823,15 +835,19 @@ flowchart TD
 
 **Solution**: TanStack v8 `grouping` state accepts an array: `grouping: ['building', 'status']`. This nests automatically. The rendering challenge is the UI: group header -> sub-group header -> column header -> rows -> sub-group summary -> group summary. Solve with a `DataTable.Content` that detects grouped row models and renders nested sections.
 
-### Gap 2: Select all across dataset
+### Gap 2: Select all across dataset — RESOLVED
 
 **Problem**: TanStack's `rowSelection` operates on visible/paginated rows. The RawTable adds a `selectAllMode` boolean meaning "all N items in the dataset are selected, even those not on the current page."
 
+> **Resolution**: Implemented via `selectAllMode` state in `useDataTable.ts` (Tier 2 state). The `DataTableSelectionBar` exposes a "Select all {totalCount} items" action that sets `selectAllMode: 'all'`.
+
 **Solution**: Add `selectAllMode: boolean` to Tier 2 state. When all page rows are selected, `DataTable.SelectionBar` shows a "Select all N items" banner. Domain bulk action callbacks check `selectAllMode` to decide whether to send all IDs or a "select all" flag to the API.
 
-### Gap 3: Group-level selection
+### Gap 3: Group-level selection — RESOLVED
 
 **Problem**: Selecting all rows within a group via the group header checkbox is not built into TanStack.
+
+> **Resolution**: Implemented via `toggleGroupSelection` helper in `useDataTable.ts`. Group headers in `DataTableContent` render a checkbox that selects/deselects all leaf rows within the group.
 
 **Solution**: Add `toggleGroupSelection(groupRows: Row<TData>[])` to the `DataTableInstance`. It iterates group rows and calls `row.toggleSelected()`. The group header checkbox reads selection state from `groupRows.every(r => r.getIsSelected())`.
 
@@ -889,9 +905,11 @@ flowchart TD
     style BulkAction fill:#f0f0f0,stroke:#999
 ```
 
-### Gap 4: Linear/Notion-style filter menu
+### Gap 4: Linear/Notion-style filter menu — RESOLVED
 
 **Problem**: The `FilterMenu` with hover-to-reveal sub-panels is a specific UX pattern not provided by any library.
+
+> **Resolution**: Fully implemented in `DataTableFilterMenu.tsx`. Supports property type detection (text, number, date, enum), operator selection, value input per type, and the hover-to-reveal sub-panel UX. Date filters include presets (today, last 7/30 days, custom range).
 
 ```mermaid
 flowchart LR
@@ -926,15 +944,19 @@ flowchart LR
 
 **Solution**: Build as a standalone `DataTable.FilterMenu` component. It receives `PropertyDef[]` defining filterable properties and emits `onToggleValue(property, value)`. Each property type (select, status, date) gets a tailored sub-panel. Date properties show preset options (1d, 3d, 1w, etc.) plus a custom date picker.
 
-### Gap 5: Notion-style settings panel
+### Gap 5: Notion-style settings panel — RESOLVED
 
 **Problem**: The settings panel (property visibility with drag reorder, group picker, sub-group picker, page size) is another specific UX compound.
+
+> **Resolution**: Implemented across `DataTableSettings.tsx` (density, page size) and `DataTableColumnConfig.tsx` (column visibility toggle, drag-to-reorder via `@dnd-kit`). Group/sub-group picking is handled in `DataTableSettings`.
 
 **Solution**: Build `DataTable.Settings` as a compound panel with sub-sections that expand on hover, matching the RawTable prototype's side-panel pattern. Uses TanStack's `columnVisibility`, `columnOrder`, `grouping`, and `pagination.pageSize` state.
 
 ---
 
 ## 10. State Persistence Strategy
+
+> **Status**: Implemented in `apps/ui-v2-dev/src/lib/hooks/useTablePersistence.ts`. Supports URL parameter sync (sort, filter, page, search) and `localStorage` fallback for column visibility, density, and page size preferences.
 
 ### Current state management (to be absorbed)
 
@@ -1026,6 +1048,8 @@ const table = useDataTable({
 
 ## 11. Migration Path
 
+> **Phase 0 status**: Complete (June 2026). Layers 1-3 built in `sndq-clone/apps/ui-v2-dev/` with all 35 features from the RawTable prototype. Components comply with `@sndq/ui-v2` design system rules (`ui-v2-usage.mdc`). Phases 1-4 remain future work.
+
 ### Phased approach by risk and complexity
 
 ```mermaid
@@ -1035,7 +1059,7 @@ gantt
     axisFormat %b
 
     section Phase 0
-    Build Layers 1-3 in ui-v2-dev (0 screens)     :active, p0, 2026-06-01, 30d
+    Build Layers 1-3 in ui-v2-dev (0 screens)     :done, p0, 2026-06-01, 2026-06-04
 
     section Phase 1
     Migrate EnrichTable (~20 screens, LOW risk)     :p1, after p0, 20d
