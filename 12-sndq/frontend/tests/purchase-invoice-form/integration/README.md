@@ -355,8 +355,8 @@ See `sndq-fe/.cursor/skills/frontend-testing/` for the full testing skill refere
 | Peppol data cleared removes tab | `peppolData` cleared → extra tabs empty, falls back to `'uploader'` | - [ ] |
 | Peppol with attachment files shows PeppolAttachmentsTab | `peppolData.attachments` has entries → tab content is `PeppolAttachmentsTab` | - [ ] |
 | User tab selection overrides default | Peppol data present but user selects `'uploader'` → stays `'uploader'` | - [ ] |
-| Peppol amounts parsed triggers lock | `safePeppolDataParsed` with amounts → `setLockState({ locked: true, lockedTotal })` | - [ ] |
-| Peppol with no amounts skips lock | `safePeppolDataParsed` with `[]` → `setLockState` NOT called | - [ ] |
+| Peppol amounts parsed triggers lock (uploader path) | `safePeppolDataParsed` with amounts → `setLockState({ locked: true, lockedTotal })` called | - [ ] |
+| Peppol with no amounts skips lock (uploader path) | `safePeppolDataParsed` with `[]` → `setLockState` NOT called (guard: `parsedAmounts.length > 0`) | - [ ] |
 
 ### Invoice Fields (MEDIUM) ([invoice-fields.md](./invoice-fields.md))
 
@@ -378,19 +378,15 @@ See `sndq-fe/.cursor/skills/frontend-testing/` for the full testing skill refere
 ### Peppol to Invoice (HIGH) ([peppol-to-invoice.md](./peppol-to-invoice.md))
 
 **Purpose**: Verify the wiring between `transformPeppolToFormData` output and React Hook Form `setValue` calls. The transform is unit-tested; these tests cover the last mile where data reaches the form. Highest-priority group — Peppol is the #1 daily flow.
-**Scope**: Full field population, supplier matching/unmatching, credit note type propagation, Belgian OGM parsing, lock total computation, amount grouping with `originalLines`.
-**Risk**: Peppol invoices open with empty/wrong fields, unmatched suppliers get stale senderId, credit notes treated as invoices, OGM references lost, lock total miscalculated, grouped amounts lose original line detail.
+**Scope**: Full field population, supplier matching/unmatching, credit note type propagation. Pure-logic tests (OGM parsing, lock total computation, grouping) moved to `unit/transformPeppolToFormData.md`.
+**Risk**: Peppol invoices open with empty/wrong fields, unmatched suppliers get stale senderId, credit notes treated as invoices.
 
 | Test Name | Key Behavior | Status |
 |-----------|--------------|--------|
 | Peppol populates all form fields | `handlePeppolDataParsed` with full data → all fields set via `setValue` | - [ ] |
-| Empty Peppol amounts produce zero-lock | Peppol `lines: []` → `lockedTotal: 0` (known UX edge case) | - [ ] |
 | Unmatched supplier resets senderId | No `supplierPartyContactId` → `resetField('senderId')`, supplier data stored | - [ ] |
 | Matched supplier sets senderId | `supplierPartyContactId` exists → `setValue('senderId')`, supplier data cleared | - [ ] |
 | Peppol credit note typeCode flows to form | `typeCode: '381'` → form `invoiceTypeCode` is `'381'` | - [ ] |
-| Belgian OGM structured remittance | `+++123/4567/89002+++` → parsed to `'123456789002'`, typed STRUCTURED | - [ ] |
-| Lock total matches Peppol amounts sum | Multi-line Peppol → `sumTotalAmounts` → config `{ locked: true, lockedTotal }` | - [ ] |
-| Grouping preserves originalLines and total | Switch individual → group by VAT → same total, `originalLines` preserved | - [ ] |
 
 ### Invoice Lines Table (HIGH) ([invoice-lines-table.md](./invoice-lines-table.md))
 
@@ -417,9 +413,6 @@ See `sndq-fe/.cursor/skills/frontend-testing/` for the full testing skill refere
 | isDeferredCost disables distribution | `isDeferredCost: true` → distribution controls disabled | - [ ] |
 | VAT rate change keeps totalAmount | Change VAT 21% → 6% → subtotal recalculated, totalAmount unchanged | - [ ] |
 | VAT toggle off equalizes amounts | Toggle VAT off → subtotal = totalAmount | - [ ] |
-| Rounding: 6% VAT on 3333 cents (known drift) | Footer looks correct via difference method, but forward calc drifts by +1 | - [ ] |
-| Rounding: multi-line mixed rates odd cents | Footer grand total = sum of totalAmount fields, VAT rows for 6%/21% | - [ ] |
-| Round-trip: reverse→forward calc ±1 drift | Documents known cases where forward total ≠ stored totalAmount | - [ ] |
 | Period button visible when no fromDate | No `fromDate` → "Period" button visible in action bar | - [ ] |
 | Click period button shows section | Click → `PeriodExpandableSection` appears | - [ ] |
 | Period pre-shown when fromDate exists | `fromDate` set → section visible, no button | - [ ] |
@@ -480,8 +473,6 @@ See `sndq-fe/.cursor/skills/frontend-testing/` for the full testing skill refere
 | Individual unit deselect zeros its values | Deselect one unit → its share and amount become 0 | - [ ] |
 | Select all checkbox toggles all units | Header checkbox → all checked; click again → all unchecked | - [ ] |
 | totalAmount change recalculates amounts | Change total with non-free mode → proportional redistribution | - [ ] |
-| splitAmount rounding: 3 equal shares | Parts sum exactly to total, max-min ≤ 1 | - [ ] |
-| splitAmount rounding: 2 equal shares, odd total | One unit +1 cent, sum still exact | - [ ] |
 | Ledger suggestion chip sets costAccount | Click suggestion → costAccount field populated with ledger | - [ ] |
 | Distribution key suggestion chip switches to distribution key mode | Click distribution key suggestion → distribution key mode enabled, key applied | - [ ] |
 | Total mismatch shows SplitErrorDialog | Submit with sum != total → error dialog with "divide equally" | - [ ] |
@@ -490,18 +481,21 @@ See `sndq-fe/.cursor/skills/frontend-testing/` for the full testing skill refere
 
 ### Supplier Defaults (HIGH) ([supplier-defaults.md](./supplier-defaults.md))
 
-**Purpose**: Guard the integration between supplier default hooks and the form context. `useBackfillSupplierDefaults` patches empty invoice lines when supplier defaults load; `useAutoSaveBuildingSupplierDefaults` persists settings to the building-supplier link on submit. Unit tests exist for internal logic — these tests verify the form-level wiring.
-**Scope**: Backfill triggers on supplier selection, "never overwrite" policy, idempotency via ref guard, auto-save on submit (create link vs update link), skip when all fields set.
-**Risk**: Supplier defaults silently overwrite user-set values, backfill fires multiple times corrupting amounts, auto-save creates duplicate links, or settings lost on submit.
+**Purpose**: Guard the `useInitialLineDefaults` hook that applies supplier defaults to pristine first lines on form mount. Unit tests exist for internal logic — these tests verify the form-level wiring. Also covers `useAutoSaveBuildingSupplierDefaults` which persists settings on submit.
+**Scope**: Initial defaults triggers, guard conditions (edit mode, free distribution, non-zero amount, existing values), ref-based single-fire, loading wait, auto-save on submit.
+**Risk**: Defaults silently overwrite user-set values, fire multiple times, fire in edit mode, auto-save creates duplicate links, or settings lost on submit.
 
 | Test Name | Key Behavior | Status |
 |-----------|--------------|--------|
-| Backfill sets costAccount on empty lines | Select supplier with defaults → empty lines patched | - [ ] |
-| Backfill sets distributionKeyId on empty lines | Supplier defaults with distribution key → empty lines get key applied | - [ ] |
-| Backfill does NOT overwrite existing costAccount | Line has user-set ledger → stays untouched | - [ ] |
-| Backfill does NOT overwrite existing distribution key | Line has existing distribution key → stays untouched | - [ ] |
-| Changing supplier triggers new backfill | Switch from supplier A to B → backfill fires for new pair | - [ ] |
-| Same supplier does NOT re-trigger backfill | Re-render with same pair → setValue called only once | - [ ] |
+| Initial defaults applies costAccount on pristine first line | Mount with supplier defaults → costAccount patched | - [ ] |
+| Initial defaults applies distributionKeyId on pristine first line | Supplier defaults with distribution key → key applied | - [ ] |
+| Does NOT fire in edit mode | Edit mode → hook skips entirely | - [ ] |
+| Does NOT fire with free distribution (regression) | Free distribution strategy → no defaults applied | - [ ] |
+| Does NOT fire with non-zero totalAmount | Line has amount > 0 → treated as non-pristine, skipped | - [ ] |
+| Does NOT fire with existing costAccount | Line has user-set ledger → stays untouched | - [ ] |
+| Only fires once (ref guard) | Re-render with same data → setValue called only once | - [ ] |
+| Waits for supplier defaults to finish loading | Defaults still loading → defers until ready | - [ ] |
+| Does NOT fire when no configured defaults | No supplier defaults configured → no mutations | - [ ] |
 | Auto-save extracts settings from amounts | Submit → `saveSupplierDefaults` called with first line's data | - [ ] |
 | Auto-save creates link for new supplier | No existing link → `linkSupplier` mutation called | - [ ] |
 | Auto-save updates empty fields on existing link | Existing link with empty fields → `updateSupplier` called | - [ ] |
@@ -540,9 +534,10 @@ See `sndq-fe/.cursor/skills/frontend-testing/` for the full testing skill refere
 
 ### Form Dialogs (MEDIUM) ([form-dialogs.md](./form-dialogs.md))
 
-**Purpose**: Verify confirmation dialog lifecycle for destructive actions: discard changes, delete **draft** invoice, and merge grouping strategy.
-**Scope**: Discard dialog open/close/confirm, delete draft dialog with loading state, draft-only visibility, merge dialog on strategy change.
-**Risk**: Discard fires without confirmation (data loss), delete proceeds on non-draft invoice, merge dialog uses stale amounts.
+**Purpose**: Verify confirmation dialog lifecycle for destructive actions: discard changes and delete **draft** invoice.
+**Scope**: Discard dialog open/close/confirm, delete draft dialog with loading state, draft-only visibility.
+**Risk**: Discard fires without confirmation (data loss), delete proceeds on non-draft invoice.
+**Note**: Merge dialog tests live in [grouping-strategy.md](./grouping-strategy.md) which covers trigger, confirm, and cancel flows comprehensively.
 
 | Test Name | Key Behavior | Status |
 |-----------|--------------|--------|
@@ -551,12 +546,11 @@ See `sndq-fe/.cursor/skills/frontend-testing/` for the full testing skill refere
 | Discard confirm calls handleDiscard | Click confirm → `handleDiscard` called | - [ ] |
 | Delete draft dialog shows loading | `isDraft: true`, `isDeleting: true` → confirm disabled | - [ ] |
 | Delete action hidden when not a draft | `isDraft: false` → no delete trigger | - [ ] |
-| Merge dialog shows when strategy changes | `mergeDialog.open: true` → dialog visible | - [ ] |
 
 ### Inline Selects (MEDIUM) ([inline-selects.md](./inline-selects.md))
 
 **Purpose**: Verify the inline building and supplier selects: selection handlers, side effects on buildingId/senderId change, search debounce, keyboard navigation, and supplier quick-create flow.
-**Scope**: Building/supplier selection, building change resets supplier, supplier clear, debounce, quick-create, keyboard nav, tab management, partial edit disabled state.
+**Scope**: Building/supplier selection, building change resets supplier, supplier clear, debounce, quick-create, keyboard nav, tab management.
 **Risk**: Building change doesn't reset supplier (wrong pair), supplier clear doesn't reset senderId, keyboard navigation traps focus.
 
 | Test Name | Key Behavior | Status |
@@ -570,4 +564,3 @@ See `sndq-fe/.cursor/skills/frontend-testing/` for the full testing skill refere
 | Quick-create supplier flow | Create new → `senderId` set, defaults refreshed | - [ ] |
 | Keyboard navigation cycles options | ArrowDown → first option focused | - [ ] |
 | Tab focus management | Tab from building → supplier focused | - [ ] |
-| Both disabled in partial edit mode | `isPartialEditMode: true` → both inside disabled fieldset | - [ ] |

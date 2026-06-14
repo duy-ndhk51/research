@@ -8,18 +8,17 @@
 
 ## Purpose
 
-Verify the confirmation dialog lifecycle for destructive actions: discard changes, delete **draft** invoice, and merge grouping strategy. These dialogs gate irreversible operations.
+Verify the confirmation dialog lifecycle for destructive actions: discard changes and delete **draft** invoice. These dialogs gate irreversible operations.
 
 ## Risk
 
-Discard fires without user confirmation (data loss), delete proceeds on non-draft invoice or without loading guard (double-delete), merge dialog uses stale amounts.
+Discard fires without user confirmation (data loss), delete proceeds on non-draft invoice or without loading guard (double-delete).
 
 ## Bugs Guarded
 
 - Discard dialog hidden by default / opens when triggered / confirm calls handleDiscard guard dialog gate -- destructive action must require explicit confirmation; bypass causes instant data loss
 - Delete draft dialog shows loading during deletion guards loading state -- button must be disabled during async delete to prevent double-fire; `isDeleting` state controls UI; delete action only available when `invoiceId && isDraft` (see `useComboActions.ts` line 32)
 - Delete action hidden when not a draft guards draft-only visibility -- delete action must not appear for non-draft invoices
-- Merge dialog shows when strategy changes guards **B7** (grouping stale snapshot) -- merge dialog must open before applying grouping change; `originalAmountsRef` captured on leave must be fresh
 
 ## Scenarios
 
@@ -30,12 +29,11 @@ Discard fires without user confirmation (data loss), delete proceeds on non-draf
 | Discard confirm calls handleDiscard | Click confirm -> `handleDiscard` called once |
 | Delete draft dialog shows loading during deletion | `isDraft: true`, `isDeleting: true` -> confirm button disabled + spinner |
 | Delete action hidden when not a draft | `isDraft: false` -> delete dialog trigger absent |
-| Merge dialog shows when strategy changes | `mergeDialog.open: true` -> dialog visible with merge options |
 
 ## Related Specs
 
 - Form orchestration: [form-orchestration.md](./form-orchestration.md) — onClose wiring
-- Invoice lines: [invoice-lines-table.md](./invoice-lines-table.md) — grouping merge
+- Merge dialog: [grouping-strategy.md](./grouping-strategy.md) — comprehensive merge dialog tests (trigger, confirm, cancel)
 
 ## Mocking Strategy
 
@@ -251,38 +249,3 @@ it('delete action hidden when not a draft', () => {
 });
 ```
 
----
-
-## Merge dialog shows when strategy changes
-
-**Preconditions**: `mergeDialog.open: true` with a pending strategy.
-
-### Steps
-
-1. Render with `mergeDialog.open: true`
-
-### Expected Outcome
-
-- Merge dialog is visible with merge options
-
-### Example Code
-
-```typescript
-it('merge dialog shows when strategy changes', () => {
-  renderWithProviders(<FormDialogs />, {
-    contextOverrides: {
-      sheetState: {
-        ...baseSheetState,
-        mergeDialog: {
-          open: true,
-          pendingStrategy: 'ALL',
-          onConfirm: vi.fn(),
-          onCancel: vi.fn(),
-        },
-      },
-    },
-  });
-
-  expect(screen.getByRole('alertdialog')).toBeInTheDocument();
-});
-```

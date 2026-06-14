@@ -1,6 +1,6 @@
 # Mode Switching
 
-**Status**: Not started
+**Status**: Done
 **Priority**: MEDIUM (wrong type code causes backend to misclassify document)
 **Test tier**: Component integration
 **Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/mode-switching.test.tsx`
@@ -221,5 +221,85 @@ it('clicking the current mode does nothing', async () => {
   await user.click(invoiceOption);
 
   expect(contextValue.setMode).not.toHaveBeenCalled();
+});
+```
+
+---
+
+## Implementation
+
+**Implemented**: 2026-06-14
+**Test file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/mode-switching.test.tsx`
+**Cases**: 5/5 implemented
+
+### Deviations from spec
+
+- **Badge text casing**: Actual rendered text is `"Purchase invoice"` (lowercase "i"), not `"Purchase Invoice"` (PascalCase) as spec suggested. The translation key produces sentence case.
+- **Credit note badge selector**: "switching back to invoice" case uses `/^credit note$/i` (anchored regex) instead of `/credit note/i` to avoid matching other buttons (e.g., save button text that may contain the substring).
+- **Translation handling**: `renderWithProviders` uses real `IntlProvider` with `testMessages`, not `vi.mock('next-intl')`. Spec's proposed `vi.importActual` approach was unnecessary.
+- **Shared fixture**: Uses `defaultHeaderContext` from `mock-factories.ts` instead of bare `renderWithProviders(<FormHeader />)` calls. All tests pass context explicitly.
+- **DuplicateWarningButton mock**: Same as `form-header.test.tsx` — mocked to `null` to prevent API calls.
+- **DOM cleanup**: Added `cleanup()` in `beforeEach` for isolation (not in spec).
+- **Dropdown interaction pattern**: Uses Radix UI DropdownMenu — click trigger button (role `button`), then select option (role `menuitem`). This matched the spec.
+
+### Dropped cases
+
+None — all 5 cases implemented.
+
+### Coverage gaps
+
+- Tests verify `setMode` is called with the correct argument but do not assert that `setValue('invoiceTypeCode', ...)` is also called. This is because `handleModeChange` in `FormHeader` calls `setValue` internally via `react-hook-form`, which would require watching form state changes. The `setMode` assertion is the primary contract; `invoiceTypeCode` mapping correctness is covered by unit tests in `constants.test.ts`.
+
+### Actual mocking strategy
+
+Only `DuplicateWarningButton` is mocked. `next-intl` is NOT mocked — handled by `renderWithProviders`.
+
+```typescript
+vi.mock(
+  '../../../purchase-invoice-v2/components/DuplicateWarningBanner',
+  () => ({ DuplicateWarningButton: () => null }),
+);
+```
+
+### Shared fixtures
+
+- `defaultHeaderContext` from `mock-factories.ts` — provides default `mode: 'invoice'`, `isPending: false`, `buildingId`, `senderId`, and form defaults
+
+### Condensed test code
+
+```typescript
+describe('Mode switching', () => {
+  it('renders invoice mode badge by default', () => {
+    renderWithProviders(<FormHeader />, defaultHeaderContext);
+    expect(screen.getByText('Purchase invoice')).toBeInTheDocument();
+  });
+
+  it('click credit note updates mode and sets typeCode', async () => {
+    const { contextValue } = renderWithProviders(<FormHeader />, defaultHeaderContext);
+    await user.click(screen.getByRole('button', { name: /purchase invoice/i }));
+    await user.click(screen.getByRole('menuitem', { name: /credit note/i }));
+    expect(contextValue.setMode).toHaveBeenCalledWith('credit_note');
+  });
+
+  it('click expense note updates mode and sets typeCode', async () => {
+    const { contextValue } = renderWithProviders(<FormHeader />, defaultHeaderContext);
+    await user.click(screen.getByRole('button', { name: /purchase invoice/i }));
+    await user.click(screen.getByRole('menuitem', { name: /expense note/i }));
+    expect(contextValue.setMode).toHaveBeenCalledWith('expense_note');
+  });
+
+  it('switching back to invoice clears typeCode', async () => {
+    const { contextValue } = renderWithProviders(<FormHeader />, { contextOverrides: { mode: 'credit_note' } });
+    await user.click(screen.getByRole('button', { name: /^credit note$/i }));
+    await user.click(screen.getByRole('menuitem', { name: /purchase invoice/i }));
+    expect(contextValue.setMode).toHaveBeenCalledWith('invoice');
+  });
+
+  it('clicking the current mode does nothing', async () => {
+    const { contextValue } = renderWithProviders(<FormHeader />, defaultHeaderContext);
+    await user.click(screen.getByRole('button', { name: /purchase invoice/i }));
+    await user.click(screen.getByRole('menuitem', { name: /purchase invoice/i }));
+    expect(contextValue.setMode).not.toHaveBeenCalled();
+  });
 });
 ```

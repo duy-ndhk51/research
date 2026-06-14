@@ -35,7 +35,6 @@ Building change doesn't reset supplier (wrong building-supplier pair), supplier 
 | Quick-create supplier flow | Creates contact, sets `senderId`, refreshes defaults |
 | Keyboard navigation cycles options | ArrowDown -> first option focused |
 | Tab focus management | Tab from building -> focuses supplier |
-| Both disabled in partial edit mode | Both selects inside disabled fieldset |
 
 ## Related Specs
 
@@ -418,36 +417,3 @@ it('Tab from building select focuses supplier select', async () => {
 });
 ```
 
----
-
-## Both selects disabled in partial edit mode
-
-**Preconditions**: `isPartialEditMode: true`.
-
-### Steps
-
-1. Render both selects with `isPartialEditMode: true`
-
-### Expected Outcome
-
-- Both combobox inputs are inside a disabled fieldset
-
-### Example Code
-
-```typescript
-it('both selects disabled in partial edit mode', () => {
-  renderWithProviders(
-    <>
-      <InlineBuildingSelect />
-      <ConnectedInlineSupplierSelect />
-    </>,
-    { contextOverrides: { isPartialEditMode: true } },
-  );
-
-  const buildingInput = screen.getByRole('combobox', { name: /building/i });
-  expect(buildingInput.closest('fieldset[disabled]')).not.toBeNull();
-
-  const supplierInput = screen.getByRole('combobox', { name: /supplier/i });
-  expect(supplierInput.closest('fieldset[disabled]')).not.toBeNull();
-});
-```

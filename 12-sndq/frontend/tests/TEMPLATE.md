@@ -96,7 +96,63 @@ describe('{Feature Name}', () => {
 
 <!--
 Repeat the H2 section above for each test case.
+-->
 
+---
+
+## Implementation
+
+<!-- Fill this section AFTER tests are written. It turns the spec into living documentation. -->
+
+**Implemented**: {YYYY-MM-DD}
+**Test file**: `{path to .test.tsx}`
+**Cases**: {N/M implemented} {— K dropped (reason) if applicable}
+
+### Deviations from spec
+
+- {What changed from the spec and why — assertion strategy, selector changes, translation handling, etc.}
+- {Use "None" if implementation matched the spec exactly}
+
+### Dropped cases
+
+- {Scenario name} — {reason it was dropped and where it should be covered instead}
+- {Use "None" if all cases were implemented}
+
+### Coverage gaps
+
+- {Known limitations of the current test coverage to address in future PRs}
+- {Use "None" if coverage is complete for the defined scope}
+
+### Actual mocking strategy
+
+<!-- Only include if mocks differ from the Mocking Strategy section above. Otherwise write "Same as spec." -->
+
+```typescript
+{actual vi.mock() calls used in the test file}
+```
+
+### Shared fixtures
+
+- `{fixtureName}` from `{file}` — {what it provides}
+
+### Condensed test code
+
+<!-- describe/it tree with key assertions. Skip boilerplate (imports, beforeEach, vi.mock). -->
+
+```typescript
+describe('{Feature}', () => {
+  it('{case 1}', () => {
+    // key assertion
+  });
+  it('{case 2}', () => {
+    // key assertion
+  });
+});
+```
+
+---
+
+<!--
 TEMPLATE RULES:
 - Priority is mandatory -- helps triage implementation order
 - Test tier is mandatory -- Pure logic | Hook | Component integration
@@ -115,9 +171,19 @@ TEMPLATE RULES:
 - NEVER use `as any` -- use `Partial<T>`, typed factories, or narrow mock types instead
 - Limit type casts to verified narrowing (e.g. `as FormDataType`)
 
+IMPLEMENTATION SECTION RULES:
+- Fill the Implementation section AFTER tests pass -- it documents actual outcomes
+- Deviations: document every difference from the spec's Example Code (selectors, assertions, mocking approach, translation handling)
+- Dropped cases: always explain WHY and WHERE the case should be covered instead
+- Coverage gaps: be honest about what is NOT tested -- this feeds future PR planning
+- Condensed test code: show the describe/it tree with key assertions only; skip imports, beforeEach, vi.mock boilerplate
+- Shared fixtures: list every factory/fixture from mock-factories.ts or utils/ that the test uses
+- If mocking strategy matches the spec exactly, write "Same as spec." instead of repeating it
+
 USAGE:
 1. Copy this template into your feature folder: tests/{feature-name}/integration/{spec}.md
 2. Replace all {placeholders} with concrete values
 3. Add one H2 section per test scenario
 4. Keep the Scenarios table in sync with the H2 sections below
+5. After implementation, fill the Implementation section with actual outcomes
 -->

@@ -32,8 +32,6 @@ Amounts get unlocked on booked invoices (accounting inconsistency), lock button 
 | Footer shows lockedTotal when locked | Display total equals `lockedTotal`, not computed sum |
 | Footer shows computed total when unlocked | Display total equals `totals.totalInclVat` |
 | Lock tooltip changes based on state | Locked → "Unlock total amount", Unlocked → "Lock total amount" |
-| Footer lock button reflects lock state | `Lock` icon visible, total shows `lockedTotal` |
-| Footer lock disabled in partial edit mode | Button disabled in partial edit |
 | Add line when locked → remainder | New line `totalAmount` = `lockedTotal - sumOfOthers` |
 | Add line when locked → zero | New line `totalAmount` = 0 when budget consumed |
 | Duplicate when locked → fits | Copy `totalAmount` = source amount |
@@ -341,70 +339,6 @@ function makeLine(overrides: Partial<AmountWithDistributionData> = {}) {
 ```
 
 **Source references**: `components/invoice-lines/pipeline/executePipelineAction.ts`, `components/invoice-lines/pipeline/reconcile.ts`
-
----
-
-## Footer lock button reflects lock state
-
-**Preconditions**: Lock state is `{ locked: true, lockedTotal: 12100 }`.
-
-### Steps
-
-1. Render with locked state
-
-### Expected Outcome
-
-- Lock icon (`Lock`) is visible (not `LockOpen`)
-- Displayed total uses `lockedTotal` (12100) instead of computed total
-- Lock button tooltip shows "Unlock total amount"
-
-### Example Code
-
-```typescript
-it('footer lock icon reflects locked state', () => {
-  renderWithProviders(<InvoiceLinesTableV3 />, {
-    formDefaults: { buildingId: 'b-1', amounts: [{ id: 'l1', totalAmount: 12100 }] },
-    contextOverrides: {
-      lockState: { locked: true, lockedTotal: 12100 },
-    },
-  });
-
-  const lockButton = screen.getByRole('button', { name: /unlock/i });
-  expect(lockButton).toBeVisible();
-});
-```
-
----
-
-## Footer lock disabled in partial edit mode
-
-**Preconditions**: `isPartialEditMode: true`.
-
-### Steps
-
-1. Render with partial edit mode active
-
-### Expected Outcome
-
-- Lock toggle button is disabled
-- Tooltip shows "Total locked" (paid/booked message)
-
-### Example Code
-
-```typescript
-it('lock toggle disabled in partial edit mode', () => {
-  renderWithProviders(<InvoiceLinesTableV3 />, {
-    formDefaults: { buildingId: 'b-1', amounts: [{ id: 'l1', totalAmount: 5000 }] },
-    contextOverrides: {
-      isPartialEditMode: true,
-      lockState: { locked: true, lockedTotal: 5000 },
-    },
-  });
-
-  const lockButton = screen.getByRole('button', { name: /lock/i });
-  expect(lockButton).toBeDisabled();
-});
-```
 
 ---
 

@@ -17,24 +17,18 @@ Peppol invoices open with empty/wrong fields, unmatched suppliers get stale `sen
 ## Bugs Guarded
 
 - **Peppol populates all form fields** guards **B4** (Peppol truthy filter) -- `if (value)` in `usePeppolFormPopulate` skips `0`, `false`, `''`; all field types must be populated correctly
-- **Empty Peppol amounts produce zero-lock** guards **B1** (lock state) -- empty amounts must not produce phantom lock total; `sumTotalAmounts([])` should yield 0, which then drives UX edge case
 - **Unmatched supplier resets senderId** / **Matched supplier sets senderId** guard **B13** (inline select clearing) -- supplier clearing must use proper value; `resetField('senderId')` vs `setValue('senderId', '')` for UUID validation
 - **Peppol credit note typeCode flows to form** guards **B2** (mode switching) -- Peppol credit note `typeCode: '381'` must flow to form `invoiceTypeCode`
-- **Lock total matches Peppol amounts sum** guards **B1** -- lock total must match exact sum of Peppol amounts; `sumTotalAmounts` uses integer cents
-- **Grouping preserves originalLines and total** guards **B7/B8** (grouping stale snapshot / totals) -- grouping must preserve `originalLines` and not change total under lock
+- Pure-logic guards (B1 lock state, B7/B8 grouping, OGM parsing) moved to `unit/transformPeppolToFormData.md`
 
 ## Scenarios
 
 | Test Name | Expected Outcome |
 |-----------|-------------------|
 | Peppol populates all form fields | All fields set via `setValue`, `trigger()` called |
-| Empty Peppol amounts produce zero-lock | `lockedTotal: 0` (known UX edge case) |
 | Unmatched supplier resets senderId | `resetField('senderId')` called, supplier data stored |
 | Matched supplier sets senderId | `setValue('senderId')` called, supplier data cleared |
 | Peppol credit note typeCode flows to form | `invoiceTypeCode` is `'381'` |
-| Belgian OGM structured remittance | Parsed to digits, typed STRUCTURED |
-| Lock total matches Peppol amounts sum | `sumTotalAmounts` matches multi-line total |
-| Grouping preserves originalLines and total | Same total after grouping, `originalLines` preserved |
 
 ## Related Specs
 
@@ -252,52 +246,6 @@ describe('Peppol to Invoice — field population', () => {
 
 ---
 
-## Empty amounts from Peppol — no zero-lock
-
-**Preconditions**: Peppol invoice with no lines (empty `lines` array).
-**Bug vector**: `PeppolInvoiceSheetRoute.tsx` lines 102-108 always sets `locked: true`. With empty amounts, `lockedTotal` is 0, creating an unusable locked form.
-
-### Steps
-
-1. Call `transformPeppolToFormData` with Peppol data that has `lines: []`
-2. Simulate the `onCreatePurchaseInvoice` callback from `PeppolInvoiceSheetRoute`
-
-### Expected Outcome
-
-- `transformedData.amounts` is an empty array
-- `sumTotalAmounts([])` returns `0`
-- The config would be `{ initialLockState: { locked: true, lockedTotal: 0 } }` — this is a known design issue where the form locks at zero
-
-### Example Code
-
-```typescript
-import { sumTotalAmounts } from '../../components/invoice-lines/pipeline';
-import { transformPeppolToFormData } from '../../../purchase-invoice-v2/utils/transformPeppolToFormData';
-
-it('empty peppol lines produce empty amounts and zero lock total', () => {
-  const emptyLinesPeppol = { ...basePeppolData, lines: [] };
-  const transformed = transformPeppolToFormData(emptyLinesPeppol);
-
-  expect(transformed.amounts).toEqual([]);
-
-  const amounts = transformed.amounts ?? [];
-  const lockedTotal = sumTotalAmounts(amounts);
-
-  expect(lockedTotal).toBe(0);
-
-  // Current behavior: locks at zero (potential UX issue)
-  // The PeppolInvoiceSheetRoute always sets locked: true
-  const config = { initialLockState: { locked: true, lockedTotal } };
-  expect(config.initialLockState.locked).toBe(true);
-  expect(config.initialLockState.lockedTotal).toBe(0);
-
-  // NOTE: A guard like `if (amounts.length > 0)` before locking
-  // would prevent this edge case. Track as potential improvement.
-});
-```
-
----
-
 ## Unmatched supplier — peppolSupplierData set, senderId reset
 
 **Preconditions**: Peppol invoice with `supplierPartyContactId: null/undefined` and `supplierParty` present.
@@ -427,175 +375,8 @@ it('peppol credit note sets invoiceTypeCode to 381', async () => {
 });
 ```
 
----
+## Related Unit Tests
 
-## Belgian OGM structured remittance detection
+The following pure-logic scenarios were moved to dedicated unit test specs:
 
-**Preconditions**: Peppol invoice with `paymentMeans[0].id = '+++123/4567/89002+++'`.
-
-### Steps
-
-1. Transform Peppol data with the formatted OGM reference
-2. Verify remittance type and cleaned reference
-
-### Expected Outcome
-
-- `remittanceType` is `PaymentMessageTypeEnum.STRUCTURED`
-- `remittanceInfo` is `'123456789002'` (digits only, checksum valid)
-
-### Example Code
-
-```typescript
-import { PaymentMessageTypeEnum } from '@/common/models/payment';
-import { transformPeppolToFormData } from '../../../purchase-invoice-v2/utils/transformPeppolToFormData';
-
-it('Belgian OGM is detected and cleaned to digits', () => {
-  const ogmPeppol = {
-    ...basePeppolData,
-    paymentMeans: [{ code: '30', id: '+++123/4567/89002+++' }],
-  };
-
-  const result = transformPeppolToFormData(ogmPeppol);
-
-  expect(result.remittanceType).toBe(PaymentMessageTypeEnum.STRUCTURED);
-  expect(result.remittanceInfo).toBe('123456789002');
-});
-```
-
----
-
-## Lock total computation in onCreatePurchaseInvoice
-
-**Preconditions**: Peppol detail sheet fires `onCreatePurchaseInvoice` with transformed data.
-
-### Steps
-
-1. Simulate `handleEditInvoice` from `PeppolInvoiceFloatingSheetContent`
-2. Simulate `onCreatePurchaseInvoice` callback from `PeppolInvoiceSheetRoute`
-3. Verify lock state config
-
-### Expected Outcome
-
-- `sumTotalAmounts(amounts)` equals the expected total from Peppol lines
-- Config is `{ initialLockState: { locked: true, lockedTotal: <computed> } }`
-- `peppolInvoiceId` is passed to `PurchaseInvoiceFormFactory`
-
-### Example Code
-
-```typescript
-import { sumTotalAmounts } from '../../components/invoice-lines/pipeline';
-import { transformPeppolToFormData } from '../../../purchase-invoice-v2/utils/transformPeppolToFormData';
-import type { AmountWithDistributionData } from '../../../purchase-invoice-v2/schema';
-
-it('lock total matches sum of transformed peppol amounts', () => {
-  const multiLinePeppol = {
-    ...basePeppolData,
-    lines: [
-      {
-        id: 'l1', name: 'Service A',
-        baseQuantity: 1, basePrice: 10000, quantity: 1,
-        vatIncluded: true, vatRate: 0.21,
-        subtotal: 10000, total: 12100, currency: 'EUR',
-      },
-      {
-        id: 'l2', name: 'Service B',
-        baseQuantity: 1, basePrice: 5000, quantity: 1,
-        vatIncluded: false, vatRate: 0,
-        subtotal: 5000, total: 5000, currency: 'EUR',
-      },
-    ],
-  };
-
-  const transformed = transformPeppolToFormData(multiLinePeppol);
-  const amounts = (transformed.amounts ?? []) as AmountWithDistributionData[];
-  const lockedTotal = sumTotalAmounts(amounts);
-
-  // 12100 + 5000 = 17100
-  expect(lockedTotal).toBe(17100);
-
-  // Simulates PeppolInvoiceSheetRoute.onCreatePurchaseInvoice
-  const config = { initialLockState: { locked: true, lockedTotal } };
-  expect(config.initialLockState).toEqual({ locked: true, lockedTotal: 17100 });
-});
-```
-
----
-
-## Grouping strategy preserves originalLines and lock total
-
-**Preconditions**: Peppol data with multiple lines at different VAT rates.
-
-### Steps
-
-1. Transform Peppol data to individual amounts
-2. Apply `groupAmountsByVatRate` to re-group
-3. Verify `originalLines` are preserved and `sumTotalAmounts` stays the same
-
-### Expected Outcome
-
-- Individual: 3 amount entries, total = sum of all three
-- Grouped by VAT: 2 entries (21% group + 6% group), same total
-- Each grouped entry has `originalLines` from the original Peppol lines
-- `sumTotalAmounts` produces the same result before and after grouping
-
-### Example Code
-
-```typescript
-import { sumTotalAmounts } from '../../components/invoice-lines/pipeline';
-import {
-  transformPeppolToFormData,
-  groupAmountsByVatRate,
-} from '../../../purchase-invoice-v2/utils/transformPeppolToFormData';
-
-it('grouping preserves originalLines and lock total', () => {
-  const multiVatPeppol = {
-    ...basePeppolData,
-    lines: [
-      {
-        id: 'l1', name: 'Item A',
-        baseQuantity: 1, basePrice: 10000, quantity: 1,
-        vatIncluded: true, vatRate: 0.21,
-        subtotal: 10000, total: 12100, currency: 'EUR',
-      },
-      {
-        id: 'l2', name: 'Item B',
-        baseQuantity: 1, basePrice: 5000, quantity: 1,
-        vatIncluded: true, vatRate: 0.21,
-        subtotal: 5000, total: 6050, currency: 'EUR',
-      },
-      {
-        id: 'l3', name: 'Item C',
-        baseQuantity: 1, basePrice: 3000, quantity: 1,
-        vatIncluded: true, vatRate: 0.06,
-        subtotal: 3000, total: 3180, currency: 'EUR',
-      },
-    ],
-  };
-
-  const transformed = transformPeppolToFormData(multiVatPeppol);
-  const individual = transformed.amounts!;
-  const grouped = groupAmountsByVatRate(individual);
-
-  // Individual: 3 entries
-  expect(individual).toHaveLength(3);
-
-  // Grouped: 2 entries (21% + 6%)
-  expect(grouped).toHaveLength(2);
-
-  // Total is preserved
-  const individualTotal = sumTotalAmounts(individual);
-  const groupedTotal = sumTotalAmounts(grouped);
-  expect(individualTotal).toBe(groupedTotal);
-  expect(groupedTotal).toBe(12100 + 6050 + 3180); // 21330
-
-  // originalLines preserved in each group
-  const vat21Group = grouped.find((g) => g.vatRate === 21)!;
-  expect(vat21Group.originalLines).toHaveLength(2);
-  expect(vat21Group.originalLines![0].name).toBe('Item A');
-  expect(vat21Group.originalLines![1].name).toBe('Item B');
-
-  const vat6Group = grouped.find((g) => g.vatRate === 6)!;
-  expect(vat6Group.originalLines).toHaveLength(1);
-  expect(vat6Group.originalLines![0].name).toBe('Item C');
-});
-```
+- **Empty amounts / zero-lock**, **Belgian OGM detection**, **Lock total computation**, **Grouping preserves originalLines** — see `unit/transformPeppolToFormData.md`

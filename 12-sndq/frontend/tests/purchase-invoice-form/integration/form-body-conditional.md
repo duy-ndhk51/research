@@ -1,6 +1,6 @@
 # FormBody Conditional Rendering
 
-**Status**: Not started
+**Status**: Done
 **Priority**: HIGH (gates all form sections behind building + supplier prerequisite)
 **Test tier**: Component integration
 **Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/form-body.test.tsx`
@@ -349,5 +349,102 @@ it('shows AI extraction overlay when extracting', () => {
   // Form sections still render underneath
   expect(screen.getByTestId('invoice-lines-table')).toBeInTheDocument();
   expect(screen.getByTestId('payment-section')).toBeInTheDocument();
+});
+```
+
+---
+
+## Implementation
+
+**Implemented**: 2026-06-14
+**Test file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/form-body.test.tsx`
+**Cases**: 4/4 implemented
+
+### Deviations from spec
+
+- **Translation handling**: `renderWithProviders` wraps components in a real `IntlProvider` with `testMessages`, so assertions use literal English strings (`'Select a building and supplier to continue'`, `'Limited editing'`) instead of translation keys (`purchase_invoice.select_building_supplier_hint`).
+- **Mock import paths**: Mocks use `../../sections/` and `../../components/` (relative from test file location inside `__tests__/integration/`), not `./` as in the spec's proposed mocking strategy.
+- **InvoiceFieldsSection mock simplified**: Spec proposed sub-testids (`invoice-number-field`, `invoice-date-field`) inside the mock. Implementation uses a single `<div data-testid="invoice-fields-section">` since the test only checks section presence, not individual fields.
+- **Partial edit case strengthened**: Originally implemented with only fieldset count assertion (`toHaveLength(2)`). Improved with 7 per-component fieldset boundary assertions using `closest('fieldset[disabled]')` to verify exactly which components are inside/outside disabled fieldsets.
+- **Shared fixtures extracted**: Spec defined `withBuildingAndSupplier` inline in Shared Setup. Implementation extracts it to `mock-factories.ts` for reuse across test files. `withAiExtracting` extends it with AI extraction state.
+- **DOM cleanup**: Added `cleanup()` in `beforeEach` (not in spec) to ensure DOM isolation between tests.
+
+### Dropped cases
+
+None — all 4 cases implemented.
+
+### Coverage gaps
+
+- **Section card headings** (`general.info_short`, `purchase_invoice.payment_details`, `general.other`) from the "full form" spec are not asserted. The test verifies section presence via `data-testid` but not heading text.
+- **Partial edit**: Does not assert that invoice lines and "other" sections remain *editable* (only that they are not inside disabled fieldsets). True editability depends on child component internals, which are mocked.
+
+### Actual mocking strategy
+
+Mock paths differ from spec (`../../sections/` vs `./`). `next-intl` is NOT mocked — handled by `renderWithProviders` with real `IntlProvider`.
+
+```typescript
+vi.mock('../../components/InlineBuildingSelect', () => ({
+  InlineBuildingSelect: () => <div data-testid="building-select">Building Select</div>,
+}));
+vi.mock('../../components/InlineSupplierSelect', () => ({
+  ConnectedInlineSupplierSelect: () => <div data-testid="supplier-select">Supplier Select</div>,
+}));
+vi.mock('../../sections/InvoiceFieldsSection', () => ({
+  InvoiceFieldsSection: () => <div data-testid="invoice-fields-section">Invoice Fields</div>,
+}));
+vi.mock('../../sections/CreditNoteSection', () => ({
+  CreditNoteSection: () => <div data-testid="credit-note-section" />,
+}));
+vi.mock('../../components/invoice-lines', () => ({
+  InvoiceLinesTableV3: () => <div data-testid="invoice-lines-table">Invoice Lines</div>,
+}));
+vi.mock('../../sections/PaymentDetailsSection', () => ({
+  PaymentDetailsSection: () => <div data-testid="payment-section">Payment Details</div>,
+}));
+vi.mock('../../sections/DueDateField', () => ({
+  ConnectedDueDateField: () => <div data-testid="due-date-field">Due Date</div>,
+}));
+vi.mock('../../sections/OtherSection', () => ({
+  OtherSection: () => <div data-testid="other-section">Other Section</div>,
+}));
+vi.mock('../../sections/AiExtractionOverlay', () => ({
+  AiExtractionOverlay: ({ isExtracting }: { isExtracting: boolean }) =>
+    isExtracting ? <div data-testid="ai-extraction-overlay" /> : null,
+}));
+```
+
+### Shared fixtures
+
+- `withBuildingAndSupplier` from `mock-factories.ts` — provides `buildingId`, `senderId`, `supplierDefaults` context + matching form defaults
+- `withAiExtracting` from `mock-factories.ts` — extends `withBuildingAndSupplier` with `aiExtraction.isExtracting: true`
+
+### Condensed test code
+
+```typescript
+describe('FormBody conditional rendering', () => {
+  it('shows placeholder when building/supplier not selected', () => {
+    renderWithProviders(<FormBody />, { contextOverrides: { supplierDefaults: { isLoading: false, defaults: null } } });
+    expect(screen.getByText('Select a building and supplier to continue')).toBeInTheDocument();
+    // 4 gated sections NOT rendered, 4 always-visible sections rendered
+  });
+
+  it('shows full form when building + supplier selected', () => {
+    renderWithProviders(<FormBody />, withBuildingAndSupplier);
+    // placeholder gone, all 8 sections rendered
+  });
+
+  it('disables building/supplier/payment in partial edit mode', () => {
+    renderWithProviders(<FormBody />, { ...withBuildingAndSupplier, contextOverrides: { isPartialEditMode: true } });
+    expect(screen.getByText('Limited editing')).toBeInTheDocument();
+    expect(document.querySelectorAll('fieldset[disabled]')).toHaveLength(2);
+    // building-select, supplier-select, payment-section inside disabled fieldset
+    // invoice-fields, lines, due-date, other outside disabled fieldset
+  });
+
+  it('shows AI extraction overlay when extracting', () => {
+    renderWithProviders(<FormBody />, withAiExtracting);
+    expect(screen.getByTestId('ai-extraction-overlay')).toBeInTheDocument();
+    // form sections still render underneath
+  });
 });
 ```

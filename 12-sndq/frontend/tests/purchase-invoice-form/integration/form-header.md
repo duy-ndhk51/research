@@ -1,6 +1,6 @@
 # Form Header
 
-**Status**: Not started
+**Status**: Done (4 of 6 cases; lock icon cases IT-136/IT-137 dropped — InvoiceFormHeader has no lock icon, belongs to InvoiceLinesTableV3)
 **Priority**: MEDIUM (primary user action zone -- save, total, lock, mode toggle)
 **Test tier**: Component integration
 **Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/form-header.test.tsx`
@@ -243,6 +243,77 @@ it('draft badge visible for drafts', () => {
   });
 
   expect(screen.getByText(/draft/i)).toBeVisible();
+});
+```
+
+---
+
+## Implementation
+
+**Implemented**: 2026-06-14
+**Test file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/form-header.test.tsx`
+**Cases**: 4/6 implemented — 2 lock icon cases dropped
+
+### Deviations from spec
+
+- **Lock icon cases dropped**: `FormHeader.tsx` and `InvoiceFormHeader.tsx` contain zero references to lock state. The lock icon lives in `InvoiceLinesTableFooter` (rendered by `InvoiceLinesTableV3`). These cases belong in the `invoice-lines-table.md` spec.
+- **Translation handling**: `renderWithProviders` uses real `IntlProvider` with `testMessages`, so assertions use literal strings (`'Draft'`, `'Save invoice'`) instead of translation keys.
+- **Save button selector**: Matched by `/save invoice/i` (actual rendered text), not `/save/i` as in spec.
+- **Total amount formatting**: Displays as `150,00` (European locale via `IntlProvider`), not `150.00` as spec suggested.
+- **Shared fixtures**: Uses `defaultHeaderContext` from `mock-factories.ts` instead of inline `defaultProps`. Uses `makeLine()` factory for amount lines.
+- **DuplicateWarningButton**: Mocked to `null` via `vi.mock` — this component makes API calls and would fail without a backend.
+- **Draft badge**: Requires both `isDraft: true` AND `invoiceId: 'existing-invoice-id'` to render (the component checks both conditions).
+- **DOM cleanup**: Added `cleanup()` in `beforeEach` for DOM isolation.
+
+### Dropped cases
+
+- **Lock icon shows when locked** — lock icon is not rendered by `FormHeader` or `InvoiceFormHeader`; belongs in `invoice-lines-table.md` (`InvoiceLinesTableFooter`)
+- **Lock icon hidden when unlocked** — same reason as above
+
+### Coverage gaps
+
+- Lock icon behavior is not yet covered anywhere — needs implementation in `invoice-lines-table.md` spec.
+- Save button spinner animation during `isPending` is not asserted (only disabled state).
+
+### Actual mocking strategy
+
+Only `DuplicateWarningButton` is mocked. `next-intl` is NOT mocked — handled by `renderWithProviders`.
+
+```typescript
+vi.mock(
+  '../../../purchase-invoice-v2/components/DuplicateWarningBanner',
+  () => ({ DuplicateWarningButton: () => null }),
+);
+```
+
+### Shared fixtures
+
+- `defaultHeaderContext` from `mock-factories.ts` — provides `isPending: false`, `buildingId`, `senderId`, and matching form defaults
+- `makeLine(id, totalAmount)` from `mock-factories.ts` — creates amount line objects for total computation
+
+### Condensed test code
+
+```typescript
+describe('FormHeader', () => {
+  it('should enable save button when form is valid', () => {
+    renderWithProviders(<FormHeader />, defaultHeaderContext);
+    expect(screen.getByRole('button', { name: /save invoice/i })).not.toBeDisabled();
+  });
+
+  it('should disable save button during submission', () => {
+    renderWithProviders(<FormHeader />, { ...defaultHeaderContext, contextOverrides: { isPending: true } });
+    expect(screen.getByRole('button', { name: /save invoice/i })).toBeDisabled();
+  });
+
+  it('total amount shows computed sum from form amounts', () => {
+    renderWithProviders(<FormHeader />, { formDefaults: { amounts: [makeLine('l1', 10000), makeLine('l2', 5000)] } });
+    expect(screen.getByText(/150,00/)).toBeInTheDocument();
+  });
+
+  it('draft badge visible for drafts', () => {
+    renderWithProviders(<FormHeader />, { contextOverrides: { isDraft: true, invoiceId: 'existing-invoice-id' } });
+    expect(screen.getByText('Draft')).toBeInTheDocument();
+  });
 });
 ```
 

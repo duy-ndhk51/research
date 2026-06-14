@@ -18,7 +18,7 @@ Units not initialized on sheet open, distribution type switch corrupts amounts, 
 
 - "loading spinner" / "properties initialize units" tests guard initialization — properties must be loaded before rendering form; premature render shows broken state
 - "distribution key forces wholeBuilding" / "switching key recalculates" tests guard **B8** (grouping changes totals without lock update) — distribution key changes shares; combined with lock, total must stay consistent after `replace()`
-- "totalAmount recalculation" / "splitAmount rounding" tests guard proportional redistribution — rounding errors in integer cents math can lose/gain cents across units; `splitAmount` uses `Math.floor` + remainder distribution to guarantee exact sum, but the remainder allocation across same-share groups can break equality
+- "totalAmount recalculation" test guards proportional redistribution — `splitAmount` rounding guarantees are covered in dedicated unit tests (`unit/splitAmount.md`)
 - "total mismatch validation" test guards **B9** (draft save skips lock validation) — mismatch dialog prevents draft save with inconsistent allocations; `SplitErrorDialog` must catch sum != total before submit
 - distribution type switching tests guard the state machine — each type has unique constraints (`DEFAULT_SHARE`, `PERCENTAGE_BASE_VALUE`, editable inputs, zeroed allocations)
 
@@ -39,8 +39,6 @@ Units not initialized on sheet open, distribution type switch corrupts amounts, 
 | Individual unit deselect zeros its values | Share and amount become 0 |
 | Select all checkbox toggles all units | Header checkbox toggles all |
 | totalAmount change recalculates amounts | Proportional redistribution |
-| splitAmount rounding: 3 equal shares, non-divisible total | Parts sum exactly to total, no cent lost |
-| splitAmount rounding: 2 equal shares, odd total | One unit gets +1 cent, sum still exact |
 | Ledger suggestion chip sets costAccount | costAccount field populated |
 | Distribution key suggestion switches mode | Distribution key mode enabled, key applied |
 | Total mismatch shows SplitErrorDialog | Error dialog with "divide equally" |
@@ -584,95 +582,6 @@ it('totalAmount change triggers proportional redistribution', async () => {
     expect(screen.getByTestId('unit-amount-unit-1')).toHaveValue(20000);
     expect(screen.getByTestId('unit-amount-unit-2')).toHaveValue(20000);
   });
-});
-```
-
----
-
-## splitAmount rounding -- 3 equal shares with non-divisible total
-
-> Documents that `splitAmount` guarantees parts sum exactly to the total, even when the total is not evenly divisible. Uses `Math.floor` per part then distributes the remainder 1 cent at a time.
-
-**Preconditions**: Pure calculation test using `splitAmount` directly.
-
-### Steps
-
-1. Call `splitAmount(10000, [333, 333, 334], 1000)` (near-equal shares, total not divisible by 3)
-2. Call `splitAmount(10001, [333, 333, 334], 1000)` (odd total)
-3. Call `splitAmount(10000, [333, 333, 333], 999)` (exactly equal shares, non-divisible)
-
-### Expected Outcome (current behavior)
-
-- In all cases, `parts.reduce((a, b) => a + b, 0)` equals the original `total` exactly
-- No part is negative
-- For equal shares, the difference between any two parts is at most 1 cent
-
-### Example Code
-
-```typescript
-it('splitAmount with near-equal shares sums exactly to total', () => {
-  // 3 near-equal shares, total 10000
-  const result1 = splitAmount(10000, [333, 333, 334], 1000);
-  expect(result1.reduce((a, b) => a + b, 0)).toBe(10000);
-  expect(result1.every((p) => p >= 0)).toBe(true);
-
-  // Odd total
-  const result2 = splitAmount(10001, [333, 333, 334], 1000);
-  expect(result2.reduce((a, b) => a + b, 0)).toBe(10001);
-  expect(result2.every((p) => p >= 0)).toBe(true);
-
-  // Exactly equal shares, non-divisible (10000 / 3 = 3333.33...)
-  const result3 = splitAmount(10000, [333, 333, 333], 999);
-  expect(result3.reduce((a, b) => a + b, 0)).toBe(10000);
-  expect(result3.every((p) => p >= 0)).toBe(true);
-
-  // Equal shares should produce at most 1 cent difference between parts
-  const maxPart3 = Math.max(...result3);
-  const minPart3 = Math.min(...result3);
-  expect(maxPart3 - minPart3).toBeLessThanOrEqual(1);
-});
-```
-
----
-
-## splitAmount rounding -- 2 equal shares with odd total
-
-> Documents that when 2 units have identical shares and the total is odd, one unit receives +1 cent. The `splitAmount` function groups by share value and distributes remainder to groups, which may break equality when the remainder is smaller than the group size.
-
-**Preconditions**: Pure calculation test using `splitAmount` directly.
-
-### Steps
-
-1. Call `splitAmount(10001, [500, 500], 1000)` (2 equal shares, odd total)
-2. Call `splitAmount(9999, [500, 500], 1000)` (same but different odd total)
-3. Call `splitAmount(10000, [500, 500], 1000)` (even total, should be perfectly equal)
-
-### Expected Outcome (current behavior)
-
-- Odd total: one unit gets `5001`, the other `5000` -- sum is `10001`
-- Even total: both units get `5000` -- sum is `10000`
-- In the odd case, which unit gets +1 depends on the group remainder distribution logic (Pass 2 in `splitAmount`)
-
-### Example Code
-
-```typescript
-it('splitAmount with 2 equal shares and odd total', () => {
-  // Odd total: 10001 split into 2 equal shares
-  const odd = splitAmount(10001, [500, 500], 1000);
-  expect(odd.reduce((a, b) => a + b, 0)).toBe(10001);
-  expect(odd).toHaveLength(2);
-  // One unit gets the extra cent
-  expect(odd.toSorted((a, b) => a - b)).toEqual([5000, 5001]);
-
-  // Odd total
-  const odd2 = splitAmount(9999, [500, 500], 1000);
-  expect(odd2.reduce((a, b) => a + b, 0)).toBe(9999);
-  expect(odd2.toSorted((a, b) => a - b)).toEqual([4999, 5000]);
-
-  // Even total: perfectly equal
-  const even = splitAmount(10000, [500, 500], 1000);
-  expect(even.reduce((a, b) => a + b, 0)).toBe(10000);
-  expect(even).toEqual([5000, 5000]);
 });
 ```
 
