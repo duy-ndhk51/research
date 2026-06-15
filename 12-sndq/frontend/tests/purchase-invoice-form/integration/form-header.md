@@ -16,10 +16,10 @@ Save button stays enabled during submission (double-submit), total displays stal
 
 ## Bugs Guarded
 
-- Save button enabled when form is valid / Save button disabled during submission guard **B9** (draft save skips lock validation) -- save must be disabled while `isPending`; draft vs full submit have different validation paths
-- Total amount shows computed sum guards **B12** (footer masks mismatch) -- total in header must use live sum (not `lockedTotal`) to prevent user confusion
-- Lock icon shows when locked / Lock icon hidden when unlocked guard **B1** (lock state vs form amounts) -- lock indicator must reflect actual `lockState.locked`; icon mismatch causes user to edit locked amounts
-- Mode toggle calls setMode guards **B2** (mode switching) -- mode toggle must call `setMode` which triggers `handleModeChange`; side effects include type code + `originalInvoiceId` management
+- Save button enabled when form is valid / Save button disabled during submission guard draft save skips lock validation -- save must be disabled while `isPending`; draft vs full submit have different validation paths
+- Total amount shows computed sum guards footer masks mismatch -- total in header must use live sum (not `lockedTotal`) to prevent user confusion
+- Lock icon shows when locked / Lock icon hidden when unlocked guard lock state vs form amounts -- lock indicator must reflect actual `lockState.locked`; icon mismatch causes user to edit locked amounts
+- Mode toggle calls setMode guards mode switching -- mode toggle must call `setMode` which triggers `handleModeChange`; side effects include type code + `originalInvoiceId` management
 
 ## Scenarios
 

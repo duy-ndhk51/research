@@ -16,10 +16,10 @@ Peppol invoices open with empty/wrong fields, unmatched suppliers get stale `sen
 
 ## Bugs Guarded
 
-- **Peppol populates all form fields** guards **B4** (Peppol truthy filter) -- `if (value)` in `usePeppolFormPopulate` skips `0`, `false`, `''`; all field types must be populated correctly
-- **Unmatched supplier resets senderId** / **Matched supplier sets senderId** guard **B13** (inline select clearing) -- supplier clearing must use proper value; `resetField('senderId')` vs `setValue('senderId', '')` for UUID validation
-- **Peppol credit note typeCode flows to form** guards **B2** (mode switching) -- Peppol credit note `typeCode: '381'` must flow to form `invoiceTypeCode`
-- Pure-logic guards (B1 lock state, B7/B8 grouping, OGM parsing) moved to `unit/transformPeppolToFormData.md`
+- **Peppol populates all form fields** guards Peppol truthy filter -- `if (value)` in `usePeppolFormPopulate` skips `0`, `false`, `''`; all field types must be populated correctly
+- **Unmatched supplier resets senderId** / **Matched supplier sets senderId** guard inline select clearing -- supplier clearing must use proper value; `resetField('senderId')` vs `setValue('senderId', '')` for UUID validation
+- **Peppol credit note typeCode flows to form** guards mode switching -- Peppol credit note `typeCode: '381'` must flow to form `invoiceTypeCode`
+- Pure-logic guards (lock state, grouping, OGM parsing) moved to `unit/transformPeppolToFormData.md`
 
 ## Scenarios
 

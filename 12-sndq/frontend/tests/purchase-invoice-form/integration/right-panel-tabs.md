@@ -18,7 +18,7 @@ Users see empty uploader instead of Peppol data. Tab persists stale selection af
 
 - Default tab / peppol cleared — stale `userSelectedTab` not reset when `peppolData` appears/disappears; condition uses `hasPeppolData` (not `hasAttachments`)
 - Peppol content switching — `PeppolParsedPreview` vs `PeppolAttachmentsTab` depends on attachment file presence
-- Peppol auto-lock (**B1**, lock state vs form amounts) — Peppol auto-lock pathway must compute correct `lockedTotal` from `safePeppolDataParsed` amounts
+- Peppol auto-lock (lock state vs form amounts) — Peppol auto-lock pathway must compute correct `lockedTotal` from `safePeppolDataParsed` amounts
 - User tab override — forced tab switch must not override explicit user selection
 
 ## Scenarios

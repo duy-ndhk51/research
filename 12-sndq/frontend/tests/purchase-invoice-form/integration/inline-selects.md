@@ -16,9 +16,9 @@ Building change doesn't reset supplier (wrong building-supplier pair), supplier 
 
 ## Bugs Guarded
 
-- "Building selected sets buildingId" / "Building changed resets supplier and amounts" guard **B13** (inline select clearing) -- building change must reset `senderId` and clear amounts; `handleBuildingChange` calls `resetField('senderId')` + `removeAllAmounts()`
-- "Supplier cleared resets senderId" guards **B13** -- clearing supplier must reset `senderId` via `resetField` (not `setValue`); UUID validation difference
-- "Supplier selected sets senderId" / "Reselecting same supplier is a no-op" guard **B13** -- supplier selection populates `senderId`; already-selected supplier must be a no-op
+- "Building selected sets buildingId" / "Building changed resets supplier and amounts" guard inline select clearing -- building change must reset `senderId` and clear amounts; `handleBuildingChange` calls `resetField('senderId')` + `removeAllAmounts()`
+- "Supplier cleared resets senderId" guards inline select clearing -- clearing supplier must reset `senderId` via `resetField` (not `setValue`); UUID validation difference
+- "Supplier selected sets senderId" / "Reselecting same supplier is a no-op" guard inline select clearing -- supplier selection populates `senderId`; already-selected supplier must be a no-op
 - "Search debounces API calls" guards debounce -- rapid typing must debounce API calls; `useDebouncedCallback` with 300ms delay
 - "Quick-create supplier flow" guards quick-create -- inline supplier creation must populate `senderId` and trigger supplier defaults refresh
 

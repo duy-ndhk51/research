@@ -16,9 +16,9 @@ Form exposes payment/amount fields before supplier is selected (causing validati
 
 ## Bugs Guarded
 
-- "placeholder" test guards **B3** (partial edit boundary) -- ensures the `hasRequiredInfo` gate (`!!buildingId && !!senderId && !supplierDefaults.isLoading`) hides gated sections (lines, payment, due date, other) while keeping always-visible sections (building/supplier selects, invoice fields) rendered
+- "placeholder" test guards partial edit boundary -- ensures the `hasRequiredInfo` gate (`!!buildingId && !!senderId && !supplierDefaults.isLoading`) hides gated sections (lines, payment, due date, other) while keeping always-visible sections (building/supplier selects, invoice fields) rendered
 - "full form" test guards section completeness -- regression catches missing sections after refactors; verifies all 4 gated sections render AND all always-visible sections remain present
-- "partial edit disables building/supplier/payment only" test guards **B3** -- verifies disabled fieldsets match what users can actually change in partial edit; `fieldset disabled` only wraps building/supplier + payment, not amounts/dates
+- "partial edit disables building/supplier/payment only" test guards partial edit boundary -- verifies disabled fieldsets match what users can actually change in partial edit; `fieldset disabled` only wraps building/supplier + payment, not amounts/dates
 - "AI extraction overlay during extraction" test guards the AI overlay lifecycle -- prevents stale overlay remaining after extraction completes
 
 ## Scenarios

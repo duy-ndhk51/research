@@ -16,9 +16,9 @@ Supplier defaults overwrite user-set values, backfill fires multiple times corru
 
 ## Bugs Guarded
 
-- "applies costAccount" / "applies distributionKeyId" tests guard **B6** (supplier backfill one-shot) -- backfill must run exactly once with correct data; `appliedPairRef` tracks `buildingId+senderId` pair
-- never-overwrite guard tests guard **B6** -- "never overwrite" policy; `useInitialLineDefaults` only applies when line is pristine (`hasDefaultValues` check)
-- "waits for loading" test guards **B6** -- late arrival (loading state) must delay application, not skip entirely; `supplierDefaults.isLoading` gate
+- "applies costAccount" / "applies distributionKeyId" tests guard supplier backfill one-shot -- backfill must run exactly once with correct data; `appliedPairRef` tracks `buildingId+senderId` pair
+- never-overwrite guard tests guard supplier backfill one-shot -- "never overwrite" policy; `useInitialLineDefaults` only applies when line is pristine (`hasDefaultValues` check)
+- "waits for loading" test guards supplier backfill one-shot -- late arrival (loading state) must delay application, not skip entirely; `supplierDefaults.isLoading` gate
 - auto-save tests guard race conditions -- concurrent submit + defaults-loading must not create duplicate building-supplier links; `useAutoSaveBuildingSupplierDefaults` must deduplicate by pair
 
 ## Scenarios
@@ -299,7 +299,7 @@ it('does not fire in edit mode', async () => {
 ### Example Code
 
 ```typescript
-it('[B6] does not fire with free distribution', async () => {
+it('does not fire with free distribution', async () => {
   const methods = mockFormMethods({
     amounts: [{
       id: 'line-1',

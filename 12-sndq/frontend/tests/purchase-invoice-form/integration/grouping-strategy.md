@@ -22,8 +22,8 @@ Guard the full grouping strategy lifecycle: toggling between individual and sing
 ## Bugs Guarded
 
 - "Saves originals when leaving individual" guards data preservation — `originalAmountsRef.current` must snapshot current lines before grouping
-- "Restores originals when returning to individual" guards **B7** (grouping stale snapshot) — restoring must use saved originals, not current (already-grouped) amounts
-- "Merge conflict opens dialog" guards **B8** (merge without confirmation) — lines with different `costAccount.id` or `distributionKeyId` must trigger confirmation
+- "Restores originals when returning to individual" guards grouping stale snapshot — restoring must use saved originals, not current (already-grouped) amounts
+- "Merge conflict opens dialog" guards merge without confirmation — lines with different `costAccount.id` or `distributionKeyId` must trigger confirmation
 - "Dialog confirm applies strategy" / "Dialog cancel preserves state" guard dialog flow — confirm must call `applyStrategy`, cancel must leave amounts unchanged
 - "Replace updates form" guards form integrity — `useFieldArray.replace()` must fire with new amounts
 - "ClearSelection fires" guards stale state — bulk selection IDs must clear when lines change

@@ -17,9 +17,9 @@ Units not initialized on sheet open, distribution type switch corrupts amounts, 
 ## Bugs Guarded
 
 - "loading spinner" / "properties initialize units" tests guard initialization — properties must be loaded before rendering form; premature render shows broken state
-- "distribution key forces wholeBuilding" / "switching key recalculates" tests guard **B8** (grouping changes totals without lock update) — distribution key changes shares; combined with lock, total must stay consistent after `replace()`
+- "distribution key forces wholeBuilding" / "switching key recalculates" tests guard grouping changes totals without lock update — distribution key changes shares; combined with lock, total must stay consistent after `replace()`
 - "totalAmount recalculation" test guards proportional redistribution — `splitAmount` rounding guarantees are covered in dedicated unit tests (`unit/splitAmount.md`)
-- "total mismatch validation" test guards **B9** (draft save skips lock validation) — mismatch dialog prevents draft save with inconsistent allocations; `SplitErrorDialog` must catch sum != total before submit
+- "total mismatch validation" test guards draft save skips lock validation — mismatch dialog prevents draft save with inconsistent allocations; `SplitErrorDialog` must catch sum != total before submit
 - distribution type switching tests guard the state machine — each type has unique constraints (`DEFAULT_SHARE`, `PERCENTAGE_BASE_VALUE`, editable inputs, zeroed allocations)
 
 ## Scenarios

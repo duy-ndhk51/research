@@ -1,10 +1,10 @@
 # Purchase Invoice V3 — Test Execution Guide
 
-Step-by-step execution guide for adding integration and E2E test coverage to the purchase invoice v3 form. Each PR should be independently verifiable, reviewable (< 1500 lines), and revertable.
+Step-by-step execution guide for adding integration and E2E test coverage to the purchase invoice v3 form.
 
 **Created**: 2026-06-03
 **Updated**: 2026-06-14
-**Status**: PR 1 implemented — 13 integration tests passing (form-body: 4, mode-switching: 5, form-header: 4)
+**Status**: PR 2 implemented — 43 integration tests passing (PR1: 13 + lock-state: 12 + invoice-lines: 18)
 **Architecture**: [purchase-invoice-v3-tests-planning.md](../refactoring/purchase-invoice-v3-tests-planning.md)
 **Branch prefix**: `test/pi-v3-`
 
@@ -30,7 +30,7 @@ Step-by-step execution guide for adding integration and E2E test coverage to the
 
 **Goal**: Add integration and E2E test coverage for `purchase-invoice-v3` form behaviors to catch regressions during refactors and verify end-to-end user flows.
 
-**Structure**: 7 PRs, covering 113 integration test cases, 9 unit test cases (newly spec'd), and 53 E2E test cases. Each PR targets < 1500 lines changed for reviewability.
+**Structure**: 7 PRs, covering 113 integration test cases, 9 unit test cases (newly spec'd), and 53 E2E test cases.
 
 | PR | Name | Risk | Cases | Depends on |
 |----|------|------|-------|------------|
@@ -42,7 +42,7 @@ Step-by-step execution guide for adding integration and E2E test coverage to the
 | **PR 6** | E2E Peppol + AI + validation | Medium | ~20 | PR 5 |
 | **PR 7** | E2E Distribution + supplier | Medium | ~14 | PR 5 |
 
-**Why 7 PRs**: Large test PRs (1500+ lines) are hard to review meaningfully. Splitting by feature cluster keeps each PR focused, allows parallel review of independent PRs (PR 2/3/4 can be reviewed in parallel once PR 1 is merged), and makes it easy to revert a specific test group if it causes flakiness.
+**Why 7 PRs**: Large test PRs are hard to review meaningfully. Splitting by feature cluster keeps each PR focused, allows parallel review of independent PRs (PR 2/3/4 can be reviewed in parallel once PR 1 is merged), and makes it easy to revert a specific test group if it causes flakiness.
 
 **Merge order**:
 - Integration: PR 1 → then PR 2, PR 3, PR 4 (can be parallel after PR 1)
@@ -122,7 +122,6 @@ Pure-logic tests on exported utility functions, moved from integration specs to 
 - `vitest.setup.ts` registers `@testing-library/jest-dom` globally — use `toBeInTheDocument()`, `toHaveClass()`, etc.
 - E2E Playwright config uses `tests/` directory with serial execution (`workers: 1`)
 - Seed scenarios referenced in E2E docs do not exist yet — backend work required
-- Each PR should target < 1500 lines of implementation code — verify with `git diff --stat` before opening
 - `__tests__/utils/` is untracked — must be committed as part of PR 1
 
 ---
@@ -143,7 +142,6 @@ Pure-logic tests on exported utility functions, moved from integration specs to 
   - **Verified 2026-06-14**: ESLint passes on all 4 target files (zero errors). All 2166 tests pass (13.20s). Type-check skipped (project-wide tsc exceeds reasonable timeout; will run per-PR)
 - [ ] Any skipped verification is recorded as a deviation with a follow-up owner or trigger
   - **Deviation**: Full `pnpm run type-check` hung (>43 min). Will run targeted tsc per-PR instead.
-- [ ] `git diff --stat` shows < 1500 lines changed (guideline — if exceeded, consider splitting further)
 - [ ] After implementation, update each spec `.md` in scope with `## Implementation` section (deviations, dropped cases, coverage gaps, shared fixtures, condensed test code) — see [TEMPLATE.md](../../tests/TEMPLATE.md)
 
 ### Documentation and comment policy
@@ -217,11 +215,17 @@ pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/
 
 ### Post-implementation
 
-- [ ] Update each spec `.md` in scope with `## Implementation` section
+- [x] Update each spec `.md` in scope with `## Implementation` section
 
 ### Note
 
-If this PR exceeds 1500 lines, split into PR 2a (lock-state-toggle, 12 cases) and PR 2b (invoice-lines-table, 27 cases).
+### Results
+
+- **lock-state-toggle.test.tsx**: 12 cases, 255 lines — all passing
+- **invoice-lines-table.test.tsx**: 18 cases (of 27 spec'd), 389 lines — all passing
+- **Total new tests**: 30 cases, ~644 lines
+- **Deferred**: 9 cases (period input 5, VAT 2, distribution 2) — `InvoiceLineCard` depends on `WorkspacesProvider`; needs mock workspace context in `renderWithProviders`
+- **Infrastructure**: Added `ResizeObserver` polyfill, `QueryClientProvider`, PostCSS override to vitest config
 
 ---
 
@@ -278,10 +282,6 @@ pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/
 ### Post-implementation
 
 - [ ] Update each spec `.md` in scope with `## Implementation` section
-
-### Note
-
-If this PR exceeds 1500 lines, split by grouping: PR 4a (invoice-fields + right-panel-tabs + inline-selects) and PR 4b (peppol + supplier + orchestration + dialogs).
 
 ---
 
@@ -396,8 +396,8 @@ diff /tmp/pi-v3-tests-e2e-before.txt /tmp/pi-v3-tests-e2e-after.txt
 
 | Date | PR | Branch | Lines | Notes |
 |------|-----|--------|-------|-------|
-| | PR 1 | `test/pi-v3-infra-basics` | | |
-| | PR 2 | `test/pi-v3-lock-lines` | | |
+| 2026-06-14 | PR 1 | `tests/SQ-21372` | ~200 | 13 tests (form-body: 4, mode-switching: 5, form-header: 4) |
+| 2026-06-15 | PR 2 | `tests/SQ-21372` | ~644 | 30 tests (lock-state: 12, invoice-lines: 18); 9 deferred |
 | | PR 3 | `test/pi-v3-grouping-dist` | | |
 | | PR 4 | `test/pi-v3-fields-selects` | | |
 | | PR 5 | `test/pi-v3-e2e-crud` | | |

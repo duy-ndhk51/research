@@ -17,7 +17,7 @@ Provider stack crashes on missing context, Peppol mode doesn't auto-lock, resiza
 ## Bugs Guarded
 
 - "Form renders without crashing in create mode" / "Form renders in edit mode with invoiceId" guard provider composition -- missing/misordered providers crash silently; `useFormContext()` throws outside `FormProvider`
-- "Form renders in Peppol mode with peppolInvoiceId" guards **B1** (lock state vs form amounts) -- Peppol mode must initialize lock state on mount; `initialLockState` prop must propagate through provider
+- "Form renders in Peppol mode with peppolInvoiceId" guards lock state vs form amounts -- Peppol mode must initialize lock state on mount; `initialLockState` prop must propagate through provider
 - "onClose callback wired to sheet state" guards sheet state wiring -- `handleSheetClose` must propagate to form lifecycle; dangling open state blocks subsequent interactions
 
 ## Scenarios

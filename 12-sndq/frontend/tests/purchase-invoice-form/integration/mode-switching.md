@@ -16,8 +16,8 @@ Credit notes submitted as regular invoices (wrong type code), expense notes proc
 
 ## Bugs Guarded
 
-- "Click credit note sets typeCode" guards **B2** (mode switching incomplete side effects) — verifies `setValue` called with correct type code when mode toggle fires
-- "Click invoice clears typeCode" guards **B2** — switching back must set `undefined` to clear the code on the form
+- "Click credit note sets typeCode" guards mode switching incomplete side effects — verifies `setValue` called with correct type code when mode toggle fires
+- "Click invoice clears typeCode" guards mode switching — switching back must set `undefined` to clear the code on the form
 - "Mode badge updates" guards visual feedback — user must see correct badge variant after switching
 
 ## Scenarios
