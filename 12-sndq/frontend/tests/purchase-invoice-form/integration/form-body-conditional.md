@@ -3,7 +3,7 @@
 **Status**: Done
 **Priority**: HIGH (gates all form sections behind building + supplier prerequisite)
 **Test tier**: Component integration
-**Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/form-body.test.tsx`
+**Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/FormBody.test.tsx`
 **Component(s) under test**: `FormBody` from `../sections/FormBody.tsx`
 
 ## Purpose
@@ -357,7 +357,7 @@ it('shows AI extraction overlay when extracting', () => {
 ## Implementation
 
 **Implemented**: 2026-06-14
-**Test file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/form-body.test.tsx`
+**Test file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/FormBody.test.tsx`
 **Cases**: 4/4 implemented
 
 ### Deviations from spec
@@ -366,7 +366,7 @@ it('shows AI extraction overlay when extracting', () => {
 - **Mock import paths**: Mocks use `../../sections/` and `../../components/` (relative from test file location inside `__tests__/integration/`), not `./` as in the spec's proposed mocking strategy.
 - **InvoiceFieldsSection mock simplified**: Spec proposed sub-testids (`invoice-number-field`, `invoice-date-field`) inside the mock. Implementation uses a single `<div data-testid="invoice-fields-section">` since the test only checks section presence, not individual fields.
 - **Partial edit case strengthened**: Originally implemented with only fieldset count assertion (`toHaveLength(2)`). Improved with 7 per-component fieldset boundary assertions using `closest('fieldset[disabled]')` to verify exactly which components are inside/outside disabled fieldsets.
-- **Shared fixtures extracted**: Spec defined `withBuildingAndSupplier` inline in Shared Setup. Implementation extracts it to `mock-factories.ts` for reuse across test files. `withAiExtracting` extends it with AI extraction state.
+- **Shared fixtures extracted**: Spec defined `withBuildingAndSupplier` inline in Shared Setup. Implementation extracts it to `mockFactories.ts` for reuse across test files. `withAiExtracting` extends it with AI extraction state.
 - **DOM cleanup**: Added `cleanup()` in `beforeEach` (not in spec) to ensure DOM isolation between tests.
 
 ### Dropped cases
@@ -415,8 +415,8 @@ vi.mock('../../sections/AiExtractionOverlay', () => ({
 
 ### Shared fixtures
 
-- `withBuildingAndSupplier` from `mock-factories.ts` — provides `buildingId`, `senderId`, `supplierDefaults` context + matching form defaults
-- `withAiExtracting` from `mock-factories.ts` — extends `withBuildingAndSupplier` with `aiExtraction.isExtracting: true`
+- `withBuildingAndSupplier` from `mockFactories.ts` — provides `buildingId`, `senderId`, `supplierDefaults` context + matching form defaults
+- `withAiExtracting` from `mockFactories.ts` — extends `withBuildingAndSupplier` with `aiExtraction.isExtracting: true`
 
 ### Condensed test code
 

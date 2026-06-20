@@ -3,7 +3,7 @@
 **Status**: Done (18 of 27 orchestration cases implemented; 9 period/VAT/distribution cases deferred)
 **Priority**: HIGH (core invoice data entry, amount calculation bugs cause accounting errors)
 **Test tier**: Component integration
-**Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/invoice-lines-table.test.tsx`
+**Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/InvoiceLinesTable.test.tsx`
 **Component(s) under test**: `InvoiceLinesTableV3` from `components/invoice-lines/InvoiceLinesTableV3.tsx`
 
 ## Purpose
@@ -1331,7 +1331,7 @@ describe('distribution select label reflects current method', () => {
 
 **Implemented**: 2026-06-15
 **Cases**: 18 of 27 (orchestration cases; period/VAT/distribution deferred)
-**Test file**: `__tests__/integration/invoice-lines-table.test.tsx` (~389 lines)
+**Test file**: `__tests__/integration/InvoiceLinesTable.test.tsx` (~389 lines)
 
 ### Implemented cases (18)
 

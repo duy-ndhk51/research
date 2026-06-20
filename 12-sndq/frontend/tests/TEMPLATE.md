@@ -3,7 +3,7 @@
 **Status**: Not started | In progress | Done
 **Priority**: HIGH | MEDIUM | LOW ({1-line reason})
 **Test tier**: Pure logic | Hook | Component integration
-**Target file**: `src/modules/{module}/__tests__/integration/{feature}.test.tsx`
+**Target file**: `src/modules/{module}/__tests__/integration/{FeatureName}.test.tsx`
 **Component(s) under test**: `{Component}` from `{path}`
 
 ## Purpose
@@ -105,7 +105,7 @@ Repeat the H2 section above for each test case.
 <!-- Fill this section AFTER tests are written. It turns the spec into living documentation. -->
 
 **Implemented**: {YYYY-MM-DD}
-**Test file**: `{path to .test.tsx}`
+**Test file**: `{path to camelCase .test.tsx}`
 **Cases**: {N/M implemented} {— K dropped (reason) if applicable}
 
 ### Deviations from spec
@@ -154,6 +154,7 @@ describe('{Feature}', () => {
 
 <!--
 TEMPLATE RULES:
+- Test file names use PascalCase (e.g., `FormBody.test.tsx`, `InvoiceLinesTable.test.tsx`, `LockStateToggle.test.tsx`)
 - Priority is mandatory -- helps triage implementation order
 - Test tier is mandatory -- Pure logic | Hook | Component integration
 - Scenarios table is mandatory -- provides a scannable overview
@@ -181,9 +182,10 @@ IMPLEMENTATION SECTION RULES:
 - If mocking strategy matches the spec exactly, write "Same as spec." instead of repeating it
 
 USAGE:
-1. Copy this template into your feature folder: tests/{feature-name}/integration/{spec}.md
+1. Copy this template into your feature folder: tests/{feature-name}/integration/{specName}.md
 2. Replace all {placeholders} with concrete values
-3. Add one H2 section per test scenario
-4. Keep the Scenarios table in sync with the H2 sections below
-5. After implementation, fill the Implementation section with actual outcomes
+3. Test file names use PascalCase: `FormBody.test.tsx`, `ModeSwitching.test.tsx`
+4. Add one H2 section per test scenario
+5. Keep the Scenarios table in sync with the H2 sections below
+6. After implementation, fill the Implementation section with actual outcomes
 -->

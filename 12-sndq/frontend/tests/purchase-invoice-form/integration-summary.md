@@ -34,10 +34,10 @@ Guards the building + supplier prerequisite gate. The form body renders differen
 
 | Test case | Description | Status |
 |-----------|-------------|--------|
-| No building/supplier selected → placeholder hint shown, no form sections rendered | Blocks premature form rendering before prerequisites met | - [ ] |
-| Both building + supplier set → placeholder gone, payment + other sections visible | Confirms full form appears when prerequisites satisfied | - [ ] |
-| `isPartialEditMode: true` → warning banner visible, fieldsets have `disabled` attribute | Prevents editing locked fields on booked invoices | - [ ] |
-| `isExtracting: true` → AI extraction overlay element rendered over form | Shows loading state while AI processes uploaded PDF | - [ ] |
+| No building/supplier selected → placeholder hint shown, no form sections rendered | Blocks premature form rendering before prerequisites met | - [x] |
+| Both building + supplier set → placeholder gone, payment + other sections visible | Confirms full form appears when prerequisites satisfied | - [x] |
+| `isPartialEditMode: true` → warning banner visible, fieldsets have `disabled` attribute | Prevents editing locked fields on booked invoices | - [x] |
+| `isExtracting: true` → AI extraction overlay element rendered over form | Shows loading state while AI processes uploaded PDF | - [x] |
 
 ## 2. Lock State Toggle
 
@@ -45,11 +45,11 @@ Guards the lock state machine that controls whether invoice amounts can be edite
 
 | Test case | Description | Status |
 |-----------|-------------|--------|
-| No peppol, no partial edit → initial state is `{ locked: false }` | Default: amounts editable for manual invoices | - [ ] |
+| No peppol, no partial edit → initial state is `{ locked: false }` | Default: amounts editable for manual invoices | - [x] |
 | `peppolInvoiceId` set + initial amounts → auto-locks with computed `lockedTotal` | Peppol amounts auto-protected on import | - [ ] |
-| Toggle unlocked→locked with 2 lines (1000 + 2500 cents) → `{ locked: true, lockedTotal: 3500 }` | Lock computes correct total from line items | - [ ] |
-| Toggle locked→unlocked → `{ locked: false }`, no `lockedTotal` property | Unlock clears computed total cleanly | - [ ] |
-| `isPartialEditMode: true` + toggle → state unchanged (early return guard) | Prevents unlocking amounts on booked invoices | - [ ] |
+| Toggle unlocked→locked with 2 lines (1000 + 2500 cents) → `{ locked: true, lockedTotal: 3500 }` | Lock computes correct total from line items | - [x] |
+| Toggle locked→unlocked → `{ locked: false }`, no `lockedTotal` property | Unlock clears computed total cleanly | - [x] |
+| `isPartialEditMode: true` + toggle → state unchanged (early return guard) | Prevents unlocking amounts on booked invoices | - [x] |
 
 ## 3. Mode Switching
 
@@ -57,11 +57,22 @@ Guards the `MODE_TO_TYPE_CODE` mapping between UI mode and backend `invoiceTypeC
 
 | Test case | Description | Status |
 |-----------|-------------|--------|
-| Default form values → `invoiceTypeCode` is `undefined` | Regular invoices have no type code | - [ ] |
+| Default form values → `invoiceTypeCode` is `undefined` | Regular invoices have no type code | - [x] |
 | Credit note defaults → `invoiceTypeCode` is `'381'` (CREDIT_NOTE) | Credit note form pre-sets correct backend code | - [ ] |
-| `MODE_TO_TYPE_CODE['credit_note']` → `'381'` | Mapping sends correct code to backend | - [ ] |
-| `MODE_TO_TYPE_CODE['expense_note']` → `EXPENSE_NOTE_TYPE_CODE` | Expense note uses distinct type code | - [ ] |
-| `MODE_TO_TYPE_CODE['invoice']` → `undefined` (clears type code) | Switching back to invoice clears type code | - [ ] |
+| `MODE_TO_TYPE_CODE['credit_note']` → `'381'` | Mapping sends correct code to backend | - [x] |
+| `MODE_TO_TYPE_CODE['expense_note']` → `EXPENSE_NOTE_TYPE_CODE` | Expense note uses distinct type code | - [x] |
+| `MODE_TO_TYPE_CODE['invoice']` → `undefined` (clears type code) | Switching back to invoice clears type code | - [x] |
+
+## 3b. Form Header
+
+Guards save button states, total amount display, and draft badge visibility in the primary user action zone.
+
+| Test case | Description | Status |
+|-----------|-------------|--------|
+| `isPending: false` → save button enabled | Save button interactive when not submitting | - [x] |
+| `isPending: true` → save button disabled | Prevents double-submit during request | - [x] |
+| 2 amounts (10000 + 5000) → total displays `150,00` | Header total computed from form amounts array | - [x] |
+| `isDraft: true` + `invoiceId` set → "Draft" badge visible | Draft status indicator shown for saved drafts | - [x] |
 
 ## 4. Right Panel Tabs
 
@@ -114,19 +125,19 @@ Guards the `InvoiceLinesTableV3` orchestration component that wires form context
 
 | Test case | Description | Status |
 |-----------|-------------|--------|
-| No `buildingId` → "Add line" button disabled with tooltip | Prevents adding lines before building prerequisite met | - [ ] |
-| `buildingId` set → "Add line" button enabled | Button becomes interactive when building selected | - [ ] |
-| `groupingStrategy: NONE` + 2 amounts → 2 `InvoiceLineCard` collapsibles rendered | Individual mode shows one card per line | - [ ] |
-| `groupingStrategy: ALL` + 1 amount → `SingleTotalView` rendered, no cards or add button | Simple mode shows single total input with hint | - [ ] |
+| No `buildingId` → "Add line" button disabled with tooltip | Prevents adding lines before building prerequisite met | - [x] |
+| `buildingId` set → "Add line" button enabled | Button becomes interactive when building selected | - [x] |
+| `groupingStrategy: NONE` + 2 amounts → 2 `InvoiceLineCard` collapsibles rendered | Individual mode shows one card per line | - [x] |
+| `groupingStrategy: ALL` + 1 amount → `SingleTotalView` rendered, no cards or add button | Simple mode shows single total input with hint | - [x] |
 | Mode toggle click → `setGroupingStrategy` called with `ALL` or `NONE` | Toggle switches between single total and line-by-line | - [ ] |
-| Delete button on card → `DeleteAmountDialog` opens; confirm → line removed; cancel → line kept | Single-line delete confirmation flow | - [ ] |
-| Duplicate button → `pipeline.execute({ type: 'DUPLICATE_LINE' })` called | Line duplication via pipeline | - [ ] |
+| Delete button on card → `DeleteAmountDialog` opens; confirm → line removed; cancel → line kept | Single-line delete confirmation flow | - [x] |
+| Duplicate button → `pipeline.execute({ type: 'DUPLICATE_LINE' })` called | Line duplication via pipeline | - [x] |
 | Custom distribution button → distribution sheet opens for that line index | Sheet opens with correct `editingItem` | - [ ] |
-| Footer shows VAT breakdown + total from `grouping.totals` | Computed totals displayed in footer | - [ ] |
-| `lockState.locked: true` → lock icon shown, `lockedTotal` displayed; `isPartialEditMode` → lock disabled | Lock state reflected in footer UI | - [ ] |
-| `mode: 'credit_note'` → total text uses warning color class | Credit note styling applied | - [ ] |
-| `invoiceId: null` → first card `defaultOpen`; `invoiceId` set → first card collapsed | Auto-expand first card only on new invoice | - [ ] |
-| `isDeferredCost: true` → distribution controls disabled | Deferred cost flag disables distribution | - [ ] |
+| Footer shows VAT breakdown + total from `grouping.totals` | Computed totals displayed in footer | - [x] |
+| `lockState.locked: true` → lock icon shown, `lockedTotal` displayed; `isPartialEditMode` → lock disabled | Lock state reflected in footer UI | - [x] |
+| `mode: 'credit_note'` → total text uses warning color class | Credit note styling applied | - [x] |
+| `invoiceId: null` → first card `defaultOpen`; `invoiceId` set → first card collapsed | Auto-expand first card only on new invoice | - [x] |
+| `isDeferredCost: true` → distribution controls disabled | Deferred cost flag disables distribution | - [x] |
 | Change VAT rate on line → `totalAmount` unchanged, `amount` (subtotal) recalculated | VAT rate change preserves gross total, derives net amount | - [ ] |
 | Toggle VAT off → `amount` equals `totalAmount` | Disabling VAT removes tax deduction from subtotal | - [ ] |
 

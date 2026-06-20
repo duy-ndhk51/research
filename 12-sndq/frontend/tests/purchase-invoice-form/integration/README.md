@@ -38,8 +38,8 @@ Tests go in `src/modules/financial/forms/purchase-invoice-v3/__tests__/integrati
 
 The shared test utilities are already in place at `__tests__/utils/`:
 
-- `render-providers.tsx` — `renderWithProviders()` and `createMockContextValue()`
-- `mock-factories.ts` — `makeLine()`, `makePristineLine()`, `mockProperties`, `mockDistributionKey`, `mockLedgerOptions`
+- `renderProviders.tsx` — `renderWithProviders()` and `createMockContextValue()`
+- `mockFactories.ts` — `makeLine()`, `makePristineLine()`, `mockProperties`, `mockDistributionKey`, `mockLedgerOptions`
 - `messages.ts` — aggregated i18n messages (`testMessages`)
 - `index.ts` — barrel export
 
@@ -252,7 +252,7 @@ export function renderWithProviders(
 pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/
 
 # Specific test file
-pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/form-body.test.tsx
+pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/FormBody.test.tsx
 
 # Watch mode
 pnpm test --watch src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/

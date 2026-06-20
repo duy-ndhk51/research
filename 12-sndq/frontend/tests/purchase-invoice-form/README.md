@@ -3,8 +3,8 @@
 Step-by-step execution guide for adding integration and E2E test coverage to the purchase invoice v3 form.
 
 **Created**: 2026-06-03
-**Updated**: 2026-06-14
-**Status**: PR 2 implemented — 43 integration tests passing (PR1: 13 + lock-state: 12 + invoice-lines: 18)
+**Updated**: 2026-06-19
+**Status**: PR 3 implemented — 80 integration tests passing (PR1: 13 + PR2: 30 + PR3: 37)
 **Architecture**: [purchase-invoice-v3-tests-planning.md](../refactoring/purchase-invoice-v3-tests-planning.md)
 **Branch prefix**: `test/pi-v3-`
 
@@ -109,7 +109,7 @@ Pure-logic tests on exported utility functions, moved from integration specs to 
 - [ ] Playwright installed for E2E — not verified (E2E is a separate track)
 - [x] `vitest.config.mts` — confirmed: `environment: 'jsdom'`, `include: ['src/**/*.test.{js,ts,jsx,tsx}']`, `setupFiles: ['./vitest.setup.ts']`
 - [x] `vitest.setup.ts` — confirmed: imports `@testing-library/jest-dom/vitest`
-- [x] Shared test utils (`__tests__/utils/`) — all 4 files present: `render-providers.tsx`, `mock-factories.ts`, `messages.ts`, `index.ts` (untracked, ready to commit)
+- [x] Shared test utils (`__tests__/utils/`) — all 4 files present: `renderProviders.tsx`, `mockFactories.ts`, `messages.ts`, `index.ts` (untracked, ready to commit)
 - [x] i18n message files — all 6 EN message files exist (`financial`, `general`, `purchase_invoice`, `properties`, `common`, `peppol`)
 - [x] Existing unit tests — 14 PI-v3 test files, all passing (242 tests)
 - [x] Full test suite — 98 test files, 2166 tests, all passing (baseline captured)
@@ -134,7 +134,7 @@ Pure-logic tests on exported utility functions, moved from integration specs to 
   - **Verified 2026-06-14**: `FormBody.tsx` (5 wks), `FormHeader.tsx` (7 wks), `InvoiceFormHeader.tsx` (7 wks), `InvoiceModeToggle.tsx` (7 wks) — no recent churn
 - [ ] Public props, types, functions, or commands have minimal useful documentation where applicable
 - [x] Existing project helpers and patterns are reused instead of introducing one-off abstractions
-  - **Verified 2026-06-14**: `__tests__/utils/` already has `renderWithProviders`, `createMockContextValue`, `makeLine`, `makePristineLine`, mock-factories, messages — all untracked, commit in PR 1
+  - **Verified 2026-06-14**: `__tests__/utils/` already has `renderWithProviders`, `createMockContextValue`, `makeLine`, `makePristineLine`, mockFactories, messages — all untracked, commit in PR 1
 - [ ] Tests or documented manual checks cover the main behavior and likely regressions
 - [ ] No unrelated files, app-specific imports, or ownership-boundary leaks are introduced
 - [ ] Security-sensitive values, credentials, generated secrets, and local env files are not committed
@@ -183,8 +183,8 @@ Establishes the shared test infrastructure that all other integration PRs depend
 
 ```bash
 pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/form-body-conditional.test.tsx
-pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/mode-switching.test.tsx
-pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/form-header.test.tsx
+pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/ModeSwitching.test.tsx
+pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/FormHeader.test.tsx
 ```
 
 ### Post-implementation
@@ -209,8 +209,8 @@ The largest integration PR — covers the lock state machine and all invoice lin
 ### Verification
 
 ```bash
-pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/lock-state-toggle.test.tsx
-pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/invoice-lines-table.test.tsx
+pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/LockStateToggle.test.tsx
+pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/InvoiceLinesTable.test.tsx
 ```
 
 ### Post-implementation
@@ -221,8 +221,8 @@ pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/
 
 ### Results
 
-- **lock-state-toggle.test.tsx**: 12 cases, 255 lines — all passing
-- **invoice-lines-table.test.tsx**: 18 cases (of 27 spec'd), 389 lines — all passing
+- **LockStateToggle.test.tsx**: 12 cases, 255 lines — all passing
+- **InvoiceLinesTable.test.tsx**: 18 cases (of 27 spec'd), 389 lines — all passing
 - **Total new tests**: 30 cases, ~644 lines
 - **Deferred**: 9 cases (period input 5, VAT 2, distribution 2) — `InvoiceLineCard` depends on `WorkspacesProvider`; needs mock workspace context in `renderWithProviders`
 - **Infrastructure**: Added `ResizeObserver` polyfill, `QueryClientProvider`, PostCSS override to vitest config
@@ -251,7 +251,16 @@ pnpm test src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/
 
 ### Post-implementation
 
-- [ ] Update each spec `.md` in scope with `## Implementation` section
+- [x] Update each spec `.md` in scope with `## Implementation` section
+
+### Results
+
+- **GroupingStrategy.test.tsx**: 20 cases, ~350 lines — all passing
+- **AmountDistributionSheet.test.tsx**: 17 cases, ~450 lines — all passing
+- **Total new tests**: 37 cases, ~800 lines
+- **Deferred**: 0 cases from grouping; distribution sheet search/sort deferred (InfiniteTable uses @tanstack/react-virtual which has no DOM measurements in JSDOM)
+- **Infrastructure**: Added `@hookform/error-message` mock for JSDOM/Radix portal compatibility, `InfiniteTable` mock for JSDOM virtualization, `BuildingLedgerSelect`/`UnitOwnerSelect`/`MultilingualDescriptionSection` mocks for deep dependency isolation
+- **Shared fixtures**: Added `lineWithLedgerA`, `lineWithLedgerB`, `lineWithSameLedger`, `withGroupingLines` to `mockFactories.ts`
 
 ---
 
@@ -398,7 +407,7 @@ diff /tmp/pi-v3-tests-e2e-before.txt /tmp/pi-v3-tests-e2e-after.txt
 |------|-----|--------|-------|-------|
 | 2026-06-14 | PR 1 | `tests/SQ-21372` | ~200 | 13 tests (form-body: 4, mode-switching: 5, form-header: 4) |
 | 2026-06-15 | PR 2 | `tests/SQ-21372` | ~644 | 30 tests (lock-state: 12, invoice-lines: 18); 9 deferred |
-| | PR 3 | `test/pi-v3-grouping-dist` | | |
+| 2026-06-19 | PR 3 | `tests/SQ-21372` | ~800 | 37 tests (grouping: 20, distribution: 17); 0 deferred |
 | | PR 4 | `test/pi-v3-fields-selects` | | |
 | | PR 5 | `test/pi-v3-e2e-crud` | | |
 | | PR 6 | `test/pi-v3-e2e-peppol-ai` | | |

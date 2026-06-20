@@ -3,7 +3,7 @@
 **Status**: Done
 **Priority**: MEDIUM (wrong type code causes backend to misclassify document)
 **Test tier**: Component integration
-**Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/mode-switching.test.tsx`
+**Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/ModeSwitching.test.tsx`
 **Component(s) under test**: `FormHeader` → `InvoiceFormHeader` → `InvoiceModeToggle`
 
 ## Purpose
@@ -229,7 +229,7 @@ it('clicking the current mode does nothing', async () => {
 ## Implementation
 
 **Implemented**: 2026-06-14
-**Test file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/mode-switching.test.tsx`
+**Test file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/ModeSwitching.test.tsx`
 **Cases**: 5/5 implemented
 
 ### Deviations from spec
@@ -237,8 +237,8 @@ it('clicking the current mode does nothing', async () => {
 - **Badge text casing**: Actual rendered text is `"Purchase invoice"` (lowercase "i"), not `"Purchase Invoice"` (PascalCase) as spec suggested. The translation key produces sentence case.
 - **Credit note badge selector**: "switching back to invoice" case uses `/^credit note$/i` (anchored regex) instead of `/credit note/i` to avoid matching other buttons (e.g., save button text that may contain the substring).
 - **Translation handling**: `renderWithProviders` uses real `IntlProvider` with `testMessages`, not `vi.mock('next-intl')`. Spec's proposed `vi.importActual` approach was unnecessary.
-- **Shared fixture**: Uses `defaultHeaderContext` from `mock-factories.ts` instead of bare `renderWithProviders(<FormHeader />)` calls. All tests pass context explicitly.
-- **DuplicateWarningButton mock**: Same as `form-header.test.tsx` — mocked to `null` to prevent API calls.
+- **Shared fixture**: Uses `defaultHeaderContext` from `mockFactories.ts` instead of bare `renderWithProviders(<FormHeader />)` calls. All tests pass context explicitly.
+- **DuplicateWarningButton mock**: Same as `FormHeader.test.tsx` — mocked to `null` to prevent API calls.
 - **DOM cleanup**: Added `cleanup()` in `beforeEach` for isolation (not in spec).
 - **Dropdown interaction pattern**: Uses Radix UI DropdownMenu — click trigger button (role `button`), then select option (role `menuitem`). This matched the spec.
 
@@ -263,7 +263,7 @@ vi.mock(
 
 ### Shared fixtures
 
-- `defaultHeaderContext` from `mock-factories.ts` — provides default `mode: 'invoice'`, `isPending: false`, `buildingId`, `senderId`, and form defaults
+- `defaultHeaderContext` from `mockFactories.ts` — provides default `mode: 'invoice'`, `isPending: false`, `buildingId`, `senderId`, and form defaults
 
 ### Condensed test code
 

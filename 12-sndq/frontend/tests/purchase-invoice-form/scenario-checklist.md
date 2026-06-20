@@ -14,10 +14,10 @@ Grouped by feature area. Each checkbox tracks implementation status.
 
 **Risk without coverage**: Form shows payment/amount fields before supplier is selected, leading to validation errors and confused users. Partial edit mode could expose editable fields on booked invoices.
 
-- [ ] Placeholder shown when no building/supplier selected
-- [ ] Full form visible when building + supplier selected
-- [ ] Partial edit mode warning banner with disabled fieldsets
-- [ ] AI extraction overlay shown during extraction
+- [x] Placeholder shown when no building/supplier selected
+- [x] Full form visible when building + supplier selected
+- [x] Partial edit mode warning banner with disabled fieldsets
+- [x] AI extraction overlay shown during extraction
 
 ### Lock State & Amount Totals
 
@@ -27,11 +27,11 @@ Grouped by feature area. Each checkbox tracks implementation status.
 
 **Risk without coverage**: Amounts get unlocked on booked invoices (accounting inconsistency), or locked at zero from empty Peppol data (unusable form).
 
-- [ ] Default lock state is unlocked (no peppol, no partial edit)
+- [x] Default lock state is unlocked (no peppol, no partial edit)
 - [ ] Auto-locks when peppolInvoiceId present with initial amounts
-- [ ] Toggle unlocked → locked computes lockedTotal from amounts
-- [ ] Toggle locked → unlocked clears lockedTotal
-- [ ] Toggle is no-op in partial edit mode
+- [x] Toggle unlocked → locked computes lockedTotal from amounts
+- [x] Toggle locked → unlocked clears lockedTotal
+- [x] Toggle is no-op in partial edit mode
 
 ### Mode Switching (Invoice / Credit Note / Expense Note)
 
@@ -41,11 +41,24 @@ Grouped by feature area. Each checkbox tracks implementation status.
 
 **Risk without coverage**: Credit notes submitted as regular invoices (wrong `invoiceTypeCode`), or expense notes processed with invoice logic. Backend rejects or misclassifies the document.
 
-- [ ] Default mode is invoice with no invoiceTypeCode
+- [x] Default mode is invoice with no invoiceTypeCode
 - [ ] Credit note defaults include CREDIT_NOTE type code
-- [ ] Switch to credit_note maps to type code `'381'`
-- [ ] Switch to expense_note maps to EXPENSE_NOTE type code
-- [ ] Switch back to invoice clears type code to undefined
+- [x] Switch to credit_note maps to type code `'381'`
+- [x] Switch to expense_note maps to EXPENSE_NOTE type code
+- [x] Switch back to invoice clears type code to undefined
+
+### Form Header
+
+**Purpose**: Guard save button states, total amount display, and draft badge visibility. This is the primary user action zone where users trigger form submission.
+
+**Scope**: Save button enabled/disabled transitions based on pending state, total amount computation from amounts array, draft badge conditional rendering.
+
+**Risk without coverage**: Save button stays enabled during submission allowing double-submit, total displays stale value causing user confusion, draft badge missing or shown incorrectly.
+
+- [x] Save button enabled when not pending or successful
+- [x] Save button disabled during submission (isPending)
+- [x] Total amount displays computed sum from amounts
+- [x] Draft badge visible when isDraft true and invoiceId exists
 
 ### Right Panel Tabs
 
@@ -104,19 +117,19 @@ Grouped by feature area. Each checkbox tracks implementation status.
 
 **Risk without coverage**: Add line possible without building, wrong view mode rendered, delete dialog not wired, distribution sheet doesn't open from line, footer shows wrong totals or lock state, first card collapsed on new invoice (bad UX).
 
-- [ ] Add line button disabled when no building selected
-- [ ] Add line button enabled when building set
-- [ ] Individual mode renders InvoiceLineCard per amount
-- [ ] Simple mode renders SingleTotalView, hides cards and add button
+- [x] Add line button disabled when no building selected
+- [x] Add line button enabled when building set
+- [x] Individual mode renders InvoiceLineCard per amount
+- [x] Simple mode renders SingleTotalView, hides cards and add button
 - [ ] Mode toggle calls setGroupingStrategy
-- [ ] Delete button opens DeleteAmountDialog; confirm removes, cancel keeps
-- [ ] Duplicate calls pipeline DUPLICATE_LINE
+- [x] Delete button opens DeleteAmountDialog; confirm removes, cancel keeps
+- [x] Duplicate calls pipeline DUPLICATE_LINE
 - [ ] Custom distribution opens sheet for correct line index
-- [ ] Footer shows VAT breakdown and computed total
-- [ ] Lock state reflected in footer (icon, lockedTotal, disabled in partial edit)
-- [ ] Credit note mode applies warning color to total
-- [ ] First card defaultOpen on new invoice, collapsed on edit
-- [ ] isDeferredCost disables distribution controls
+- [x] Footer shows VAT breakdown and computed total
+- [x] Lock state reflected in footer (icon, lockedTotal, disabled in partial edit)
+- [x] Credit note mode applies warning color to total
+- [x] First card defaultOpen on new invoice, collapsed on edit
+- [x] isDeferredCost disables distribution controls
 - [ ] Changing VAT rate recalculates subtotal but keeps totalAmount unchanged
 - [ ] Toggling VAT off sets subtotal equal to totalAmount
 

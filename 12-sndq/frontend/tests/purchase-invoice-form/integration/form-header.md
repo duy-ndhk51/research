@@ -3,7 +3,7 @@
 **Status**: Done (4 of 6 cases; lock icon cases IT-136/IT-137 dropped — InvoiceFormHeader has no lock icon, belongs to InvoiceLinesTableV3)
 **Priority**: MEDIUM (primary user action zone -- save, total, lock, mode toggle)
 **Test tier**: Component integration
-**Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/form-header.test.tsx`
+**Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/FormHeader.test.tsx`
 **Component(s) under test**: `FormHeader` from `sections/FormHeader.tsx`, `InvoiceFormHeader` from `sections/InvoiceFormHeader.tsx`
 
 ## Purpose
@@ -251,7 +251,7 @@ it('draft badge visible for drafts', () => {
 ## Implementation
 
 **Implemented**: 2026-06-14
-**Test file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/form-header.test.tsx`
+**Test file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/FormHeader.test.tsx`
 **Cases**: 4/6 implemented — 2 lock icon cases dropped
 
 ### Deviations from spec
@@ -260,7 +260,7 @@ it('draft badge visible for drafts', () => {
 - **Translation handling**: `renderWithProviders` uses real `IntlProvider` with `testMessages`, so assertions use literal strings (`'Draft'`, `'Save invoice'`) instead of translation keys.
 - **Save button selector**: Matched by `/save invoice/i` (actual rendered text), not `/save/i` as in spec.
 - **Total amount formatting**: Displays as `150,00` (European locale via `IntlProvider`), not `150.00` as spec suggested.
-- **Shared fixtures**: Uses `defaultHeaderContext` from `mock-factories.ts` instead of inline `defaultProps`. Uses `makeLine()` factory for amount lines.
+- **Shared fixtures**: Uses `defaultHeaderContext` from `mockFactories.ts` instead of inline `defaultProps`. Uses `makeLine()` factory for amount lines.
 - **DuplicateWarningButton**: Mocked to `null` via `vi.mock` — this component makes API calls and would fail without a backend.
 - **Draft badge**: Requires both `isDraft: true` AND `invoiceId: 'existing-invoice-id'` to render (the component checks both conditions).
 - **DOM cleanup**: Added `cleanup()` in `beforeEach` for DOM isolation.
@@ -288,8 +288,8 @@ vi.mock(
 
 ### Shared fixtures
 
-- `defaultHeaderContext` from `mock-factories.ts` — provides `isPending: false`, `buildingId`, `senderId`, and matching form defaults
-- `makeLine(id, totalAmount)` from `mock-factories.ts` — creates amount line objects for total computation
+- `defaultHeaderContext` from `mockFactories.ts` — provides `isPending: false`, `buildingId`, `senderId`, and matching form defaults
+- `makeLine(id, totalAmount)` from `mockFactories.ts` — creates amount line objects for total computation
 
 ### Condensed test code
 

@@ -48,7 +48,7 @@ Users see empty uploader instead of Peppol data. Tab persists stale selection af
 import { describe, it, expect, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithProviders } from '../utils/render-providers';
+import { renderWithProviders } from '../utils/renderProviders';
 import { PurchaseInvoiceFormV3 } from '../../PurchaseInvoiceFormV3';
 import type { PeppolInvoiceResponse } from '@/common/api/resources/financial/peppolApi';
 

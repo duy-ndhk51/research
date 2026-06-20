@@ -3,7 +3,7 @@
 **Status**: Done (12 of 12 cases)
 **Priority**: HIGH (prevents accounting inconsistencies on paid/Peppol invoices)
 **Test tier**: Component integration
-**Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/lock-state.test.tsx`
+**Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/LockStateToggle.test.tsx`
 **Component(s) under test**: `InvoiceLinesTableFooter` lock button, wired through `PurchaseInvoiceFormContext.toggleAmountLock`
 
 ## Purpose
@@ -563,7 +563,7 @@ it('add line when unlocked uses default values without reconciliation', async ()
 
 **Implemented**: 2026-06-15
 **Cases**: 12 of 12 (7 footer + 5 reconciliation)
-**Test file**: `__tests__/integration/lock-state-toggle.test.tsx` (~255 lines)
+**Test file**: `__tests__/integration/LockStateToggle.test.tsx` (~255 lines)
 
 ### Deviations from spec
 
