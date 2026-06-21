@@ -16,19 +16,19 @@ This file is a **template pack**. Copy/paste the relevant template per component
 
 - **Maintenance**: Keep tests stable when styles/tokens evolve.
 - **Extensibility**: Lock down public contracts so refactors are safe.
-- **Complexity**: Spend more tests on “behavioral risk” than on pure styling.
+- **Complexity**: Spend more tests on "behavioral risk" than on pure styling.
 
 ---
 
 ## 1) The testing pyramid (recommended)
 
-### 1.1 Contract tests (default for primitives)
+### 1.1 Unit tests (default for primitives)
 
 **What these protect**
 
 - Public API: `props -> element/attributes/roles`
 - Composition mechanics: `as`, `asChild`, ref forwarding (smoke-level)
-- Minimal styling contract: only the **few classes/tokens** that are truly part of the component’s public promise
+- Minimal styling contract: only the **few classes/tokens** that are truly part of the component's public promise
 
 **What they avoid**
 
@@ -41,11 +41,11 @@ This file is a **template pack**. Copy/paste the relevant template per component
 - `+ 1` per variant prop you assert (one assertion per prop, not per value)
 - `+` composition tests for each of `as`, `asChild`, `ref` — only when the component supports them
 
-If you find yourself adding a variant assertion *per value* of a variant prop, you’re testing a matrix — collapse it.
+If you find yourself adding a variant assertion *per value* of a variant prop, you're testing a matrix — collapse it.
 
 **Worked count**: a `Text` primitive with `weight` / `variant` / `truncate` asserted, plus `as` + `asChild` + `ref`, lands at `1 + 3 + 3 = 7` tests. See §9.
 
-### 1.2 Interaction tests (for complex primitives)
+### 1.2 Integration tests (for complex primitives)
 
 Use for components where regressions are costly and subtle:
 
@@ -65,7 +65,7 @@ Use for components where regressions are costly and subtle:
 
 **What it should NOT be**
 
-- “snapshot everything”: keep the set **small and curated**
+- "snapshot everything": keep the set **small and curated**
 
 **Target**: core primitives + a few flagship blocks/patterns.
 
@@ -80,11 +80,11 @@ Pick the **highest row you qualify for**.
 - **No tests** [Tier 0]:
   - component is internal, unstable, or likely to be removed soon
   - component is a thin re-export without local logic
-- **Contract tests only** [Tier 1, default]:
+- **Unit tests only** [Tier 1, default]:
   - primitive or simple composite
   - no complex keyboard/focus behavior
-- **Contract + interaction tests** [Tier 1, interactive]:
-  - keyboard/focus is part of the contract
+- **Unit + integration tests** [Tier 1, interactive]:
+  - keyboard/focus is part of the public API
   - portals/overlays or controlled/uncontrolled state can break
 - **Visual regression (in addition to above)** [Tier 1 core / Tier 2 flagship]:
   - component is core to the design system
@@ -94,11 +94,11 @@ Pick the **highest row you qualify for**.
 
 - **Avoid large snapshots** of full markup or full class strings.
 - **Avoid variant matrices** (every `variant x size x state` combo).
-- **Avoid testing `cva`/Radix internals**. Test your wrapper contract only.
+- **Avoid testing `cva`/Radix internals**. Test your wrapper's public API only.
 
 ---
 
-## 3) Template A — Primitive contract tests (Tier 1)
+## 3) Template A — Primitive unit tests (Tier 1)
 
 > Use for primitives like `Text`, `Badge`, `Separator`, simple layout primitives, etc.
 
@@ -110,9 +110,9 @@ Pick the **highest row you qualify for**.
 
 ### Checklist (copy/paste)
 
-- [ ] **Element contract**: default element and `as` behavior (if supported)
-- [ ] **Composition contract**: `asChild` merges `className`/props onto child (if supported)
-- [ ] **Minimal styling contract**: assert a class **only** when the variant prop being tested has no other observable effect (no DOM/role/attr change). Max **one assertion per variant prop under test**. Never assert layout/utility classes (`flex`, `gap-2`, `p-4`) — those are incidental.
+- [ ] **Element**: default element and `as` behavior (if supported)
+- [ ] **Composition**: `asChild` merges `className`/props onto child (if supported)
+- [ ] **Minimal styling**: assert a class **only** when the variant prop being tested has no other observable effect (no DOM/role/attr change). Max **one assertion per variant prop under test**. Never assert layout/utility classes (`flex`, `gap-2`, `p-4`) — those are incidental.
 - [ ] **Ref forwarding**: smoke test that `ref` resolves to the rendered DOM node.
 - [ ] **A11y sanity**: prefer `getByRole` / `getByLabelText` over `testid`
 
@@ -140,9 +140,9 @@ describe('{ComponentName}', () => {
     expect(screen.getByText('Hello').tagName.toLowerCase()).toBe('{tag}');
   });
 
-  it('applies the {variantProp} contract when {variantProp} is "{value}"', () => {
+  it('applies the {variantProp} styling when {variantProp} is "{value}"', () => {
     render(<{ComponentName} {variantProp}="{value}">Hello</{ComponentName}>);
-    expect(screen.getByText('Hello')).toHaveClass('{stableContractClass}');
+    expect(screen.getByText('Hello')).toHaveClass('{stableClass}');
   });
 
   it('forwards ref to the DOM element', () => {
@@ -156,7 +156,7 @@ describe('{ComponentName}', () => {
 ### Anti-patterns
 
 ```tsx
-// Don't: assert layout utilities (incidental, not a contract)
+// Don't: assert layout utilities (incidental, not part of public API)
 expect(el).toHaveClass('flex', 'items-center', 'gap-2');
 
 // Don't: assert full class strings (snapshot in disguise)
@@ -176,13 +176,13 @@ expect(screen.getByText('x')).toHaveClass('font-medium');
 
 ---
 
-## 4) Template B — Composition contract tests (`asChild`)
+## 4) Template B — Composition unit tests (`asChild`)
 
 > Use only when the component supports `asChild` or slotting.
 
 ### Why this test exists
 
-`asChild` is an **extensibility escape hatch** that consumers rely on. It’s also easy to break during refactors (order of `className` merging, prop spreading, ref forwarding). One contract test guarantees the merge behavior survives internal changes.
+`asChild` is an **extensibility escape hatch** that consumers rely on. It's also easy to break during refactors (order of `className` merging, prop spreading, ref forwarding). One unit test guarantees the merge behavior survives internal changes.
 
 ### Test skeleton
 
@@ -213,17 +213,17 @@ describe('{ComponentName} asChild', () => {
 
 ---
 
-## 5) Template C — Interactive primitive tests
+## 5) Template C — Integration tests
 
-Interactive primitives split into two flavors. Pick by **where the open content lives in the DOM**, not by which component it is.
+Integration tests split into two flavors. Pick by **where the open content lives in the DOM**, not by which component it is.
 
-### 5.1 Template C1 — In-tree interactive (jsdom-friendly)
+### 5.1 Template C1 — In-tree integration (jsdom-friendly)
 
 > Scope: `Tabs`, `SegmentedControl`, `RadioGroup`, `Checkbox`, controlled inputs — components where focus stays in the document tree.
 >
 > jsdom + Testing Library is reliable here. No portal, no scroll lock, no animation timing issues.
 
-**Contract to test (copy/paste and fill)**
+**Checklist (copy/paste and fill)**
 
 - [ ] **Open/close**: opens on click, closes on Escape (if applicable)
 - [ ] **Keyboard**: Enter/Space on trigger, arrow keys if applicable
@@ -249,13 +249,13 @@ describe('{ComponentName} interactions', () => {
 });
 ```
 
-### 5.2 Template C2 — Portal / overlay interactive (Playwright by default)
+### 5.2 Template C2 — Portal / overlay integration (Playwright by default)
 
 > Scope: `Dialog`, `Popover`, `Sheet`, `DropdownMenu`, `Tooltip`, `Toast` — anything that portals out of the component tree.
 >
-> **Default to Playwright.** jsdom mishandles portals, focus return, scroll lock, and animation timing. Testing Library is acceptable only if the author verifies **10× consecutive non-flaky local runs** and notes it in the PR.
+> **Default to Playwright.** jsdom mishandles portals, focus return, scroll lock, and animation timing. Testing Library is acceptable only if the author verifies **10x consecutive non-flaky local runs** and notes it in the PR.
 
-**Contract to test**
+**Checklist**
 
 - [ ] Trigger opens overlay; overlay has `role="dialog" | "menu" | "listbox"`
 - [ ] Escape closes; click-outside closes (where applicable)
@@ -278,6 +278,17 @@ test('{ComponentName} opens, traps focus, returns focus on Escape', async ({ pag
 });
 ```
 
+### 5.3 File naming for split test files
+
+When a component needs both unit and integration tests, use two co-located files:
+
+- `{ComponentName}.test.tsx` — unit tests (Template A/B)
+- `{ComponentName}.integration.test.tsx` — integration tests (Template C)
+
+Both files live in the component folder. The `.integration.test.tsx` suffix signals the file contains user-driven tests requiring `userEvent` or Playwright.
+
+> **Note:** For portal/overlay components tested with Testing Library instead of Playwright, the author must verify **10x consecutive non-flaky local runs** and note it in the PR description.
+
 ---
 
 ## 6) Template D — Block testing policy (Tier 2)
@@ -286,7 +297,7 @@ Blocks are compositions and tend to evolve with product needs.
 
 **Default**: blocks get **visual regression only** (Template E).
 
-**Add a unit/integration test only if it would catch a bug a contract test on the underlying primitives wouldn’t.**
+**Add an integration test only if it would catch a bug a unit test on the underlying primitives wouldn't.**
 
 ### Examples — DO test
 
@@ -297,13 +308,13 @@ Blocks are compositions and tend to evolve with product needs.
 
 ### Examples — DON'T test
 
-- Block that wraps `<Button>` and forwards `onClick` (already covered by `Button` contract)
-- Block that just renders children (already covered by composition contract)
+- Block that wraps `<Button>` and forwards `onClick` (already covered by `Button` unit tests)
+- Block that just renders children (already covered by composition unit tests)
 - Pure layout blocks (covered by visual regression)
 
 ### Provider/context invariant
 
-Tier 1 primitives **must not require a context provider** to render. If yours does, fix the component, don’t add test infra. Tier 2 blocks may need providers — extract a `renderWithProviders` helper rather than wiring providers per file.
+Tier 1 primitives **must not require a context provider** to render. If yours does, fix the component, don't add test infra. Tier 2 blocks may need providers — extract a `renderWithProviders` helper rather than wiring providers per file.
 
 ### "Logic exists" block test skeleton
 
@@ -333,31 +344,31 @@ describe('{BlockName}', () => {
 
 Keep it intentionally small:
 
-- **Core primitives**: a short, curated list (10–20 max)
+- **Core primitives**: a short, curated list (10-20 max)
 - **A few flagship blocks**: only those reused widely
 
 ### Keep screenshots stable (maintenance rules)
 
-- Use **deterministic data** (no random IDs, no “today’s date”, no live network).
+- Use **deterministic data** (no random IDs, no "today's date", no live network).
 - Freeze time if the UI renders relative timestamps.
 - Fix viewport sizes.
 - Avoid animations in screenshot mode.
 
 ### Tooling and workflow
 
-- **API**: use `@playwright/test`’s `expect(locator).toHaveScreenshot('name.png')`.
+- **API**: use `@playwright/test`'s `expect(locator).toHaveScreenshot('name.png')`.
 - **Update baselines**: `pnpm test:visual --update-snapshots` (run locally and commit the diff intentionally — never auto-update in CI).
 - **Storage**: baselines live next to the spec under `__screenshots__/{spec}/{platform}/`. Pin `playwright.config.ts` `snapshotPathTemplate` so screenshots are stable across machines.
 - **Determinism setup** (in `beforeEach` or a fixture):
   - `await page.emulateMedia({ reducedMotion: 'reduce' })`
   - Freeze `Date` if relative timestamps render
-  - Set viewport explicitly (don’t rely on default)
+  - Set viewport explicitly (don't rely on default)
 - **CI**: run the visual job on Linux/Chromium only — macOS rendering differs subtly and produces noise. Failed diffs upload to artifacts; reviewer must approve in the PR.
 
 ### Suggested "definition of done" for a core component (visual)
 
 - [ ] baseline screenshot exists for the default state
-- [ ] at least one “state” screenshot exists (e.g. error/disabled/open)
+- [ ] at least one "state" screenshot exists (e.g. error/disabled/open)
 - [ ] diffs are explainable and tied to a deliberate change (token/component update)
 
 ---
@@ -372,7 +383,7 @@ Use during PR review. Each item maps back to the section that enforces it.
 - [ ] No variant matrices (one test per value of a variant prop).
 - [ ] No full-class-string snapshots, no full-DOM snapshots.
 
-**Contract focus (§3)**
+**Unit test focus (§3)**
 
 - [ ] Class assertions are tied 1:1 to a variant prop under test.
 - [ ] No tests for `cva` output composition or Radix internals.
@@ -380,14 +391,14 @@ Use during PR review. Each item maps back to the section that enforces it.
 - [ ] `as` and `asChild` (if supported) each have one test.
 - [ ] `ref` forwarding has a smoke test.
 
-**Interactive components (§5)**
+**Integration tests (§5)**
 
 - [ ] In-tree interactives use Template C1 (jsdom).
-- [ ] Portal/overlay interactives use Template C2 (Playwright). If Testing Library is used, the author confirms 10× non-flaky local runs in the PR description.
+- [ ] Portal/overlay interactives use Template C2 (Playwright). If Testing Library is used, the author confirms 10x non-flaky local runs in the PR description.
 
 **Blocks (§6)**
 
-- [ ] Block has unit tests **only** if it has logic a primitive contract test wouldn’t catch.
+- [ ] Block has integration tests **only** if it has logic a unit test on the underlying primitives wouldn't catch.
 - [ ] Block does not introduce a context dependency at the primitive layer.
 
 **Visual (§7)**
@@ -408,10 +419,10 @@ Use during PR review. Each item maps back to the section that enforces it.
 
 | Concern         | Decision                                                  | Why                                                                                                      |
 | --------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Tier            | Contract only                                             | Pure styling primitive, no portals, no keyboard contract                                                 |
-| Element         | One `as` test                                             | `as` is part of the public API; one tag value proves the contract (`TextElement` union covers the rest at compile time) |
+| Tier            | Unit tests only                                           | Pure styling primitive, no portals, no keyboard behavior                                                 |
+| Element         | One `as` test                                             | `as` is part of the public API; one tag value proves the behavior (`TextElement` union covers the rest at compile time) |
 | Composition     | One `asChild` test                                        | `asChild` is an extensibility guarantee                                                                  |
-| Variants        | Assert `weight`, `variant`, `truncate` (one each)         | These have no other observable effect — the class **is** the contract                                    |
+| Variants        | Assert `weight`, `variant`, `truncate` (one each)         | These have no other observable effect — the class **is** the public API surface                           |
 | Variants skipped | `size`, `align`                                          | `size` has 7 values (matrix risk); `align` is low-regression-risk text alignment                         |
 | Ref             | Forwarding smoke test                                     | `forwardRef` is part of the public API                                                                   |
 | Visual          | Optional                                                  | Participates in flagship type-scale visual specs; no per-component baseline                              |
@@ -424,12 +435,12 @@ This matches the §1.1 additive formula. Anything more (e.g. asserting every val
 
 ---
 
-## 10) Contract drift policy
+## 10) Test drift policy
 
-Tests live as long as the component. Apply these rules when contracts evolve:
+Tests live as long as the component. Apply these rules when the public API evolves:
 
 - **Adding a variant value** (e.g. new `size`): no new test required. Optional if the variant is core to the design.
-- **Renaming a variant prop or value**: update the contract test in the **same PR** as the rename. PR is incomplete otherwise.
-- **Removing a variant**: delete the test. Don’t keep dead assertions.
-- **Adding a prop with side effects** (e.g. `loading` that disables the trigger): add one contract test in the same PR.
-- **Internal refactor** (cva → tailwind-variants, swap Radix versions): tests must continue to pass without modification. If they don’t, the contract was wrong, not the refactor.
+- **Renaming a variant prop or value**: update the unit test in the **same PR** as the rename. PR is incomplete otherwise.
+- **Removing a variant**: delete the test. Don't keep dead assertions.
+- **Adding a prop with side effects** (e.g. `loading` that disables the trigger): add one unit test in the same PR.
+- **Internal refactor** (cva -> tailwind-variants, swap Radix versions): tests must continue to pass without modification. If they don't, the test was wrong, not the refactor.
