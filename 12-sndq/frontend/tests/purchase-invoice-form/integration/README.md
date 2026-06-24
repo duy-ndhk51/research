@@ -481,7 +481,7 @@ See `sndq-fe/.cursor/skills/frontend-testing/` for the full testing skill refere
 
 ### Supplier Defaults (HIGH) ([supplier-defaults.md](./supplier-defaults.md))
 
-**Purpose**: Guard the `useInitialLineDefaults` hook that applies supplier defaults to pristine first lines on form mount. Unit tests exist for internal logic — these tests verify the form-level wiring. Also covers `useAutoSaveBuildingSupplierDefaults` which persists settings on submit.
+**Purpose**: Guard the `useBackfillSupplierDefaults` hook that applies supplier defaults to pristine first lines on form mount. Unit tests exist for internal logic — these tests verify the form-level wiring. Also covers `useAutoSaveBuildingSupplierDefaults` which persists settings on submit.
 **Scope**: Initial defaults triggers, guard conditions (edit mode, free distribution, non-zero amount, existing values), ref-based single-fire, loading wait, auto-save on submit.
 **Risk**: Defaults silently overwrite user-set values, fire multiple times, fire in edit mode, auto-save creates duplicate links, or settings lost on submit.
 
@@ -549,9 +549,9 @@ See `sndq-fe/.cursor/skills/frontend-testing/` for the full testing skill refere
 
 ### Inline Selects (MEDIUM) ([inline-selects.md](./inline-selects.md))
 
-**Purpose**: Verify the inline building and supplier selects: selection handlers, side effects on buildingId/senderId change, search debounce, keyboard navigation, and supplier quick-create flow.
-**Scope**: Building/supplier selection, building change resets supplier, supplier clear, debounce, quick-create, keyboard nav, tab management.
-**Risk**: Building change doesn't reset supplier (wrong pair), supplier clear doesn't reset senderId, keyboard navigation traps focus.
+**Purpose**: Verify the inline building and supplier selects plus `InlineLedgerSelect` base UI (IS-L*): selection handlers, side effects on buildingId/senderId change, search debounce, keyboard navigation, supplier quick-create flow, and tabbed ledger popover behavior.
+**Scope**: Building/supplier selection, building change resets supplier, supplier clear, debounce, quick-create, keyboard nav, tab management; ledger tab rendering, search, footer actions, tab class isolation (IS-L1–L11).
+**Risk**: Building change doesn't reset supplier (wrong pair), supplier clear doesn't reset senderId, keyboard navigation traps focus; wrong-class ledger options shown on Revenue tab after supplier backfill.
 
 | Test Name | Key Behavior | Status |
 |-----------|--------------|--------|
@@ -564,3 +564,25 @@ See `sndq-fe/.cursor/skills/frontend-testing/` for the full testing skill refere
 | Quick-create supplier flow | Create new → `senderId` set, defaults refreshed | - [ ] |
 | Keyboard navigation cycles options | ArrowDown → first option focused | - [ ] |
 | Tab focus management | Tab from building → supplier focused | - [ ] |
+
+### Ledger Credit Note Conversion (HIGH) ([ledger-credit-note-conversion.md](./ledger-credit-note-conversion.md))
+
+**Purpose**: Tabbed ledger select + confirmation dialog + bulk credit note conversion when a 7xx ledger is selected on a non-credit-note invoice.
+**Scope**: 6xx/7xx tab split, dialog gate, bulk line update, distribution sheet outer-form scope (props from `InvoiceLinesTableV3`), FormHeader toggle must not mutate lines, Revenue tab class isolation after supplier backfill.
+**Risk**: Wrong form scope in distribution sheet; bulk overwrite of existing 7xx lines; 6xx options leaking into Revenue tab list.
+
+| Test case | Key behavior | Status |
+|-----------|--------------|--------|
+| Expense tab renders 6xx, Revenue tab renders 7xx | Options split by `displayCode` prefix | - [ ] |
+| Select expense on invoice mode → no dialog | Normal selection, no conversion | - [ ] |
+| Select revenue on invoice mode → dialog | Confirmation before state change | - [ ] |
+| Confirm → credit_note mode + type code 381 | Mode and `invoiceTypeCode` updated | - [ ] |
+| Confirm with mixed lines → only 6xx updated | Existing 7xx lines preserved | - [ ] |
+| Cancel dialog → no changes | Cancel is a no-op | - [ ] |
+| Revenue on credit_note mode → no dialog | Direct selection | - [ ] |
+| Revenue on expense_note mode → dialog | Same gate as invoice mode | - [ ] |
+| Lines without `code` → bulk updated | Treated as expense class | - [ ] |
+| Lines with undefined costAccount → updated | Empty lines populated | - [ ] |
+| Distribution sheet → outer form conversion | Props-based conversion from sheet | - [ ] |
+| FormHeader toggle → lines unchanged | Mode toggle never mutates lines | - [ ] |
+| Backfilled 6xx → Revenue tab excludes 6xx | Tab class isolation; trigger unchanged | - [ ] |

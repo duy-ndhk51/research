@@ -3,7 +3,7 @@
 Step-by-step execution guide for migrating the DataTable block from `sndq-clone/packages/ui-v2/src/blocks/data-table` into `sndq/packages/ui-v2`. Each commit should be independently verifiable and revertable.
 
 **Created**: 2026-06-21
-**Status**: Not started
+**Status**: PR 4 Commit 21 complete (pending manual commit)
 **Architecture**: [architecture.md](./architecture.md)
 **Migration plan**: [testing-and-migration-stages.md](./testing-and-migration-stages.md)
 **Source**: `sndq-clone/packages/ui-v2/src/blocks/data-table` (working tree)
@@ -25,7 +25,8 @@ Step-by-step execution guide for migrating the DataTable block from `sndq-clone/
 9. [Final Verification](#9-final-verification)
 10. [Team Communication](#10-team-communication)
 11. [What's Next](#11-whats-next)
-12. [Execution Log](#execution-log)
+12. [Migration corrections](#migration-corrections)
+13. [Execution Log](#execution-log)
 
 ---
 
@@ -34,14 +35,14 @@ Step-by-step execution guide for migrating the DataTable block from `sndq-clone/
 **Goal**: Graduate the DataTable block from `sndq-clone` prototype into a production-grade `@sndq/ui-v2` export with full test coverage and docs, preserving the existing Layer 1 `Table` primitive contract.
 
 
-**Feature summary:** [pr-summaries/data-table.md](./pr-summaries/data-table.md) *(create when PR 1 work starts)*  
+**Feature summary:** [pr-summaries/data-table.md](./pr-summaries/data-table.md)  
 **PR summaries:** [pr-summaries/README.md](./pr-summaries/README.md)
 
 **Structure**: ~32 commits across 6 PRs.
 
 | PR | Scope | Stages | Risk | Commits | Summary doc |
 |----|-------|--------|------|---------|-------------|
-| **PR 1** | Foundation + core hooks: types, test infra, provider, `usePersistedTableState`, `useDataTable`, flat-table smoke | 0–1 | Low–Medium | 1–8 | [pr-1-foundation-core-hooks.md](./pr-summaries/pr-1-foundation-core-hooks.md) |
+| **PR 1** | Foundation + core hooks: types, test infra, `providers/`, `usePersistedTableState`, `useDataTable`, column-pinning utils, flat-table smoke | 0–1 | Low–Medium | 1–8 (+ providers refactor) | [pr-1-foundation-core-hooks.md](./pr-summaries/pr-1-foundation-core-hooks.md) |
 | **PR 2** | Persistence (localStorage + URL) + Content rendering (flat + grouped) | 2–3 | Medium | 9–13 | [pr-2-persistence-content.md](./pr-summaries/pr-2-persistence-content.md) |
 | **PR 3** | Sorting + global search + column filtering — **Phase 1 gate** | 4–5 | Medium | 14–18 | [pr-3-sort-search-filters.md](./pr-summaries/pr-3-sort-search-filters.md) |
 | **PR 4** | Pagination + footer + selection + bulk actions + toolbar | 6–7 | Medium | 19–21 | [pr-4-pagination-selection-bulk.md](./pr-summaries/pr-4-pagination-selection-bulk.md) |
@@ -82,6 +83,16 @@ Use this gate for every implementation commit. If an item is intentionally skipp
 - [ ] Security-sensitive values, credentials, generated secrets, and local env files are not committed
 - [ ] Build, lint, type-check, and any targeted verification commands are known before editing
 - [ ] Any skipped verification is recorded as a deviation with a follow-up owner or trigger
+- [ ] Touched files diffed against sndq-clone counterpart; deviations recorded
+
+### Source-of-truth and porting rules
+
+1. **Behavior source** — `sndq-clone/packages/ui-v2/src/blocks/data-table` working tree. Diff each touched file against its clone counterpart before marking a commit complete.
+2. **No ui-v2-dev** — Do not use `sndq-clone/apps/ui-v2-dev` (or other app layers) as an implementation reference during migration.
+3. **No ARIA / a11y attributes** — Do not add or keep `aria-*`, accessibility-only `role=`, or similar in `@sndq/ui-v2` data-table. Strip them when porting from clone. Full a11y pass is out of migration scope.
+4. **Allowed deviations** — Only when sndq primitives force it (e.g. Radix `Checkbox` indeterminate API) or when explicitly recorded under **Deviations from the gate** for that commit.
+5. **No speculative guards** — Do not add behavior (e.g. early returns) unless a real callsite needs it. Test-only features that clone lacks should not ship unless documented and justified.
+6. **Tests** — Test sndq behavior aligned with clone; do not add tests under sndq-clone.
 
 ### Documentation and comment policy
 
@@ -118,10 +129,10 @@ pnpm --filter @sndq/ui-v2 type-check 2>&1 | tee /tmp/dt-migration-typecheck-befo
 
 ## 3. PR 1 — Foundation + Core Hooks (Stages 0–1)
 
-> **Summary:** Package wiring, types, provider, test infra, state hook, `useDataTable`, flat-table smoke test.
-> **PR summary doc:** [pr-summaries/pr-1-foundation-core-hooks.md](./pr-summaries/pr-1-foundation-core-hooks.md) *(create when opening this PR)*
+> **Summary:** Package wiring, types, `providers/`, test infra, state hook, `useDataTable`, column-pinning utils, flat-table smoke test.
+> **PR summary doc:** [pr-summaries/pr-1-foundation-core-hooks.md](./pr-summaries/pr-1-foundation-core-hooks.md)
 
-Package wiring, types, DataTable provider, shared test infrastructure, state management, `useDataTable`, and flat-table integration smoke test. Column definitions use `createColumnHelper` from `@tanstack/react-table` (not ui-v2 utils). Delivers a minimal client-side table pipeline before persistence lands in PR 2.
+Package wiring, types, DataTable `providers/` layer, shared test infrastructure, state management, `useDataTable`, column-pinning utilities, and flat-table integration smoke test. Column definitions use `createColumnHelper` from `@tanstack/react-table` (not ui-v2 utils). Delivers a minimal client-side table pipeline before persistence lands in PR 2.
 
 ### Test file naming
 
@@ -129,11 +140,11 @@ Co-locate tests next to the source they cover. Use `.tsx` when the test file con
 
 | Kind | Pattern | Example |
 |------|---------|---------|
-| **Component** | `[PascalCase].test.tsx` | `__tests__/DataTable.test.tsx` (blocks); `DataTableSearch.test.tsx` (co-located) |
+| **Component** | `[PascalCase].test.tsx` | `__tests__/DataTable.test.tsx`, `__tests__/DataTableContext.test.tsx` (blocks); `DataTableSearch.test.tsx` (co-located) |
 | **Integration** | `[PascalCaseFeature].integration.test.tsx` | `DataTableContentFlat.integration.test.tsx` |
 | **Utils / hooks / pure logic** | `[camelCase].test.ts` (or `.tsx` if JSX) | `columnLayout.test.ts`, `useDataTable.test.tsx` |
 
-Feature variants use concatenated PascalCase for integration tests (not dot suffixes): `DataTableContentFlat.integration.test.tsx`, not `DataTableContent.flat.test.tsx`. Hook sub-suites stay camelCase: `usePersistedTableStatePersistence.test.tsx`.
+Feature variants use concatenated PascalCase for integration tests (not dot suffixes): `DataTableContentFlat.integration.test.tsx`, not `DataTableContent.flat.test.tsx`. Hook feature areas may use a nested `describe('feature')` in the main hook test file (e.g. `describe('persistence')` in `usePersistedTableState.test.tsx`) or a separate camelCase sub-suite file when large (e.g. `useDataTableServerSide.test.tsx`).
 
 **Blocks:** centralize block tests and shared helpers under `__tests__/` (component/integration tests + helpers). Module files and exported functions/constants use **camelCase** — e.g. `fixtures.ts` (`mockPeople`), `domHelpers.ts` (`getHeaderTexts`, `getVisibleRowCount`), `renderWithDataTable.tsx`. Types may stay PascalCase (e.g. `Person`).
 
@@ -195,7 +206,7 @@ pnpm --filter @sndq/ui-v2 test
 
 ### Commit 2: Types — `EditorMeta`, `parseEditorValue`, TanStack `ColumnMeta` augmentation
 
-**What**: Port `types/index.ts` and `types/tanstack-table.d.ts` from sndq-clone. These are self-contained with no component imports.
+**What**: Port `types/index.ts` and `types/tanstackTable.d.ts` from sndq-clone. These are self-contained with no component imports.
 
 **Refactor note (applied during migration)**: sndq-clone made two structural changes applied here:
 1. Replaced the flat `filterType` / `filterOptions` / `datePresets` / `className` / `editable` fields on `ColumnMeta` with a single `filter?: FilterMeta` discriminated union (`select | date | text`).
@@ -205,7 +216,7 @@ The files below reflect both refactored shapes.
 **Files to create**:
 
 - `src/blocks/data-table/types/index.ts` — `SelectOption`, `FilterMeta`, `EditorMeta`, `EditorValueMap`, `parseEditorValue`, `EditingOnSave` (component prop re-exports excluded — added incrementally as each component is ported). `FilterDatePreset` is inlined here until `utils/filters.ts` is ported in PR 3.
-- `src/blocks/data-table/types/tanstack-table.d.ts` — `ColumnMeta` augmentation with 5 fields: `align`, `filter`, `editor`, `skeleton`, `groupable`
+- `src/blocks/data-table/types/tanstackTable.d.ts` — `ColumnMeta` augmentation with 5 fields: `align`, `filter`, `editor`, `skeleton`, `groupable`
 
 **Quality gate checklist**:
 
@@ -248,13 +259,19 @@ pnpm --filter @sndq/ui-v2 type-check
 
 ### Commit 3: DataTable provider + editing store
 
-**What**: Port `DataTable.tsx` — the context provider, `useDataTableContext`, `EditingCellStore`, and `useEditingStore`.
+**What**: Port the DataTable context layer — table instance context, editing store, and root shell. Context concerns live under `providers/`; `DataTable.tsx` is the layout shell only.
+
+**Refactor note (2026-06-22)**: Initial port placed all context logic in a single `DataTable.tsx`. Extracted into `providers/` in [Post-Commit 8: Extract `providers/`](#post-commit-8-extract-providers-folder) to match blocks folder convention in `packages/ui-v2/AGENTS.md`.
 
 **Files to create**:
 
-- `src/blocks/data-table/DataTable.tsx` — context, editing store, provider component
+- `src/blocks/data-table/providers/DataTableContext.tsx` — `DataTableContext`, `useDataTableContext`, `DataTableProvider`
+- `src/blocks/data-table/providers/EditingStoreContext.tsx` — `EditingCellStore`, `useEditingStore`, `EditingStoreProvider` (ref + listener store factory)
+- `src/blocks/data-table/providers/DataTableProviders.tsx` — composes both providers
+- `src/blocks/data-table/providers/index.ts` — public provider API re-exports
+- `src/blocks/data-table/DataTable.tsx` — wraps `DataTableProviders` + `Flex` layout shell (`DataTableProps` stays here)
 
-**Dependencies used**: `Flex` (exists in `@sndq/ui-v2/components`), `cn` (exists in `lib/utils`). The `DataTableInstance` type is imported as `import type` from `./types` — the hook implementation comes in Commit 7.
+**Dependencies used**: `Flex` (exists in `@sndq/ui-v2/components`), `cn` (exists in `lib/utils`). `DataTableInstance` and `EditingCell` imported as `import type` from `./types` in provider files — the hook implementation comes in Commit 7. Internal consumers import hooks from `./providers`, not `./DataTable`.
 
 **Quality gate checklist**:
 
@@ -291,7 +308,7 @@ pnpm --filter @sndq/ui-v2 type-check
 
 - [x] Quality gate checklist satisfied
 - [x] Tests green or deviation documented — 19 files / 153 tests passed
-- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0; `DataTableInstance` and `EditingCell` imported from `./types` in `DataTable.tsx` (not re-exported); `useDataTableContext` uses a cast (`as DataTableInstance<TData> | null`) to work around TypeScript's generic context assignability check
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0; `DataTableInstance` and `EditingCell` imported from `./types` in provider files (not re-exported from `DataTable.tsx`); `useDataTableContext` uses a cast (`as DataTableInstance<TData> | null`) to work around TypeScript's generic context assignability check
 - [ ] Committed
 
 ---
@@ -302,8 +319,9 @@ pnpm --filter @sndq/ui-v2 type-check
 
 **Files to create**:
 
-- `src/blocks/data-table/__tests__/fixtures.ts` — `Person` type, `mockPeople` array (3 rows with id, name, status, amount, date)
-- `src/blocks/data-table/__tests__/domHelpers.ts` — `getVisibleCellTexts(container, columnIndex?)`, `getVisibleRowCount(container)`, `getHeaderTexts(container)` (camelCase module + exports)
+- `src/blocks/data-table/__tests__/utils/fixtures.ts` — `Person` type, `mockPeople` array (3 rows with id, name, status, amount, date)
+- `src/blocks/data-table/__tests__/utils/domHelpers.ts` — `getVisibleCellTexts(container, columnIndex?)`, `getVisibleRowCount(container)`, `getHeaderTexts(container)` (camelCase module + exports)
+- `src/blocks/data-table/__tests__/utils/index.ts` — barrel re-export (added at PR 1 checkpoint)
 
 **Quality gate checklist**:
 
@@ -332,7 +350,7 @@ pnpm --filter @sndq/ui-v2 type-check
 **Deviations from the gate**:
 
 - **No tests for the test infra itself** — these helpers are validated by consumer tests in Commit 5+
-- **`renderWithDataTable` deferred to Commits 6–7** — requires hooks (`usePersistedTableState`, `useDataTable`); column defs use `createColumnHelper` from `@tanstack/react-table` directly; add `__tests__/renderWithDataTable.tsx` alongside first hook tests
+- **`renderWithDataTable` deferred to Commits 6–7** — requires hooks; mock-only helper remains inline in `DataTable.test.tsx`; real-hook `renderFlatTable` added in Commit 8 under `__tests__/utils/`
 
 **Commit message**: `feat: add data-table test infrastructure`
 
@@ -347,20 +365,30 @@ pnpm --filter @sndq/ui-v2 type-check
 
 ### Commit 5: DataTable provider tests
 
-**What**: Unit tests for the DataTable provider following the testing-and-migration-stages Stage 0 spec.
+**What**: Unit tests for the DataTable provider following the testing-and-migration-stages Stage 0 spec. Split by concern after providers extraction (2026-06-22).
 
 **Files to create**:
 
-- `src/blocks/data-table/__tests__/DataTable.test.tsx` — uses `createMockDataTableInstance` from `fixtures.ts` with exported `DataTableInstance` type
+- `src/blocks/data-table/__tests__/DataTable.test.tsx` — shell only; uses `createMockDataTableInstance` from `__tests__/utils/fixtures.ts`
+- `src/blocks/data-table/__tests__/DataTableContext.test.tsx` — imports `useDataTableContext` from `../providers`
+- `src/blocks/data-table/__tests__/EditingStoreContext.test.tsx` — imports `useEditingStore` / `DataTableProviders` from `../providers`
 
 **Test cases**:
 
-- [ ] Renders children within provider
-- [ ] `useDataTableContext` throws when used outside `<DataTable>`
-- [ ] `useEditingStore` throws when used outside `<DataTable>`
-- [ ] Editing store: `subscribe` → `setEditingCell` → callback fires
-- [ ] Editing store: `getSnapshot` returns current cell
-- [ ] Editing store: `setEditingCell(null)` clears state
+**`DataTable.test.tsx`** (1):
+
+- [x] Renders children within provider
+
+**`DataTableContext.test.tsx`** (1):
+
+- [x] `useDataTableContext` throws when used outside `<DataTable>`
+
+**`EditingStoreContext.test.tsx`** (4):
+
+- [x] `useEditingStore` throws when used outside `<DataTable>`
+- [x] Editing store: `subscribe` → `setEditingCell` → callback fires
+- [x] Editing store: `getSnapshot` returns current cell
+- [x] Editing store: `setEditingCell(null)` clears state
 
 **Quality gate checklist**:
 
@@ -380,12 +408,14 @@ pnpm --filter @sndq/ui-v2 type-check
 
 ```bash
 pnpm --filter @sndq/ui-v2 test src/blocks/data-table/__tests__/DataTable.test.tsx
+pnpm --filter @sndq/ui-v2 test src/blocks/data-table/__tests__/DataTableContext.test.tsx
+pnpm --filter @sndq/ui-v2 test src/blocks/data-table/__tests__/EditingStoreContext.test.tsx
 pnpm --filter @sndq/ui-v2 test
 ```
 
 **If it fails**:
 
-- **"Cannot create mock for DataTableInstance"**: Create a minimal mock factory in `__tests__/fixtures.ts` that satisfies the type
+- **"Cannot create mock for DataTableInstance"**: Create a minimal mock factory in `__tests__/utils/fixtures.ts` that satisfies the type
 
 **Deviations from the gate**:
 
@@ -396,7 +426,7 @@ pnpm --filter @sndq/ui-v2 test
 **Status**:
 
 - [x] Quality gate checklist satisfied
-- [x] Tests green or deviation documented — 20 files / 159 tests passed (6 new in `__tests__/DataTable.test.tsx`)
+- [x] Tests green or deviation documented — 20 files / 159 tests passed at initial port (6 provider tests; split into 3 files after providers extraction — see Post-Commit 8)
 - [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
 - [x] Manual verification complete, if applicable — N/A (automated tests cover provider + editing store)
 - [ ] Committed
@@ -414,13 +444,23 @@ pnpm --filter @sndq/ui-v2 test
 - `src/blocks/data-table/constants/index.ts` — constants barrel
 - `src/blocks/data-table/hooks/usePersistedTableState.ts`
 - `src/blocks/data-table/hooks/usePersistedTableState.test.tsx`
+- `src/blocks/data-table/utils/columnPinning.ts` — strip/prepend selection column in pinning state
+- `src/blocks/data-table/utils/stateUpdaters.ts` — `resolveUpdater` for TanStack functional updaters
+- `src/blocks/data-table/utils/persistedTableBaseline.ts` — init/reset baseline for persisted slices
+- `src/blocks/data-table/utils/columnPinning.test.ts`, `stateUpdaters.test.ts`, `persistedTableBaseline.test.ts`
+- `src/blocks/data-table/hooks/useSelectionSyncedColumnPinning.ts` — syncs selection column when `enableSelection` toggles (internal; not exported from `hooks/index.ts` yet)
+- `src/blocks/data-table/hooks/useSelectionSyncedColumnPinning.test.tsx`
 
-**Test cases**:
+**Test cases** (`usePersistedTableState.test.tsx`):
 
 - [x] `onSortingChange` with functional updater
 - [x] Density toggle updates state
-- [x] `resetAllState()` clears sorting, filters, pagination
-- [x] Selection column pinned left when `enableSelection` is true (uses `SELECTION_COLUMN_ID` from `constants/columns.ts`)
+- [x] `resetAllState()` clears session slices when no `initialState`
+- [x] `resetAllState()` restores sorting and grouping from `initialState`
+- [x] `resetAllState()` clears rowSelection and globalFilter even when set in `initialState`
+- [x] `resetAllState()` restores columnPinning baseline with selection pinned
+- [x] `resetAllState()` resets columnSizing to initial baseline
+- [x] `resetAllState()` restores all TanStack slices and UI flags (density, selectAllMode, showFilters, showColumnConfig) to baseline
 
 **Risks**:
 
@@ -447,7 +487,7 @@ pnpm --filter @sndq/ui-v2 type-check
 **Status**:
 
 - [x] Quality gate checklist satisfied
-- [x] Tests green or deviation documented — 21 files / 163 tests passed (4 new in `hooks/usePersistedTableState.test.tsx`)
+- [x] Tests green or deviation documented — 21 files / 163 tests passed at initial port (8 in `hooks/usePersistedTableState.test.tsx`; expanded with column-pinning utils + `useSelectionSyncedColumnPinning` — see [pr-1-foundation-core-hooks.md](./pr-summaries/pr-1-foundation-core-hooks.md))
 - [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0; persistence wiring intentionally absent until Commit 10; `useIsomorphicLayoutEffect` ported early (unused until Commit 10)
 - [ ] Committed
 
@@ -469,8 +509,8 @@ pnpm --filter @sndq/ui-v2 type-check
 
 - `src/blocks/data-table/types/index.ts` — re-export from `dataTable.ts`
 - `src/blocks/data-table/constants/index.ts` — re-export columns + defaults constants
-- `src/blocks/data-table/DataTable.tsx` — import `DataTableInstance` / `EditingCell` from `./types`
-- `src/blocks/data-table/__tests__/fixtures.ts` — import `DataTableInstance` from `../types`
+- `src/blocks/data-table/DataTable.tsx` — import `DataTableInstance` from `./types` (layout shell only; context in `providers/`)
+- `src/blocks/data-table/__tests__/utils/fixtures.ts` — import `DataTableInstance` from `../../types`
 
 **Test cases** (from testing-and-migration-stages Stage 1):
 
@@ -480,6 +520,7 @@ pnpm --filter @sndq/ui-v2 type-check
 - [x] `enableSelection` injects selection column (`SELECTION_COLUMN_ID` from `constants/columns.ts`)
 - [x] `getSelectionCount()` returns correct count
 - [x] `toggleGroupSelection()` on grouped rows
+- [x] `toggleGroupSelection()` dedupes overlapping leaf rows
 
 **Risks**:
 
@@ -505,14 +546,14 @@ pnpm --filter @sndq/ui-v2 type-check
 - **`config.persistence` omitted** until Commit 10 (matches state-only `usePersistedTableState`)
 - **`DataTableTanStackOptions`** — `Pick<TableOptions, …>` for TanStack fields forwarded unchanged; SNDQ-only flags (`enablePagination`, `enableFiltering`, `enableSelection`, …) on `DataTableOptions`
 - **Types/constants split** — hook API types in `types/dataTable.ts`; `DEFAULT_PAGE_SIZES` and `DEFAULT_SERVER_SIDE_CONFIG` in `constants/` (not inline in hook)
-- **`SELECTION_COLUMN_ID`** from `constants/columns.ts`; no selection checkbox `aria-label` yet
+- **`SELECTION_COLUMN_ID`** from `constants/columns.ts`; a11y labels deferred (out of migration scope)
 
 **Commit message**: `feat: add useDataTable hook`
 
 **Status**:
 
 - [x] Quality gate checklist satisfied
-- [x] Tests green or deviation documented — 22 files / 169 tests passed (6 new in `hooks/useDataTable.test.tsx`)
+- [x] Tests green or deviation documented — 22 files / 169 tests passed at initial port (7 in `hooks/useDataTable.test.tsx`)
 - [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0; `DataTable.tsx` + `fixtures.ts` wired to `types/dataTable.ts`; hook is implementation-only
 - [ ] Committed
 
@@ -525,7 +566,7 @@ pnpm --filter @sndq/ui-v2 type-check
 **Files to create**:
 
 - `src/blocks/data-table/__tests__/DataTableFlat.integration.test.tsx`
-- `src/blocks/data-table/__tests__/renderFlatTable.tsx` — shared test helper (`FlatTablePreview`, `renderFlatTable`)
+- `src/blocks/data-table/__tests__/utils/renderFlatTable.tsx` — shared test helper (`FlatTablePreview`, `renderFlatTable`, `basePersonColumns`)
 
 **Test cases**:
 
@@ -548,7 +589,8 @@ pnpm --filter @sndq/ui-v2 test
 **Deviations from the gate**:
 
 - **Sort-click DOM reorder** deferred to PR 2 `DataTableContent` tests (Stage 3) — Commit 8 smoke uses raw `Table` + `flexRender` only; no `DataTableContent` yet
-- **`renderFlatTable.tsx` helper** added under `__tests__/` for reuse in PR 2 content tests; separate from mock-only `renderWithDataTable` in `DataTable.test.tsx`
+- **`__tests__/utils/` layout** — test helpers moved from `__tests__/` root to `__tests__/utils/` (fixtures, domHelpers, renderFlatTable); column types use `typeof basePersonColumns` (not `ColumnDef<Person, unknown>`)
+- **`renderFlatTable.tsx`** separate from mock-only `renderWithDataTable` inline in `DataTable.test.tsx`
 
 **Commit message**: `test: add flat table integration smoke`
 
@@ -561,6 +603,43 @@ pnpm --filter @sndq/ui-v2 test
 
 ---
 
+### Post-Commit 8: Extract `providers/` folder
+
+**What**: Refactor context concerns out of monolithic `DataTable.tsx` into `providers/` — one file per concern, composed by `DataTableProviders`. Aligns with blocks folder convention documented in `packages/ui-v2/AGENTS.md`.
+
+**Files to create**:
+
+- `src/blocks/data-table/providers/DataTableContext.tsx`
+- `src/blocks/data-table/providers/EditingStoreContext.tsx`
+- `src/blocks/data-table/providers/DataTableProviders.tsx`
+- `src/blocks/data-table/providers/index.ts`
+
+**Files to edit**:
+
+- `src/blocks/data-table/DataTable.tsx` — layout shell only (`DataTableProviders` + `Flex`)
+- `src/blocks/data-table/__tests__/DataTable.test.tsx` — shell test only (1 test)
+- `src/blocks/data-table/__tests__/DataTableContext.test.tsx` — new (1 test)
+- `src/blocks/data-table/__tests__/EditingStoreContext.test.tsx` — new (4 tests; moved from `DataTable.test.tsx`)
+- `packages/ui-v2/AGENTS.md` — document `providers/` in blocks folder convention
+
+**Verification**:
+
+```bash
+pnpm --filter @sndq/ui-v2 type-check
+pnpm --filter @sndq/ui-v2 test
+```
+
+**Commit message**: `refactor: extract data-table providers`
+
+**Status**:
+
+- [x] Quality gate checklist satisfied
+- [x] Tests green — 29 files / 198 tests passed (2026-06-22); provider tests split across 3 files under `__tests__/`
+- [x] Build / lint / type-check green — `tsc --noEmit` exit 0
+- [ ] Committed
+
+---
+
 ### PR 1 Checkpoint
 
 Push after Commit 8 and wait for CI or the relevant automated checks to pass before continuing.
@@ -568,22 +647,25 @@ Push after Commit 8 and wait for CI or the relevant automated checks to pass bef
 ```bash
 git push -u origin feature/data-table-migration
 # Create PR targeting dev
+# Paste pr-summaries/pr-1-foundation-core-hooks.md into GitHub PR description
 ```
 
-**This validates**: Package wiring works, types compile, provider renders, test infra is usable, `usePersistedTableState` works, `useDataTable` creates valid TanStack Table instances (columns defined via `@tanstack/react-table` `createColumnHelper`), hook + provider + primitive pipeline renders. Existing primitive tests unaffected.
+**This validates**: Package wiring works, types compile, `providers/` layer renders, test infra is usable, `usePersistedTableState` works, `useDataTable` creates valid TanStack Table instances (columns defined via `@tanstack/react-table` `createColumnHelper`), hook + provider + primitive pipeline renders. Existing primitive tests unaffected.
 
 **Exit gate** (from testing-and-migration-stages Stages 0–1):
 
-- [ ] `pnpm --filter @sndq/ui-v2 test` green for all new + existing files
-- [ ] `pnpm --filter @sndq/ui-v2 type-check` green
-- [ ] No regressions in prior primitive tests
-- [ ] PR summary file filled in [pr-summaries/pr-1-foundation-core-hooks.md](./pr-summaries/pr-1-foundation-core-hooks.md) and pasted into GitHub PR description
+- [x] `pnpm --filter @sndq/ui-v2 test` green for all new + existing files — 29 files / 198 tests (2026-06-22; includes providers refactor + column-pinning utils)
+- [x] `pnpm --filter @sndq/ui-v2 type-check` green — `tsc --noEmit` exit 0
+- [x] No regressions in prior primitive tests
+- [x] PR summary file filled in [pr-summaries/pr-1-foundation-core-hooks.md](./pr-summaries/pr-1-foundation-core-hooks.md) and pasted into GitHub PR description
 
 **Manual checkpoint**:
 
 - [ ] PR description matches the commit scope
 - [ ] CI passes or failures are explained
-- [ ] Rollback instructions are clear
+- [x] Rollback instructions are clear — see [pr-1-foundation-core-hooks.md § Rollback](./pr-summaries/pr-1-foundation-core-hooks.md)
+
+**Rollback** (summary): Revert PR or branch `feature/data-table-migration`. Scope: `packages/ui-v2/` + `pnpm-lock.yaml`. Then `pnpm install && pnpm --filter @sndq/ui-v2 test && pnpm --filter @sndq/ui-v2 type-check`.
 
 **Status**:
 
@@ -597,7 +679,7 @@ git push -u origin feature/data-table-migration
 ## 4. PR 2 — Persistence + Content Rendering (Stages 2–3)
 
 > **Summary:** URL/localStorage persistence + `DataTableContent` rendering (flat + grouped).
-> **PR summary doc:** [pr-summaries/pr-2-persistence-content.md](./pr-summaries/pr-2-persistence-content.md) *(create when opening this PR)*
+> **PR summary doc:** [pr-summaries/pr-2-persistence-content.md](./pr-summaries/pr-2-persistence-content.md)
 
 Persistence (localStorage + URL) and the visual content layer — `DataTableContent`, `DataTableColumnHeader`, grouped rows, column layout utilities.
 
@@ -609,18 +691,30 @@ Persistence (localStorage + URL) and the visual content layer — `DataTableCont
 
 **Files to create**:
 
+- `src/lib/utils/debounce.ts`, `debounce.test.ts` — lodash-free debounce util (`cancel`, `flush`, `leading`, `trailing`)
+- `src/lib/hooks/useUnmount.ts`
+- `src/lib/hooks/useDebounceCallback.ts`, `useDebounceCallback.test.ts` — aligned with usehooks-ts tests (no lodash)
+- `src/lib/hooks/useDebounceValue.ts`, `useDebounceValue.test.ts`
+- `src/blocks/data-table/types/persistence.ts` — `PersistenceOptions`, `PersistedTableState`
+- `src/blocks/data-table/constants/persistence.ts` — `DEFAULT_PERSISTENCE_PREFIX`, `DEFAULT_PERSISTENCE_DEBOUNCE_MS`
+- `src/blocks/data-table/utils/tablePersistence.ts`, `tablePersistence.test.ts` — serializers, URL/localStorage I/O, `loadPersistedTableState`
 - `src/blocks/data-table/hooks/useTablePersistence.ts`
 - `src/blocks/data-table/hooks/useTablePersistence.test.ts`
 
+**Files to edit**:
+
+- `src/lib/hooks/useDebounce.ts` — thin wrapper over `useDebounceValue`
+- `src/blocks/data-table/types/index.ts`, `constants/index.ts`, `utils/index.ts`
+
 **Test cases** (from testing-and-migration-stages Stage 2):
 
-- [ ] `serializeSorting` / `parseSorting` round-trip
-- [ ] `storageKey` with scope
-- [ ] `readFromUrl` / `writeToUrl`
-- [ ] localStorage read/write
-- [ ] URL wins over localStorage on load
-- [ ] Debounced save doesn't loop
-- [ ] `QuotaExceededError` handled gracefully
+- [x] `serializeSorting` / `parseSorting` round-trip
+- [x] `storageKey` with scope
+- [x] `readFromUrl` / `writeToUrl`
+- [x] localStorage read/write
+- [x] URL wins over localStorage on load
+- [x] Debounced save doesn't loop
+- [x] `QuotaExceededError` handled gracefully
 
 **Mock**: `vi.stubGlobal('localStorage', ...)`, mock `window.location.search`
 
@@ -639,15 +733,15 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/hooks/useTablePersistence.t
 
 **Deviations from the gate**:
 
-- **None expected**
+- **AGENTS.md alignment** — persistence types/constants/utils extracted from hook; shared debounce layer in `src/lib/` without lodash; hook tests split (utils = pure I/O, hook = debounce/dedupe/unmount)
 
 **Commit message**: `feat: add useTablePersistence hook`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — `tablePersistence.test.ts` (6) + `useTablePersistence.test.ts` (5) + lib debounce tests (15); full suite **34 files / 225 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
 - [ ] Committed
 
 ---
@@ -658,37 +752,38 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/hooks/useTablePersistence.t
 
 **Files to edit**:
 
-- `src/blocks/data-table/hooks/usePersistedTableState.ts` — add persistence wiring
+- `src/blocks/data-table/types/persistedTableState.ts` — add `persistence?: PersistenceOptions` to options type
+- `src/blocks/data-table/hooks/usePersistedTableState/usePersistedTableState.ts` — add persistence wiring
 - `src/blocks/data-table/hooks/index.ts` — add `useTablePersistence` export
 
 **Files to create**:
 
-- `src/blocks/data-table/hooks/usePersistedTableStatePersistence.test.tsx`
+- (none — persistence cases live in nested `describe('persistence')` inside `usePersistedTableState.test.tsx`)
 
 **Test cases**:
 
-- [ ] Mount with `strategy: 'localStorage'` → reload state survives
-- [ ] Change sort → URL updates when `strategy: 'url'`
+- [x] Mount with `strategy: 'localStorage'` → reload state survives
+- [x] Change sort → URL updates when `strategy: 'url'`
 
 **Verification**:
 
 ```bash
-pnpm --filter @sndq/ui-v2 test src/blocks/data-table/hooks/usePersistedTableStatePersistence.test.tsx
-pnpm --filter @sndq/ui-v2 test src/blocks/data-table/hooks/usePersistedTableState.test.tsx
+pnpm --filter @sndq/ui-v2 test src/blocks/data-table/hooks/usePersistedTableState/usePersistedTableState.test.tsx
+pnpm --filter @sndq/ui-v2 type-check
 ```
 
 **Deviations from the gate**:
 
-- **None expected**
+- **Subfolder paths** — hook and test live under `hooks/usePersistedTableState/` per AGENTS.md subfolder rule; `persistence` option added to `types/persistedTableState.ts` (not inline in hook); persistence tests merged into `usePersistedTableState.test.tsx` (`describe('persistence')`)
 
 **Commit message**: `feat: wire persistence into table state`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — `usePersistedTableState.test.tsx` (10: 8 state + 2 persistence); full suite green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
@@ -698,40 +793,46 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/hooks/usePersistedTableStat
 
 **Files to create**:
 
-- `src/blocks/data-table/utils/columnLayout.ts`
-- `src/blocks/data-table/utils/rows.ts`
-- `src/blocks/data-table/utils/index.ts` — utils barrel
-- `src/blocks/data-table/utils/columnLayout.test.ts`
-- `src/blocks/data-table/utils/rows.test.ts`
+- `src/blocks/data-table/utils/columnLayout/columnLayout.ts`
+- `src/blocks/data-table/utils/columnLayout/columnLayout.test.ts`
+- `src/blocks/data-table/utils/columnLayout/index.ts`
+- `src/blocks/data-table/utils/rows/rows.ts`
+- `src/blocks/data-table/utils/rows/rows.test.ts`
+- `src/blocks/data-table/utils/rows/index.ts`
+
+**Files to edit**:
+
+- `src/blocks/data-table/utils/index.ts` — re-export columnLayout + rows
 
 **Test cases** (from testing-and-migration-stages Stage 3):
 
-- [ ] `mapSortDirection` correctness
-- [ ] Pinned class/style helpers produce correct CSS
-- [ ] Layout styles when resizing
-- [ ] `getTopLevelRows` filters correctly
-- [ ] `getGroupRowMetadata` returns depth, count, label
-- [ ] `getGroupSelectionState` returns all / indeterminate / none
+- [x] `mapSortDirection` correctness
+- [x] Pinned class/style helpers produce correct CSS
+- [x] Layout styles when resizing
+- [x] `getTopLevelRows` filters correctly
+- [x] `getGroupRowMetadata` returns depth, count, label
+- [x] `getGroupSelectionState` returns all / indeterminate / none
 
 **Verification**:
 
 ```bash
-pnpm --filter @sndq/ui-v2 test src/blocks/data-table/utils/columnLayout.test.ts
-pnpm --filter @sndq/ui-v2 test src/blocks/data-table/utils/rows.test.ts
+pnpm --filter @sndq/ui-v2 test src/blocks/data-table/utils/columnLayout/columnLayout.test.ts
+pnpm --filter @sndq/ui-v2 test src/blocks/data-table/utils/rows/rows.test.ts
+pnpm --filter @sndq/ui-v2 type-check
 ```
 
 **Deviations from the gate**:
 
-- **None expected**
+- **Subfolder paths** — utils live under `utils/columnLayout/` and `utils/rows/` per AGENTS.md subfolder rule (not flat `utils/columnLayout.ts`)
 
 **Commit message**: `feat: add column layout and row utils`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — `columnLayout.test.ts` (16) + `rows.test.ts` (5); full suite **37 files / 253 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
@@ -744,32 +845,39 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/utils/rows.test.ts
 - `src/blocks/data-table/DataTableContent.tsx`
 - `src/blocks/data-table/DataTableColumnHeader.tsx`
 - `src/blocks/data-table/DataTableGroupHeaderRow.tsx`
+- `src/blocks/data-table/DataTableEditableCell.tsx` — pass-through stub (Commit 24 replaces)
+- `src/blocks/data-table/DataTableRowContextMenu.tsx` — early port (Content compile dependency)
 
 **Risks**:
 
 | Risk | Severity | What to check |
 |------|----------|---------------|
 | Internal imports to Layer 1 Table compound components | MEDIUM | Verify `TableRow`, `TableHead`, `TableCell`, `TableGroupHeader` etc. are all exported |
-| Context dependency on `useDataTableContext` | LOW | Provider from PR 1 must be in scope |
+| Context dependency on `useDataTableContext` | LOW | `providers/` from PR 1 must be in scope; import from `./providers`, not `./DataTable` |
 
 **Verification**:
 
 ```bash
 pnpm --filter @sndq/ui-v2 type-check
+pnpm --filter @sndq/ui-v2 test   # regression guard; no new tests this commit
 ```
 
 **Deviations from the gate**:
 
-- **Tests in next commit** — component code ships separately from tests for reviewability
+- **Tests in Commit 13** — component code ships separately from tests for reviewability
+- **`DataTableEditableCell.tsx` pass-through stub** — full editor/popover impl in Commit 24
+- **`DataTableRowContextMenu.tsx` ported early** — Commit 25 adds tests only
+- **Context imports from `./providers`** — not `./DataTable` (providers refactor from PR 1)
+- **Group checkbox uses Radix `checked="indeterminate"`** — sndq `Checkbox` has no separate `indeterminate` prop (clone used `indeterminate` boolean)
 
 **Commit message**: `feat: add DataTableContent and header components`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — no new tests; existing suite **37 files / 242 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
@@ -779,64 +887,70 @@ pnpm --filter @sndq/ui-v2 type-check
 
 **Files to create**:
 
-- `src/blocks/data-table/DataTableContentFlat.integration.test.tsx`
-- `src/blocks/data-table/DataTableContentGrouped.integration.test.tsx`
+- `src/blocks/data-table/__tests__/DataTableContentFlat.integration.test.tsx`
+- `src/blocks/data-table/__tests__/DataTableContentGrouped.integration.test.tsx`
+- `src/blocks/data-table/__tests__/utils/renderContentTable.tsx` (helper)
+- Update `__tests__/utils/renderFlatTable.tsx` to delegate to `ContentTablePreview`
+- Update `__tests__/utils/domHelpers.ts` (`getSkeletonCount`, `getHeaderCell`, `getBodyCell`, `getGroupHeaderRow`)
 
 **Test cases** (from testing-and-migration-stages Stage 3):
 
 Flat:
-- [ ] Loading skeleton rows
-- [ ] Custom `emptyState` renders
-- [ ] Column alignment from meta
-- [ ] Pinned columns get sticky classes
+- [x] Loading skeleton rows
+- [x] Custom `emptyState` renders
+- [x] Column alignment from meta
+- [x] Pinned columns get sticky classes
+- [x] Body cell layout updates when columnSizing changes (FlatRow memo regression)
 
 Grouped:
-- [ ] Single-level grouping shows group headers
-- [ ] Expand/collapse toggles child rows
-- [ ] Group checkbox calls `toggleGroupSelection`
-- [ ] `renderGroupSummary` slot renders
+- [x] Single-level grouping shows group headers
+- [x] Expand/collapse toggles child rows
+- [x] Group checkbox calls `toggleGroupSelection`
+- [x] `renderGroupSummary` slot renders
 
 **Verification**:
 
 ```bash
-pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableContentFlat.integration.test.tsx
-pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableContentGrouped.integration.test.tsx
+pnpm --filter @sndq/ui-v2 test src/blocks/data-table/__tests__/DataTableContentFlat.integration.test.tsx
+pnpm --filter @sndq/ui-v2 test src/blocks/data-table/__tests__/DataTableContentGrouped.integration.test.tsx
 pnpm --filter @sndq/ui-v2 test
 ```
 
 **Deviations from the gate**:
 
-- **None expected**
+- **Tests under `__tests__/`** — per AGENTS.md block test layout (Commit 8 precedent), not block-root paths from the gate doc
+- **`renderFlatTable` refactored** — delegates to `ContentTablePreview`; Commit 8 smoke test updated for empty table (`TableEmptyRow` → 1 tbody row)
+- **Grouped expand/collapse fixture** — `mockPeople` has Jack + Tom in `draft`, Lucy in `approved` (tests assert Tom, not Lucy)
 
 **Commit message**: `test: add DataTableContent flat and grouped tests`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — **8 new tests** (4 flat + 4 grouped); full suite **39 files / 250 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
+
+**Post-port follow-up (FlatRow memo)**:
+
+`FlatRow` uses `React.memo` for row-data/selection perf and relies on `DataTableEditableCell`'s editing store for inline edit updates. The memo comparator must also receive `layoutRevision` (from `columnSizing`, `columnPinning`, `columnVisibility`, `columnOrder`) or body cells show stale widths/pinning/visibility after layout changes while headers update. Fixed in follow-up commit; regression test added to `DataTableContentFlat.integration.test.tsx`.
 
 ---
 
 ### PR 2 Checkpoint
 
-```bash
-git push -u origin feature/data-table-migration
-```
-
 **This validates**: Full rendering pipeline works. Persistence serializes/deserializes correctly. Column layout math is correct. Grouped rows render with expand/collapse.
 
 **Exit gate**:
 
-- [ ] `pnpm --filter @sndq/ui-v2 test` green for all new + existing files
-- [ ] `pnpm --filter @sndq/ui-v2 type-check` green
-- [ ] No regressions in PR 1 tests
-- [ ] PR summary file filled in [pr-summaries/pr-2-persistence-content.md](./pr-summaries/pr-2-persistence-content.md) and pasted into GitHub PR description
+- [x] `pnpm --filter @sndq/ui-v2 test` green for all new + existing files — **39 files / 250 tests** (2026-06-22)
+- [x] `pnpm --filter @sndq/ui-v2 type-check` green — `tsc --noEmit` exit 0
+- [x] No regressions in PR 1 tests — 9 PR 1 data-table test files / **46 tests** green
+- [x] PR summary file filled in [pr-summaries/pr-2-persistence-content.md](./pr-summaries/pr-2-persistence-content.md) and pasted into GitHub PR description
 
 **Status**:
 
-- [ ] PR created
+- [x] PR created — [#3285](https://github.com/sndqapp/sndq/pull/3285)
 - [ ] CI passes
 - [ ] Reviewed
 - [ ] Merged or approved to continue
@@ -863,39 +977,42 @@ The interaction layer — users can sort columns, search globally, and apply col
 
 **Test cases**:
 
-- [ ] Collapsed → expanded on click
-- [ ] Typing updates filter after debounce (fake timers)
-- [ ] Clear resets rows
-- [ ] Disabled when `enableGlobalFilter: false`
+- [x] Search input visible on mount (always-expanded)
+- [x] Typing updates filter after debounce (fake timers)
+- [x] Clear button restores all rows when input has value
 
 **Verification**:
 
 ```bash
 pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableSearch.test.tsx
+pnpm --filter @sndq/ui-v2 type-check
+pnpm --filter @sndq/ui-v2 test
 ```
 
 **Deviations from the gate**:
 
-- **None expected**
+- **No `useUILocale`** — `placeholder` defaults to `'Search...'` until Commit 26 (locale)
+- **`useDebounceCallback`** — replaces clone's manual `setTimeout` debounce (behavior-equivalent impl diff)
+- **Co-located test file** — `DataTableSearch.test.tsx` at block root per migration test naming exception
 
 **Commit message**: `feat: add DataTableSearch component`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — **3 co-located tests**; full suite **45 files / 296 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
 ### Commit 15: Column header sort wiring + tests
 
-**What**: Add sort interaction to `DataTableColumnHeader` — click cycles asc → desc → none.
+**What**: Port sort header interaction from clone — click on header cell cycles asc → desc → none. `toggleSorting` wiring in `DataTableContent` already done in Commit 12.
 
 **Files to edit**:
 
-- `src/blocks/data-table/DataTableColumnHeader.tsx` — add sort click handler, sort indicator
+- `src/blocks/data-table/DataTableColumnHeader.tsx` — align with clone: `onClick` on `TableHead`, sort icon, no inner button
 
 **Files to create**:
 
@@ -903,28 +1020,31 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableSearch.test.tsx
 
 **Test cases**:
 
-- [ ] Sortable header has button role
-- [ ] Click cycles asc → desc → none
-- [ ] Sort indicator matches direction
+- [x] Click cycles asc → desc → none
+- [x] Sort indicator matches direction (icon: `arrowUp` / `arrowDown` / `arrowUpDown`)
+- [x] Non-sortable header omits sort icon when `onSort` is omitted
 
 **Verification**:
 
 ```bash
 pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableColumnHeader.test.tsx
+pnpm --filter @sndq/ui-v2 type-check
+pnpm --filter @sndq/ui-v2 test
 ```
 
 **Deviations from the gate**:
 
-- **None expected**
+- **`toggleSorting` in `DataTableContent`** — wired in Commit 12; Commit 15 is header + tests only
+- **Co-located test file** — `DataTableColumnHeader.test.tsx` at block root per migration test naming exception
 
 **Commit message**: `feat: add column header sorting`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — **3 co-located tests**; full suite **45 files / 296 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
@@ -943,16 +1063,18 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableColumnHeader.test.
 
 **Test cases**:
 
-- [ ] `toggleFilterArrayValue` add/remove/clear
-- [ ] `normalizeFilterValues` handles edge cases
-- [ ] `filterOptionsBySearch` filters correctly
-- [ ] `datePresetFilterFn` with frozen `Date`
-- [ ] `autoRemove` returns true for empty filter
+- [x] `toggleFilterArrayValue` add/remove/clear
+- [x] `normalizeFilterValues` handles edge cases
+- [x] `filterOptionsBySearch` filters correctly
+- [x] `datePresetFilterFn` with frozen `Date`
+- [x] `autoRemove` returns true for empty filter
 
 **Verification**:
 
 ```bash
 pnpm --filter @sndq/ui-v2 test src/blocks/data-table/utils/filters.test.ts
+pnpm --filter @sndq/ui-v2 type-check
+pnpm --filter @sndq/ui-v2 test
 ```
 
 **Deviations from the gate**:
@@ -963,10 +1085,10 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/utils/filters.test.ts
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — **6 unit tests**; full suite **46 files / 302 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
@@ -981,11 +1103,11 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/utils/filters.test.ts
 
 **Test cases**:
 
-- [ ] Open menu shows properties
-- [ ] Toggle option filters rows
-- [ ] Badge count on trigger
-- [ ] Date preset applies filter
-- [ ] Search within options
+- [x] Open menu shows properties
+- [x] Toggle option filters rows
+- [x] Badge count on trigger
+- [x] Date preset applies filter
+- [x] Search within options
 
 **Pattern**: Assert **visible row names** after filter, not `columnFilters` state.
 
@@ -997,16 +1119,17 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableFilterMenu.test.ts
 
 **Deviations from the gate**:
 
-- **None expected**
+- **Strip a11y from clone port** — remove `role`, `aria-selected`, `aria-hidden` (no a11y attributes in sndq data-table)
+- **No `useUILocale`** — hardcoded EN filter strings until Commit 26
 
 **Commit message**: `feat: add DataTableFilterMenu component`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — **47 files / 307 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
@@ -1021,11 +1144,11 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableFilterMenu.test.ts
 
 **Test cases**:
 
-- [ ] Sort pill visible when sorting active
-- [ ] Dismiss removes sort
-- [ ] One pill per active column filter
-- [ ] Remove pill clears filter
-- [ ] "Clear all" resets all filters
+- [x] Sort pill visible when sorting active
+- [x] Dismiss removes sort
+- [x] One pill per active column filter
+- [x] Remove pill clears filter
+- [x] "Clear all" resets all filters
 
 **Verification**:
 
@@ -1036,16 +1159,16 @@ pnpm --filter @sndq/ui-v2 test
 
 **Deviations from the gate**:
 
-- **None expected**
+- **No `useUILocale`** — hardcoded EN activeFilters strings until Commit 26
 
 **Commit message**: `feat: add DataTableActiveFilters component`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — **48 files / 312 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
@@ -1102,17 +1225,17 @@ Pagination controls, row selection, and bulk action bar. Unlocks **Phase 2 gate*
 **Test cases**:
 
 Utils:
-- [ ] `getPaginationRange(0, 10, 25)` → 1–10
-- [ ] Edge: last page range
-- [ ] `formatPaginationSummary` empty → "0 results"
+- [x] `getPaginationRange(0, 10, 25)` → 1–10
+- [x] Edge: last page range
+- [x] `formatPaginationSummary` empty → "0 results"
 
 Pagination:
-- [ ] Next/prev disabled at bounds
-- [ ] Page indicator text
-- [ ] Page size change updates visible row count (client-side)
+- [x] Next/prev disabled at bounds
+- [x] Page indicator text
+- [x] Page size change updates visible row count (client-side)
 
 Footer:
-- [ ] Renders children alongside pagination slot
+- [x] Renders children alongside pagination slot
 
 **Verification**:
 
@@ -1124,16 +1247,17 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableFooter.test.tsx
 
 **Deviations from the gate**:
 
+- **No `useUILocale`** — hardcoded EN pagination strings until Commit 26
 - **Server-side pagination tests deferred** to PR 6 (Stage 12b)
 
 **Commit message**: `feat: add pagination and footer components`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — **52 files / 322 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
@@ -1150,15 +1274,15 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableFooter.test.tsx
 **Test cases**:
 
 Content selection:
-- [ ] Row checkbox toggles selection
-- [ ] Header checkbox selects page
-- [ ] Indeterminate when partial
+- [x] Row checkbox toggles selection
+- [x] Header checkbox selects page
+- [x] Indeterminate when partial
 
 Selection bar:
-- [ ] Hidden when count 0
-- [ ] Shows N selected
-- [ ] "Select all {total}" sets `selectAllMode`
-- [ ] Deselect one row clears `selectAllMode`
+- [x] Hidden when count 0
+- [x] Shows N selected
+- [x] "Select all {total}" sets `selectAllMode`
+- [x] Deselect one row clears `selectAllMode`
 
 **Verification**:
 
@@ -1169,16 +1293,16 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableSelectionBar.test.
 
 **Deviations from the gate**:
 
-- **None expected**
+- **No `useUILocale`** — hardcoded EN selection strings until Commit 26
 
 **Commit message**: `feat: add selection and selection bar`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — **54 files / 329 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
@@ -1196,13 +1320,13 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableSelectionBar.test.
 **Test cases**:
 
 BulkActions:
-- [ ] Renders actions slot
-- [ ] Passes `totalCount` to render prop
-- [ ] Escape deselects all
+- [x] Renders actions slot
+- [x] Passes `totalCount` to render prop
+- [x] Escape deselects all
 
 Toolbar:
-- [ ] Hidden when selection active
-- [ ] Visible when selection cleared
+- [x] Hidden when selection active
+- [x] Visible when selection cleared
 
 **Verification**:
 
@@ -1214,37 +1338,34 @@ pnpm --filter @sndq/ui-v2 test
 
 **Deviations from the gate**:
 
-- **None expected**
+- **Strip a11y from clone port** — remove `aria-modal` from `DataTableBulkActions` (no a11y attributes in sndq data-table)
+- **Toolbar visibility toggling** — clone `DataTableToolbar` is layout-only (`Flex` wrapper); added `useDataTableContext` + early return when `getSelectionCount() > 0` per Commit 21 spec and [architecture.md](./architecture.md)
 
 **Commit message**: `feat: add bulk actions and toolbar`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — **56 files / 334 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
 ### PR 4 Checkpoint
 
-```bash
-git push -u origin feature/data-table-migration
-```
-
 **This validates**: Full pagination, selection, and bulk action flow works. Unlocks **Phase 2 gate** (CompactTable migration for ~31 screens).
 
 **Exit gate**:
 
-- [ ] `pnpm --filter @sndq/ui-v2 test` green
-- [ ] `pnpm --filter @sndq/ui-v2 type-check` green
-- [ ] No regressions
-- [ ] PR summary file filled in [pr-summaries/pr-4-pagination-selection-bulk.md](./pr-summaries/pr-4-pagination-selection-bulk.md) and pasted into GitHub PR description
+- [x] `pnpm --filter @sndq/ui-v2 test` green — **56 files / 334 tests**
+- [x] `pnpm --filter @sndq/ui-v2 type-check` green — exit 0
+- [x] No regressions — full suite green (312 → 334 tests across Commits 19–21)
+- [x] PR summary file filled in [pr-summaries/pr-4-pagination-selection-bulk.md](./pr-summaries/pr-4-pagination-selection-bulk.md) and pasted into GitHub PR description
 
 **Status**:
 
-- [ ] PR created
+- [x] PR created — https://github.com/sndqapp/sndq/pull/3301
 - [ ] CI passes
 - [ ] Reviewed
 - [ ] Merged or approved to continue
@@ -1410,14 +1531,17 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableEditableCell.test.
 
 ### Commit 25: `DataTableRowContextMenu` + `DataTableEmptyState` + tests
 
-**What**: Port row context menu (right-click actions) and empty state component.
+**What**: Port row context menu (right-click actions) and empty state component. `DataTableRowContextMenu.tsx` was ported early in Commit 12; this commit adds tests and strips a11y roles from the existing file.
 
 **Files to create**:
 
-- `src/blocks/data-table/DataTableRowContextMenu.tsx`
 - `src/blocks/data-table/DataTableEmptyState.tsx`
 - `src/blocks/data-table/DataTableRowContextMenu.test.tsx`
 - `src/blocks/data-table/DataTableEmptyState.test.tsx`
+
+**Files to edit**:
+
+- `src/blocks/data-table/DataTableRowContextMenu.tsx` — strip `role="menu"` / `role="menuitem"` (already exists from Commit 12)
 
 **Test cases**:
 
@@ -1441,7 +1565,7 @@ pnpm --filter @sndq/ui-v2 test
 
 **Deviations from the gate**:
 
-- **None expected**
+- **`DataTableRowContextMenu.tsx` ported early in Commit 12** — a11y roles stripped in clone-alignment pass; Commit 25 adds tests only (tests updated to avoid `role` queries)
 
 **Commit message**: `feat: add context menu and empty state`
 
@@ -1875,6 +1999,18 @@ See [testing-and-migration-stages.md § Stage → production migration mapping](
 
 ---
 
+## Migration corrections
+
+Resolved 2026-06-22. Commits 14–15 were initially implemented against ui-v2-dev / Stage 4 a11y spec; corrected to match `sndq-clone/packages/ui-v2` per [Source-of-truth and porting rules](#source-of-truth-and-porting-rules).
+
+| Commit | What drifted | Resolution |
+|--------|--------------|------------|
+| **14** | ui-v2-dev collapse/expand search + `aria-label` + `enableGlobalFilter` guard | **Done** — always-visible `InputGroup`; 3 tests; no guard |
+| **15** | Inner sort `<button>`, `aria-sort`, `aria-label` | **Done** — `onClick` on `TableHead`; 3 tests |
+| **12 (early RowContextMenu)** | `role="menu"` / `role="menuitem"` | **Done** — roles stripped; context menu tests use text queries |
+
+---
+
 ## Execution Log
 
 Record notes, issues, verification results, and deviations here as you go.
@@ -1890,20 +2026,26 @@ Record notes, issues, verification results, and deviations here as you go.
 | 2026-06-21 | — | Removed column helper utils (`createColumnHelper` re-export, `compactColumn`, adapters); apps use `@tanstack/react-table` `createColumnHelper` + `ColumnMeta` augmentation; PR 1 commits renumbered 1–8 |
 | 2026-06-21 | 6 | usePersistedTableState state-only + 4 hook tests; useIsomorphicLayoutEffect ported |
 | 2026-06-21 | 7 | useDataTable hook + 6 hook tests; types in `types/dataTable.ts`; defaults in `constants/defaults.ts`; hooks barrel |
-| 2026-06-21 | 8 | flat table integration smoke; `__tests__/renderFlatTable.tsx` helper; 2 tests in `__tests__/DataTableFlat.integration.test.tsx` |
-| | 9 | |
-| | 10 | |
-| | 11 | |
-| | 12 | |
-| | 13 | |
-| | 14 | |
-| | 15 | |
-| | 16 | |
-| | 17 | |
-| | 18 | |
-| | 19 | |
-| | 20 | |
-| | 21 | |
+| 2026-06-21 | 8 | flat table integration smoke; `__tests__/utils/renderFlatTable.tsx`; 2 tests in `__tests__/DataTableFlat.integration.test.tsx` |
+| 2026-06-21 | PR 1 checkpoint | verify 23/171 + type-check green; pr-1-foundation-core-hooks.md + data-table.md; ready for manual push/PR |
+| 2026-06-22 | — | Refactor: extract `providers/` from `DataTable.tsx`; split provider tests; update AGENTS.md + pr-1 summary |
+| 2026-06-22 | Post-8 | providers/ folder (`DataTableContext`, `EditingStoreContext`, `DataTableProviders`); 29 files / 198 tests green |
+| 2026-06-22 | 9 | `useTablePersistence` + AGENTS split (`types/persistence`, `constants/persistence`, `utils/tablePersistence`); shared debounce (`lib/utils/debounce`, `useDebounceCallback`, `useDebounceValue`, refactor `useDebounce`); **34 files / 225 tests** green; not exported from hooks barrel until Commit 10 |
+| 2026-06-22 | 10 | persistence wired into `usePersistedTableState`; merged persistence tests into hook test file; **36 files / 232 tests** green |
+| 2026-06-22 | 11 | `utils/columnLayout/` + `utils/rows/` ported with 21 unit tests; **37 files / 253 tests** green |
+| 2026-06-22 | 12 | `DataTableContent`, `DataTableColumnHeader`, `DataTableGroupHeaderRow` + EditableCell stub + early RowContextMenu; **37 files / 242 tests** green |
+| 2026-06-22 | 13 | Content integration tests (flat + grouped); `renderContentTable` helper; **39 files / 250 tests** green |
+| 2026-06-22 | 13+ | FlatRow `layoutRevision` fix + integration test |
+| 2026-06-22 | 14 | `DataTableSearch` clone-aligned; **3 co-located tests** |
+| 2026-06-22 | 15 | Column header sort clone-aligned; **3 co-located tests**; **45 files / 296 tests** green |
+| 2026-06-22 | 14–15 | Clone-alignment pass: search + header + RowContextMenu role strip |
+| 2026-06-22 | — | Doc: clone-first porting rules + Commits 14–15 correction spec (no ARIA, no ui-v2-dev) |
+| 2026-06-22 | 16 | `utils/filters` + 6 unit tests; **46 files / 302 tests** green |
+| 2026-06-22 | 17 | `DataTableFilterMenu` + 5 tests; **47 files / 307 tests** green |
+| 2026-06-22 | 18 | `DataTableActiveFilters` + 5 tests; **48 files / 312 tests** green |
+| 2026-06-22 | 19 | pagination utils + Pagination + Footer + 7 tests; **52 files / 322 tests** green |
+| 2026-06-22 | 20 | `DataTableSelectionBar` + 7 tests; **54 files / 329 tests** green |
+| 2026-06-22 | 21 | `DataTableBulkActions` + `DataTableToolbar` + 5 tests; **56 files / 334 tests** green |
 | | 22 | |
 | | 23 | |
 | | 24 | |

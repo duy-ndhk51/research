@@ -4,7 +4,7 @@
 **Priority**: MEDIUM (building/supplier selection gates entire form -- wrong ID corrupts all downstream data)
 **Test tier**: Component integration
 **Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/inline-selects.test.tsx`
-**Component(s) under test**: `InlineBuildingSelect` from `components/InlineBuildingSelect.tsx`, `ConnectedInlineSupplierSelect` from `components/ConnectedInlineSupplierSelect.tsx`
+**Component(s) under test**: `InlineBuildingSelect` from `components/InlineBuildingSelect.tsx`, `ConnectedInlineSupplierSelect` from `components/ConnectedInlineSupplierSelect.tsx`, `InlineLedgerSelect` from `components/InlineLedgerSelect.tsx` (UI scenarios IS-L* in appended section)
 
 ## Purpose
 
@@ -417,3 +417,156 @@ it('Tab from building select focuses supplier select', async () => {
 });
 ```
 
+---
+
+## InlineLedgerSelect — Tab Rendering and Base UI
+
+**Status**: Not started
+**Priority**: Medium
+**Component(s) under test**: `InlineLedgerSelect`
+
+These scenarios cover the base UI behavior of the tabbed ledger select, independent of the credit note conversion flow. For conversion scenarios see [ledger-credit-note-conversion.md](./ledger-credit-note-conversion.md).
+
+**Trigger note**: `InlineLedgerSelect` uses `ListItemSelect` (a `button` trigger), not a combobox. Open the popover via the cost category placeholder / selected ledger button — match `InvoiceLineCard.test.tsx` mock pattern or `screen.getByRole('button', { name: /cost category/i })` with mocked i18n keys.
+
+| ID | Test case | Expected outcome | Status |
+|----|-----------|------------------|--------|
+| IS-L1 | No `buildingId` → select trigger not rendered or disabled | Prevents selection before building prerequisite is met | - [ ] |
+| IS-L2 | `buildingId` set, no value → trigger shows placeholder text | Placeholder shown when no ledger selected | - [ ] |
+| IS-L3 | Value set → trigger shows ledger name and code | Selected ledger displayed in trigger button | - [ ] |
+| IS-L4 | Open popover → Expenses tab active by default | Default tab is Expenses, not Revenue | - [ ] |
+| IS-L5 | Type in search → options filtered within active tab | Debounced search narrows visible options per tab | - [ ] |
+| IS-L6 | Switch tabs → search query resets | Tab change clears the search input (via `handleTabChange`; popover-close tab reset is out of scope) | - [ ] |
+| IS-L7 | "Create new ledger" footer action → `CreateLedgerFloatingSheetContent` opens | Footer create action functional | - [ ] |
+| IS-L8 | "Chart of Accounts" footer button → `ChartOfAccountsDrawer` opens | Footer drawer action functional | - [ ] |
+| IS-L9 | Create new ledger → `onChange` called with new ledger, popover closes | New ledger selected same as regular selection | - [ ] |
+| IS-L10 | Revenue tab with no 7xx ledgers for building → empty state shown | Graceful empty state rendered, no crash | - [ ] |
+| IS-L11 | Line has backfilled 6xx value → open Revenue tab | List shows 7xx only; selected 6xx not duplicated in Revenue options; trigger still shows 6xx label | - [ ] |
+
+### Mocking strategy
+
+```typescript
+vi.mock('@/hooks/financial/useBuildingLedgerOptions', () => ({
+  useBuildingLedgerOptions: vi.fn(),
+}));
+
+vi.mock(
+  '@/modules/financial/components/chart-of-accounts/drawer/ChartOfAccountsDrawer',
+  () => ({ default: ({ open }: { open: boolean }) => open ? <div data-testid="chart-drawer" /> : null }),
+);
+
+vi.mock(
+  '@/modules/financial/components/chart-of-accounts/forms/CreateLedgerFloatingSheetContent',
+  () => ({ default: ({ onClose }: { onClose: () => void }) => <button onClick={onClose}>mock-create-sheet</button> }),
+);
+```
+
+### IS-L4: Expenses tab is active by default
+
+**Preconditions**: `buildingId` set, mock options return 6xx and 7xx options.
+
+**Steps**:
+
+1. Click the ledger select trigger to open popover
+2. Assert "Expenses" tab is selected
+3. Assert Revenue tab exists but is not active
+
+**Example code**:
+
+```typescript
+it('defaults to Expenses tab on open', async () => {
+  (useBuildingLedgerOptions as Mock).mockReturnValue({ data: mockExpenseOptions, isLoading: false });
+  const { user } = renderWithProviders(
+    <InlineLedgerSelect buildingId="building-1" onChange={vi.fn()} />,
+  );
+
+  await user.click(screen.getByRole('button', { name: /cost category/i }));
+
+  expect(screen.getByRole('tab', { name: /expenses/i })).toHaveAttribute('aria-selected', 'true');
+  expect(screen.getByRole('tab', { name: /revenue/i })).toHaveAttribute('aria-selected', 'false');
+});
+```
+
+### IS-L7: "Create new ledger" footer action
+
+**Preconditions**: Popover is open.
+
+**Steps**:
+
+1. Click "Create new ledger" footer action
+2. Assert `CreateLedgerFloatingSheetContent` is rendered
+
+**Example code**:
+
+```typescript
+it('opens CreateLedgerFloatingSheetContent on footer create action', async () => {
+  const { user } = renderWithProviders(
+    <InlineLedgerSelect buildingId="building-1" onChange={vi.fn()} />,
+  );
+
+  await user.click(screen.getByRole('button', { name: /cost category/i }));
+  await user.click(screen.getByRole('button', { name: /create new ledger/i }));
+
+  expect(screen.getByText('mock-create-sheet')).toBeInTheDocument();
+});
+```
+
+### IS-L8: "Chart of Accounts" footer button
+
+**Preconditions**: Popover is open.
+
+**Steps**:
+
+1. Click "Chart of Accounts" icon button
+2. Assert `ChartOfAccountsDrawer` is rendered
+
+**Example code**:
+
+```typescript
+it('opens ChartOfAccountsDrawer on footer drawer action', async () => {
+  const { user } = renderWithProviders(
+    <InlineLedgerSelect buildingId="building-1" onChange={vi.fn()} />,
+  );
+
+  await user.click(screen.getByRole('button', { name: /cost category/i }));
+  await user.click(screen.getByRole('button', { name: /chart of accounts/i }));
+
+  expect(screen.getByTestId('chart-drawer')).toBeInTheDocument();
+});
+```
+
+### IS-L11: Revenue tab class isolation with backfilled 6xx value
+
+**Preconditions**: Line `costAccount` set to a full 6xx value (e.g. from supplier backfill). Mock returns both 6xx and 7xx options.
+
+**Steps**:
+
+1. Open ledger select — assert trigger shows 6xx name/code
+2. Switch to Revenue tab
+3. Assert 7xx options visible; 6xx options (including selected value) absent from list
+
+**Related**: [ledger-credit-note-conversion.md](./ledger-credit-note-conversion.md) Case 13.
+
+**Example code**:
+
+```typescript
+it('shows only 7xx options on Revenue tab when value is backfilled 6xx', async () => {
+  setupMockLedgerOptions();
+  const value = {
+    kind: 'full' as const,
+    id: 'ledger-601',
+    code: '601',
+    name: 'Maintenance',
+    type: CostAccountType.LEDGER,
+  };
+  const { user } = renderWithProviders(
+    <InlineLedgerSelect buildingId="building-1" value={value} onChange={vi.fn()} />,
+  );
+
+  await user.click(screen.getByRole('button', { name: /maintenance/i }));
+  await user.click(screen.getByRole('tab', { name: /revenue/i }));
+
+  expect(screen.getByText('Common charges')).toBeInTheDocument();
+  expect(screen.queryByText('Maintenance')).not.toBeInTheDocument();
+});
+```

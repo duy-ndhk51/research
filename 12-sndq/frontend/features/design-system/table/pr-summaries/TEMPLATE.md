@@ -1,29 +1,62 @@
-# DataTable — PR {N} Summary
+# DataTable — PR summary templates
 
-**Block:** `DataTable` · **Tier:** 2 (Block) · **PR:** {N} of 6 · **Commits:** {range} · **Stages:** {list}
+Two audiences — keep them separate.
+
+| Audience | File | May include |
+|----------|------|-------------|
+| **GitHub PR description** | `pr-{n}-….md` | What this PR adds, design decisions, tests. Standalone wording. |
+| **Internal migration tracking** | `data-table.md`, [migration-execution.md](../migration-execution.md) | PR index, commit ranges, stages, phase gates, sndq-clone source notes |
+
+Fill PR summaries from [migration-execution.md](../migration-execution.md), then **strip internal migration framing** before pasting into GitHub.
+
+---
+
+## PR summary writing guidelines (GitHub-facing)
+
+When editing `pr-*.md` for a pull request description:
+
+- **Do not mention sndq-clone** — describe what lands in `@sndq/ui-v2`, not where it was ported from.
+- **Do not reference future PRs or commit numbers** — no “deferred to PR 2”, “Commit 10”, “PR 1 of 6”, or “Stages 0–1” in the pasted body.
+- **Use “Not included” for out-of-scope work** — list absent features plainly (e.g. persistence wiring, `DataTableContent`) without saying which later PR adds them.
+- **Avoid migration meta** — no “matches migration-execution Commits X–Y” or “PR summary updated in `pr-summaries/`” in the GitHub text.
+- **Prefer capability titles** — e.g. `# DataTable — Foundation + Core Hooks`, not `# DataTable — PR 1 Summary`.
+- **Documentation section** — include `## Documentation` only when the PR adds or updates user-facing docs under `apps/docs/` (e.g. `content/docs/blocks/data-table.mdx`). If there is no `apps/docs` change, omit the section entirely — do not mention missing docs, AGENTS.md, or “not included” doc notes in the GitHub body.
+
+Commit ranges, stage numbers, and cross-PR planning stay in `migration-execution.md` and `data-table.md` only.
+
+Reference: [pr-1-foundation-core-hooks.md](./pr-1-foundation-core-hooks.md).
+
+---
+
+## PR summary template (paste into GitHub)
+
+```markdown
+# DataTable — {Capability title}
+
+**Block:** `DataTable` · **Tier:** 2 (Block)
 
 ## Summary
 
-{1–3 sentences: what this PR delivers and what it unlocks.}
+{1–3 sentences: what this PR delivers in @sndq/ui-v2. No future-PR references.}
 
 ## Design decisions
 
-- **Scope** — {main deliverables: hooks, components, utils}
-- **Dependencies** — {new package deps, ported lib hooks, Layer 1 primitives used}
-- **Key patterns** — {e.g. server-side default, TanStack meta shape, test infra in `__tests__/`}
-- {Add or remove bullets as needed}
+- **Scope** — {main deliverables: hooks, components, utils, tests}
+- **Dependencies** — {new package deps, lib hooks, Layer 1 primitives used}
+- **Key patterns** — {e.g. server-side default, TanStack meta shape, test infra in `__tests__/utils/`}
+- **Not included** — {features intentionally absent in this PR; no “→ PR N”}
 
-## Documentation
-
-{MDX path if applicable; otherwise "Deferred to PR 6" or "No docs in this PR."}
+{Include ## Documentation only when this PR adds or updates MDX under apps/docs/. Otherwise omit the section completely.}
 
 ## Test coverage
 
 **`{file}.test.tsx`** — {N} tests:
 
-- {grouped bullets from migration-execution commit test cases}
+- {grouped bullets from migration-execution test cases}
 
 {Delete unused test-file subsections.}
+
+**Verification ({date}):** {N} test files / {M} tests passed; `tsc --noEmit` exit 0; {regression note}.
 
 ## Package / token changes
 
@@ -31,41 +64,38 @@
 
 ## Review checklist
 
-- [ ] Scope matches migration-execution Commits {range}
+- [ ] Scope covers {short list of deliverables}
 - [ ] `pnpm --filter @sndq/ui-v2 test` and `type-check` green
-- [ ] No regressions in prior PR tests
-- [ ] PR summary file updated in `pr-summaries/`
-- [ ] {PR-specific checks}
+- [ ] No regressions in prior tests
+- [ ] {PR-specific checks — no future-PR references}
+```
 
 ---
 
 ## Feature summary template (`data-table.md`)
 
-Use this structure for the overall feature file instead of the PR template above.
+**Internal only** — not pasted into GitHub PR descriptions. May reference migration plan, PR index, commits, stages, and phase gates.
 
 ```markdown
 # DataTable — Feature Summary
 
-**Block:** `DataTable` · **Tier:** 2 (Block) · **Migration:** sndq-clone → @sndq/ui-v2
+**Block:** `DataTable` · **Tier:** 2 (Block)
 
 ## Summary
 
-{2–4 sentences: graduate DataTable block, 6 PRs / 33 commits, consumer phases.}
+{2–4 sentences: overall DataTable graduation in @sndq/ui-v2, multi-PR plan, consumer phases.}
 
 ## PR index
 
 | PR | Summary | Commits | Stages | Doc |
-|----|---------|---------|-------|-----|
-| 1 | {short} | 1–9 | 0–1 | [pr-1-foundation-core-hooks.md](./pr-1-foundation-core-hooks.md) |
-| 2 | {short} | 10–14 | 2–3 | [pr-2-persistence-content.md](./pr-2-persistence-content.md) |
-| 3 | {short} | 15–19 | 4–5 | [pr-3-sort-search-filters.md](./pr-3-sort-search-filters.md) |
-| 4 | {short} | 20–22 | 6–7 | [pr-4-pagination-selection-bulk.md](./pr-4-pagination-selection-bulk.md) |
-| 5 | {short} | 23–26 | 8–10 | [pr-5-settings-editing-context.md](./pr-5-settings-editing-context.md) |
-| 6 | {short} | 27–33 | 11–12 | [pr-6-locale-integration-docs.md](./pr-6-locale-integration-docs.md) |
+|----|---------|---------|--------|-----|
+| 1 | {short} | 1–8 | 0–1 | [pr-1-foundation-core-hooks.md](./pr-1-foundation-core-hooks.md) |
+| 2 | {short} | 9–13 | 2–3 | [pr-2-persistence-content.md](./pr-2-persistence-content.md) |
+| … | | | | |
 
 ## Design decisions (cross-cutting)
 
-- {Layer 1 Table primitive, server-side default, ColumnMeta refactor, etc.}
+- {Layer 1 Table primitive, server-side default, ColumnMeta shape, block folder layout, etc.}
 
 ## Phase gates
 
@@ -77,6 +107,8 @@ Use this structure for the overall feature file instead of the PR template above
 
 ## Review checklist (graduation)
 
-- [ ] All 6 PR summaries complete
-- [ ] Full test suite + docs (PR 6)
+- [ ] All PR summaries complete
+- [ ] Full test suite + docs
 ```
+
+Migration source and sndq-clone notes belong in [migration-execution.md](../migration-execution.md), not in GitHub-facing PR summaries.

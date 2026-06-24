@@ -4,7 +4,7 @@
 **Priority**: HIGH (incorrect backfill silently corrupts invoice amounts)
 **Test tier**: Hook
 **Target file**: `src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/supplier-defaults.test.ts`
-**Component(s) under test**: `useInitialLineDefaults` from `hooks/useInitialLineDefaults.ts`, `useAutoSaveBuildingSupplierDefaults` from `hooks/useAutoSaveBuildingSupplierDefaults.ts`
+**Component(s) under test**: `useBackfillSupplierDefaults` from `hooks/useBackfillSupplierDefaults.ts` (backfill), `useAutoSaveBuildingSupplierDefaults` from `hooks/useAutoSaveBuildingSupplierDefaults.ts` (auto-save)
 
 ## Purpose
 
@@ -17,7 +17,8 @@ Supplier defaults overwrite user-set values, backfill fires multiple times corru
 ## Bugs Guarded
 
 - "applies costAccount" / "applies distributionKeyId" tests guard supplier backfill one-shot -- backfill must run exactly once with correct data; `appliedPairRef` tracks `buildingId+senderId` pair
-- never-overwrite guard tests guard supplier backfill one-shot -- "never overwrite" policy; `useInitialLineDefaults` only applies when line is pristine (`hasDefaultValues` check)
+- never-overwrite guard tests guard supplier backfill one-shot -- "never overwrite" policy; `useBackfillSupplierDefaults` only patches lines where the field is undefined/empty
+- edit mode guard test guards `invoiceId` early return -- backfill skipped entirely when editing an existing invoice (`if (invoiceId) return`)
 - "waits for loading" test guards supplier backfill one-shot -- late arrival (loading state) must delay application, not skip entirely; `supplierDefaults.isLoading` gate
 - auto-save tests guard race conditions -- concurrent submit + defaults-loading must not create duplicate building-supplier links; `useAutoSaveBuildingSupplierDefaults` must deduplicate by pair
 
@@ -27,7 +28,7 @@ Supplier defaults overwrite user-set values, backfill fires multiple times corru
 |-----------|------------------|
 | applies costAccount on pristine first line | `setValue('amounts.0', ...)` with `costAccount.id` |
 | applies distributionKeyId on pristine first line | `setValue('amounts.0', ...)` with `distributionKeyId` |
-| does NOT fire in edit mode | `setValue` NOT called |
+| does NOT fire in edit mode (invoiceId set) | `setValue` NOT called — `invoiceId` early return guard |
 | does NOT fire with "free" distribution (regression) | Line with `distributionType: 'free'` untouched |
 | does NOT fire with non-zero totalAmount | Non-pristine line untouched |
 | does NOT fire with existing costAccount | User-set costAccount preserved |
@@ -66,7 +67,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { UseFormReturn } from 'react-hook-form';
 import { renderHook, waitFor } from '@testing-library/react';
 import type { PurchaseInvoiceFormV2Data } from '../../../purchase-invoice-v2/schema';
-import { useInitialLineDefaults } from '../useInitialLineDefaults';
+import { useBackfillSupplierDefaults } from '../useBackfillSupplierDefaults';
 
 const mockProperties = [{ id: 'unit-1' }, { id: 'unit-2' }];
 
@@ -110,12 +111,10 @@ beforeEach(() => {
 ```
 
 **Architecture note**: Supplier defaults are applied via two mechanisms:
-1. **Initial line defaults** (`useInitialLineDefaults`) -- one-shot update of the pristine first line when creating a new invoice
+1. **Backfill supplier defaults** (`useBackfillSupplierDefaults`) -- one-shot backfill of empty lines when supplier defaults load. Guarded by `invoiceId` early return (skips entirely in edit mode) and a ref-based `appliedPairRef` (fires once per `buildingId:senderId` pair). Never overwrites user-set or Peppol-provided values.
 2. **Add Line** (`createDefaultAmountWithDefaults`) -- event-based, applies defaults at line creation time (tested in invoice-lines-table.md)
 
-The previous `useBackfillSupplierDefaults` hook was removed because it incorrectly overwrote existing lines (including "free" distributions) in edit mode.
-
-**Source reference**: `useInitialLineDefaults.ts`, `useAutoSaveBuildingSupplierDefaults.ts`, `usePurchaseInvoiceForm.ts`
+**Source reference**: `hooks/useBackfillSupplierDefaults.ts`, `hooks/useAutoSaveBuildingSupplierDefaults.ts`, `hooks/usePurchaseInvoiceForm.ts`
 
 ---
 
@@ -141,7 +140,7 @@ The previous `useBackfillSupplierDefaults` hook was removed because it incorrect
 ```typescript
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { useInitialLineDefaults } from '../useInitialLineDefaults';
+import { useBackfillSupplierDefaults } from '../useBackfillSupplierDefaults';
 
 describe('Supplier Defaults — Initial Line', () => {
   it('applies costAccount to pristine first line on new invoice', async () => {
@@ -150,7 +149,7 @@ describe('Supplier Defaults — Initial Line', () => {
     });
 
     renderHook(() =>
-      useInitialLineDefaults({
+      useBackfillSupplierDefaults({
         methods,
         invoiceId: undefined,
         buildingId: 'b-1',
@@ -204,7 +203,7 @@ it('applies distributionKeyId to pristine first line on new invoice', async () =
   });
 
   renderHook(() =>
-    useInitialLineDefaults({
+    useBackfillSupplierDefaults({
       methods,
       invoiceId: undefined,
       buildingId: 'b-1',
@@ -254,7 +253,7 @@ it('does not fire in edit mode', async () => {
   });
 
   renderHook(() =>
-    useInitialLineDefaults({
+    useBackfillSupplierDefaults({
       methods,
       invoiceId: 'inv-123',
       buildingId: 'b-1',
@@ -319,7 +318,7 @@ it('does not fire with free distribution', async () => {
   });
 
   renderHook(() =>
-    useInitialLineDefaults({
+    useBackfillSupplierDefaults({
       methods,
       invoiceId: undefined,
       buildingId: 'b-1',
@@ -374,7 +373,7 @@ it('does NOT fire when first line has non-zero totalAmount', async () => {
   });
 
   renderHook(() =>
-    useInitialLineDefaults({
+    useBackfillSupplierDefaults({
       methods,
       invoiceId: undefined,
       buildingId: 'b-1',
@@ -430,7 +429,7 @@ it('does NOT fire when first line already has costAccount', async () => {
   });
 
   renderHook(() =>
-    useInitialLineDefaults({
+    useBackfillSupplierDefaults({
       methods,
       invoiceId: undefined,
       buildingId: 'b-1',
@@ -490,7 +489,7 @@ it('only fires once even on re-render', async () => {
   };
 
   const { rerender } = renderHook(
-    (props) => useInitialLineDefaults(props),
+    (props) => useBackfillSupplierDefaults(props),
     { initialProps: baseProps },
   );
 
@@ -529,7 +528,7 @@ it('waits for supplier defaults to finish loading', async () => {
   });
 
   const { rerender } = renderHook(
-    (props) => useInitialLineDefaults(props),
+    (props) => useBackfillSupplierDefaults(props),
     {
       initialProps: {
         methods,
@@ -592,7 +591,7 @@ it('does NOT fire when supplier has no configured defaults', async () => {
   });
 
   renderHook(() =>
-    useInitialLineDefaults({
+    useBackfillSupplierDefaults({
       methods,
       invoiceId: undefined,
       buildingId: 'b-1',

@@ -19,7 +19,7 @@ Copy [TEMPLATE.md](./TEMPLATE.md) (or the feature template in TEMPLATE.md) when 
 ## Expected files
 
 - `data-table.md` — overall feature summary (6 PRs, phase gates)
-- `pr-1-foundation-core-hooks.md` — Commits 1–9, Stages 0–1
+- `pr-1-foundation-core-hooks.md` — Commits 1–8, Stages 0–1
 - `pr-2-persistence-content.md` — Commits 10–14, Stages 2–3
 - `pr-3-sort-search-filters.md` — Commits 15–19, Stages 4–5 (Phase 1 gate)
 - `pr-4-pagination-selection-bulk.md` — Commits 20–22, Stages 6–7

@@ -57,6 +57,8 @@ Organized as an AI-assisted research workspace — optimized for context retriev
 | 29 | [SNDQ DataTable — Architecture](./12-sndq/frontend/features/design-system/table/architecture.md) | SNDQ | `sndq`, `design-system`, `table`, `tanstack`, `architecture` |
 | 30 | [SNDQ DataTable — Testing & Migration Stages](./12-sndq/frontend/features/design-system/table/testing-and-migration-stages.md) | SNDQ | `sndq`, `design-system`, `table`, `testing`, `migration` |
 | 31 | [Design System Token Architecture](./04-frontend/design-systems/token-architecture/README.md) | Frontend | `design-system`, `tokens`, `dark-mode`, `theming`, `architecture` |
+| 32 | [SNDQ DataTable — Virtual Table](./12-sndq/frontend/features/design-system/table/virtual-table.md) | SNDQ | `sndq`, `design-system`, `table`, `virtualization`, `infinite-scroll` |
+| 33 | [Unified Building — A/B Opt-In & Shell Layout](./12-sndq/frontend/features/unified-building/overview.md) | SNDQ | `sndq`, `unified-building`, `feature-flag`, `a-b-testing` |
 <!-- TOPIC-INDEX-END -->
 
 **Playground experiments:**

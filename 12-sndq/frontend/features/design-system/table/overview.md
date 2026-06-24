@@ -1,6 +1,6 @@
 # SNDQ DataTable — Overview
 
-Short reference for the table architecture. See [architecture.md](./architecture.md) for the full deep-dive with research findings, gap analysis, and migration plans. See also: [testing and migration stages](./testing-and-migration-stages.md) for staged graduation, docs, and test coverage per feature.
+Short reference for the table architecture. See [architecture.md](./architecture.md) for the full deep-dive with research findings, gap analysis, and migration plans. See also: [testing and migration stages](./testing-and-migration-stages.md) for staged graduation, docs, and test coverage per feature. See [virtual-table.md](./virtual-table.md) for the virtualized infinite-scroll implementation plan.
 
 ---
 

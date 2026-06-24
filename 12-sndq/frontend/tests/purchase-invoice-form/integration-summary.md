@@ -172,6 +172,7 @@ Guards the integration between supplier default hooks and the form. `useBackfill
 
 | Test case | Description | Status |
 |-----------|-------------|--------|
+| Edit mode (`invoiceId` set) → backfill skipped entirely | `invoiceId` early return blocks all supplier default application | - [x] |
 | Select building + supplier with defaults → empty lines get `costAccount` backfilled | Backfill triggers when supplier defaults load, patches empty fields | - [ ] |
 | Select building + supplier with defaults → empty lines get `distributionKeyId` backfilled | Distribution key default applied to lines missing distribution key | - [ ] |
 | Lines with existing `costAccount` → NOT overwritten by backfill | "Never overwrite" policy preserved for user/Peppol-set values | - [ ] |
@@ -182,3 +183,25 @@ Guards the integration between supplier default hooks and the form. `useBackfill
 | Submit with no existing link → `linkSupplier` mutation called | Creates new building-supplier association | - [ ] |
 | Submit with existing link (empty fields) → `updateSupplier` called | Updates only the missing fields on existing link | - [ ] |
 | Submit with existing link (all fields set) → no mutation fired | "Never overwrite" skips API call entirely | - [ ] |
+
+## 10. Ledger Select — Credit Note Conversion
+
+Detailed spec: [ledger-credit-note-conversion.md](./integration/ledger-credit-note-conversion.md)
+
+Guards the `InlineLedgerSelect` tabbed UI and the credit note conversion flow: showing a confirmation dialog when a revenue-class (7xx) ledger is selected on a non-credit-note invoice, bulk-updating all expense lines to the selected ledger, and preserving existing revenue lines.
+
+| Test case | Description | Status |
+|-----------|-------------|--------|
+| Expense tab renders 6xx options, Revenue tab renders 7xx options | Options correctly split by `displayCode` prefix | - [ ] |
+| Select expense option on invoice mode → `onChange` called, no dialog | Normal expense selection, no conversion side effects | - [ ] |
+| Select revenue option on invoice mode → confirmation dialog appears | Dialog gate before any state change | - [ ] |
+| Confirm dialog → mode becomes `'credit_note'`, `invoiceTypeCode` set to `'381'` | Mode and type code updated on confirmation | - [ ] |
+| Confirm with 3 lines (2× 6xx, 1× 7xx) → only 6xx lines updated | Bulk update respects existing 7xx lines | - [ ] |
+| Cancel dialog → no mode change, no line updates | Cancel is a no-op | - [ ] |
+| Select revenue option on credit_note mode → no dialog, `onChange` called | Already credit_note skips confirmation | - [ ] |
+| Select revenue option on expense_note mode → confirmation dialog appears | `expense_note` treated same as `invoice` for conversion | - [ ] |
+| Lines with `costAccount` but no `code` → treated as 6xx during bulk update | Missing code included in bulk update | - [ ] |
+| Lines with `costAccount: undefined` → updated during conversion | Empty costAccount lines populated | - [ ] |
+| Distribution sheet: revenue selection triggers conversion on outer invoice form | Conversion works from distribution sheet context | - [ ] |
+| FormHeader mode toggle → line `costAccount` values NOT modified | Mode toggle never modifies line data | - [ ] |
+| Revenue tab excludes wrong-class options when selected value is backfilled 6xx | No 6xx in Revenue list; trigger still shows selected 6xx label | - [ ] |

@@ -104,7 +104,7 @@ export function getHeaderTexts(container: HTMLElement): string[];
 
 **Graduate:** `hooks/useDataTable.ts`, `hooks/usePersistedTableState.ts` (without URL)
 
-**Column definitions:** use `createColumnHelper` from `@tanstack/react-table` with `ColumnMeta` from `types/tanstack-table.d.ts` (see prototype `DataTableDemo.tsx`). No ui-v2 column helper utils.
+**Column definitions:** use `createColumnHelper` from `@tanstack/react-table` with `ColumnMeta` from `types/tanstackTable.d.ts` (see prototype `DataTableDemo.tsx`). No ui-v2 column helper utils.
 
 **Docs:** `useDataTable` options, `enable*` flags, `config.clientSide: true` vs server default
 

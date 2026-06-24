@@ -6,7 +6,7 @@
 Tests the end-to-end flow of supplier defaults: when a supplier with configured defaults is selected, new invoice lines auto-fill with the default ledger and distribution key. On successful submit, settings from the invoice are auto-saved back to the building-supplier link.
 
 **Architecture note**: Supplier defaults are applied in two ways:
-1. **Initial line** — pristine first line on new invoice gets defaults via `useInitialLineDefaults`
+1. **Initial line** — pristine first line on new invoice gets defaults via `useBackfillSupplierDefaults`
 2. **Add Line** — new lines added via button get defaults via `createDefaultAmountWithDefaults`
 
 Existing lines (in edit mode) are NEVER modified by supplier defaults.
