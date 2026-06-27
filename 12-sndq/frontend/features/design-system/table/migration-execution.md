@@ -3,7 +3,7 @@
 Step-by-step execution guide for migrating the DataTable block from `sndq-clone/packages/ui-v2/src/blocks/data-table` into `sndq/packages/ui-v2`. Each commit should be independently verifiable and revertable.
 
 **Created**: 2026-06-21
-**Status**: PR 4 Commit 21 complete (pending manual commit)
+**Status**: PR 6 Commit 27 complete (pending manual commit)
 **Architecture**: [architecture.md](./architecture.md)
 **Migration plan**: [testing-and-migration-stages.md](./testing-and-migration-stages.md)
 **Source**: `sndq-clone/packages/ui-v2/src/blocks/data-table` (working tree)
@@ -1396,11 +1396,11 @@ Column configuration, inline editing, row context menu, and empty state.
 
 **Test cases**:
 
-- [ ] `computeGroupingLevels` empty → empty
-- [ ] `computeGroupingLevels` one level
-- [ ] `computeGroupingLevels` max depth
-- [ ] `buildGroupingAfterSelect` adds level
-- [ ] `removeGroupingFromLevel` removes level
+- [x] `computeGroupingLevels` empty → empty
+- [x] `computeGroupingLevels` one level
+- [x] `computeGroupingLevels` max depth
+- [x] `buildGroupingAfterSelect` adds level
+- [x] `removeGroupingFromLevel` removes level
 
 **Verification**:
 
@@ -1416,10 +1416,10 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/utils/grouping.test.ts
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — **61 files / 401 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
@@ -1431,21 +1431,21 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/utils/grouping.test.ts
 
 - `src/blocks/data-table/DataTableSettings.tsx`
 - `src/blocks/data-table/DataTableColumnConfig.tsx`
-- `src/blocks/data-table/DataTableSettings.test.tsx`
-- `src/blocks/data-table/DataTableColumnConfig.test.tsx`
+- `src/blocks/data-table/__tests__/components/DataTableSettings.test.tsx`
+- `src/blocks/data-table/__tests__/components/DataTableColumnConfig.test.tsx`
 
 **Note**: Column reorder is handled by `reorderColumnIds()` from `utils/columnLayout.ts` (ported in Commit 11). No extra drag-and-drop library is needed.
 
 **Test cases**:
 
 Settings:
-- [ ] Density toggle updates table density class
-- [ ] Page size change
-- [ ] Group field sets grouping state
+- [x] Density toggle updates table density class
+- [x] Page size change
+- [x] Group field sets grouping state
 
 Column config:
-- [ ] Toggle visibility hides column
-- [ ] Reorder updates header order (trigger `reorderColumnIds` via drag-end callback)
+- [x] Toggle visibility hides column
+- [x] Reorder updates header order (trigger `reorderColumnIds` via drag-end callback)
 
 **Risks**:
 
@@ -1456,125 +1456,131 @@ Column config:
 **Verification**:
 
 ```bash
-pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableSettings.test.tsx
-pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableColumnConfig.test.tsx
+pnpm --filter @sndq/ui-v2 test src/blocks/data-table/__tests__/components/DataTableSettings.test.tsx
+pnpm --filter @sndq/ui-v2 test src/blocks/data-table/__tests__/components/DataTableColumnConfig.test.tsx
 ```
 
 **Deviations from the gate**:
 
-- **None expected**
+- **No `useUILocale`** — hardcoded EN `settingsLocale` until Commit 26 (locale)
 
 **Commit message**: `feat: add settings and column config`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — **63 files / 406 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
 ### Commit 24: Editors + `DataTableEditableCell` + tests
 
-**What**: Port inline editing — editor renderers (text, currency, select, custom), editable cell component, and `parseEditorValue` tests.
+**What**: Port inline editing — editor renderers (text, select, custom), editable cell component, and `parseEditorValue` tests. **Currency editor deferred** — not in scope until a later commit.
 
 **Files to create**:
 
 - `src/blocks/data-table/editors.tsx`
-- `src/blocks/data-table/DataTableEditableCell.tsx`
-- `src/blocks/data-table/editors.test.tsx`
-- `src/blocks/data-table/DataTableEditableCell.test.tsx`
-- `src/blocks/data-table/parseEditorValue.test.ts`
+- `src/blocks/data-table/DataTableEditableCell.tsx` — replaces Commit 12 pass-through stub
+- `src/blocks/data-table/types/columnMeta.test.ts`
+- `src/blocks/data-table/__tests__/components/editors.test.tsx`
+- `src/blocks/data-table/__tests__/components/DataTableEditableCell.test.tsx`
+
+**Files to edit**:
+
+- `src/blocks/data-table/types/columnMeta.ts` — `EditorMeta` / `EditorValueMap` / parsers for text, select, custom only (no currency)
 
 **Test cases**:
 
 `parseEditorValue`:
-- [ ] text → string
-- [ ] currency → number
-- [ ] select → string
-- [ ] custom → passthrough
+- [x] text → string
+- [x] select → string
+- [x] custom → passthrough
 
 Editors:
-- [ ] Each editor renders correct input type
-- [ ] Currency parses number
+- [x] Each editor renders correct input type (text, select, custom)
 
 EditableCell:
-- [ ] Click opens editor
-- [ ] Enter saves and calls `onSave`
-- [ ] Escape cancels without saving
-- [ ] Only one cell open at a time (via editing store)
-- [ ] `submitOnBlur` behavior
+- [x] Click opens editor
+- [x] Enter saves and calls `onSave`
+- [x] Escape cancels without saving
+- [x] Only one cell open at a time (via editing store)
+- [x] `submitOnBlur` behavior
 
 **Verification**:
 
 ```bash
-pnpm --filter @sndq/ui-v2 test src/blocks/data-table/parseEditorValue.test.ts
-pnpm --filter @sndq/ui-v2 test src/blocks/data-table/editors.test.tsx
-pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableEditableCell.test.tsx
+pnpm --filter @sndq/ui-v2 test src/blocks/data-table/types/columnMeta.test.ts
+pnpm --filter @sndq/ui-v2 test src/blocks/data-table/__tests__/components/editors.test.tsx
+pnpm --filter @sndq/ui-v2 test src/blocks/data-table/__tests__/components/DataTableEditableCell.test.tsx
 ```
 
 **Deviations from the gate**:
 
-- **None expected**
+- **No `useUILocale`** — hardcoded EN `editorLocale` until Commit 26 (locale)
+- **No currency editor** — deferred to reduce Commit 24 complexity; `EditorMeta` supports text, select, custom only
+- **EditableCell trigger** — `textVariants({ size: 'sm', truncate: true })` on the Button instead of nested `<Text>`
+- **Test paths** follow AGENTS.md — `types/columnMeta.test.ts` + `__tests__/components/` (not block root)
 
 **Commit message**: `feat: add inline editing components`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — **66 files / 415 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
 ### Commit 25: `DataTableRowContextMenu` + `DataTableEmptyState` + tests
 
-**What**: Port row context menu (right-click actions) and empty state component. `DataTableRowContextMenu.tsx` was ported early in Commit 12; this commit adds tests and strips a11y roles from the existing file.
+**What**: Port empty state component and complete context-menu test coverage. `DataTableRowContextMenu.tsx` was ported early in Commit 12 (roles already stripped); this commit adds `DataTableEmptyState` and fills remaining test gaps.
 
 **Files to create**:
 
 - `src/blocks/data-table/DataTableEmptyState.tsx`
-- `src/blocks/data-table/DataTableRowContextMenu.test.tsx`
-- `src/blocks/data-table/DataTableEmptyState.test.tsx`
+- `src/blocks/data-table/__tests__/components/DataTableEmptyState.test.tsx`
 
 **Files to edit**:
 
-- `src/blocks/data-table/DataTableRowContextMenu.tsx` — strip `role="menu"` / `role="menuitem"` (already exists from Commit 12)
+- `src/blocks/data-table/__tests__/components/DataTableRowContextMenu.test.tsx` — add destructive styling test (component already exists from Commit 12)
 
 **Test cases**:
 
 Context menu:
-- [ ] Right-click opens menu
-- [ ] Action calls handler with row data
-- [ ] Destructive styling on destructive actions
-- [ ] Escape closes menu
+- [x] Right-click opens menu
+- [x] Action calls handler with row data
+- [x] Destructive styling on destructive actions
+- [x] Escape closes menu
 
 Empty state:
-- [ ] Renders title/description
-- [ ] Spans full colspan via content integration
+- [x] Renders title/description
+- [x] Spans full colspan via content integration
 
 **Verification**:
 
 ```bash
-pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableRowContextMenu.test.tsx
-pnpm --filter @sndq/ui-v2 test src/blocks/data-table/DataTableEmptyState.test.tsx
+pnpm --filter @sndq/ui-v2 test src/blocks/data-table/__tests__/components/DataTableRowContextMenu.test.tsx
+pnpm --filter @sndq/ui-v2 test src/blocks/data-table/__tests__/components/DataTableEmptyState.test.tsx
 pnpm --filter @sndq/ui-v2 test
 ```
 
 **Deviations from the gate**:
 
-- **`DataTableRowContextMenu.tsx` ported early in Commit 12** — a11y roles stripped in clone-alignment pass; Commit 25 adds tests only (tests updated to avoid `role` queries)
+- **`DataTableRowContextMenu.tsx` ported early in Commit 12** — a11y roles already stripped; Commit 25 adds destructive test only (tests use text/role button queries, not `role="menu"`)
+- **No `useUILocale`** — hardcoded EN default empty-state title (`'No results found'`) until Commit 26 (locale)
+- **Test paths** follow AGENTS.md — `__tests__/components/` (not block root)
 
 **Commit message**: `feat: add context menu and empty state`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — **67 files / 420 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
@@ -1613,7 +1619,7 @@ Final graduation: locale support, public barrel export, composition integration 
 
 ### Commit 26: Locale files + tests
 
-**What**: Port all 4 locale files and the locale barrel.
+**What**: Port block locale files (EN/NL/DE/FR), package `useUILocale` infrastructure, wire all DataTable components off hardcoded strings, and add locale tests.
 
 **Files to create**:
 
@@ -1624,30 +1630,51 @@ Final graduation: locale support, public barrel export, composition integration 
 - `src/blocks/data-table/locale/fr.ts`
 - `src/blocks/data-table/locale/index.ts`
 - `src/blocks/data-table/locale/index.test.ts`
+- `src/types/index.ts` — `DeepPartial`
+- `src/lib/deepMerge/deepMerge.ts` + `index.ts` + `deepMerge.test.ts`
+- `src/locale/types.ts`, `en.ts`, `nl.ts`, `de.ts`, `fr.ts`, `registry.ts`, `context.tsx`, `index.ts`
+
+**Files to edit** (wire `useUILocale`):
+
+- `src/blocks/data-table/DataTableSearch.tsx`
+- `src/blocks/data-table/DataTablePagination.tsx`
+- `src/blocks/data-table/DataTableFilterMenu.tsx`
+- `src/blocks/data-table/DataTableFilterPanels.tsx`
+- `src/blocks/data-table/DataTableActiveFilters.tsx`
+- `src/blocks/data-table/DataTableSettings.tsx`
+- `src/blocks/data-table/DataTableSelectionBar.tsx`
+- `src/blocks/data-table/DataTableEditableCell.tsx`
+- `src/blocks/data-table/DataTableEmptyState.tsx`
 
 **Test cases**:
 
-- [ ] All locales export required keys
-- [ ] EN fallback works when key missing
+- [x] All locales export required keys
+- [x] EN fallback works when key missing (`mergeDataTableLocale`)
 
 **Verification**:
 
 ```bash
 pnpm --filter @sndq/ui-v2 test src/blocks/data-table/locale/index.test.ts
+pnpm --filter @sndq/ui-v2 test src/lib/deepMerge/deepMerge.test.ts
+pnpm --filter @sndq/ui-v2 test
+pnpm --filter @sndq/ui-v2 exec tsc --noEmit
 ```
 
 **Deviations from the gate**:
 
-- **None expected**
+- **Component wiring + package `src/locale/`** — beyond original file list; aligns with prior “until Commit 26” hardcoded-string deferrals
+- **`mergeDataTableLocale`** exported from block locale barrel for partial overrides + EN fallback test
+- **Block/public compound barrel** still deferred to Commit 27
+- **`UIProvider` not exported** from package root `src/index.ts` yet (internal import path only)
 
 **Commit message**: `feat: add data-table locale support`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — **70 files / 441 tests** green
+- [x] Build / lint / type-check green or deviation documented — `tsc --noEmit` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
@@ -1668,20 +1695,23 @@ pnpm --filter @sndq/ui-v2 test src/blocks/data-table/locale/index.test.ts
 
 ```bash
 pnpm --filter @sndq/ui-v2 type-check
+pnpm --filter @sndq/ui-v2 test
 ```
 
 **Deviations from the gate**:
 
-- **None expected**
+- **No `currencyEditor`** — removed in Commit 24; barrel exports `textEditor`, `selectEditor`, `resolveEditorField` only
+- **No column helpers** — `createColumnHelper`, `compactColumn`, adapters omitted; apps use `@tanstack/react-table` directly
+- **`usePersistedTableState` not exported** from block barrel (lower-level; consumers use `useTablePersistence`)
 
 **Commit message**: `feat: wire data-table public barrel export`
 
 **Status**:
 
-- [ ] Quality gate checklist satisfied
-- [ ] Tests green or deviation documented
-- [ ] Build / lint / type-check green or deviation documented
-- [ ] Committed
+- [x] Quality gate checklist satisfied
+- [x] Tests green or deviation documented — **70 files / 441 tests** green
+- [x] Build / lint / type-check green or deviation documented — `pnpm --filter @sndq/ui-v2 type-check` exit 0
+- [ ] Committed — manual commit by developer
 
 ---
 
@@ -2046,12 +2076,12 @@ Record notes, issues, verification results, and deviations here as you go.
 | 2026-06-22 | 19 | pagination utils + Pagination + Footer + 7 tests; **52 files / 322 tests** green |
 | 2026-06-22 | 20 | `DataTableSelectionBar` + 7 tests; **54 files / 329 tests** green |
 | 2026-06-22 | 21 | `DataTableBulkActions` + `DataTableToolbar` + 5 tests; **56 files / 334 tests** green |
-| | 22 | |
-| | 23 | |
-| | 24 | |
-| | 25 | |
-| | 26 | |
-| | 27 | |
+| 2026-06-22 | 22 | `utils/grouping` + 5 tests; **61 files / 401 tests** green |
+| 2026-06-22 | 23 | `DataTableSettings` + `DataTableColumnConfig` + 5 tests; hardcoded EN settings strings; **63 files / 406 tests** green |
+| 2026-06-22 | 24 | `editors` + `DataTableEditableCell` + 9 tests; text/select/custom only (currency deferred); hardcoded EN editor strings; **66 files / 415 tests** green |
+| 2026-06-22 | 25 | `DataTableEmptyState` + destructive context-menu test; RowContextMenu from Commit 12; hardcoded EN empty-state title; **67 files / 420 tests** green |
+| 2026-06-22 | 26 | block locale EN/NL/DE/FR + `useUILocale` + 9 component wiring + `deepMerge`; **70 files / 441 tests** green |
+| 2026-06-22 | 27 | compound `DataTable` barrel (15 sub-components) + types portal + `blocks/index.ts`; no `currencyEditor`/column helpers; **70 files / 441 tests** green |
 | | 28 | |
 | | 29 | |
 | | 30 | |

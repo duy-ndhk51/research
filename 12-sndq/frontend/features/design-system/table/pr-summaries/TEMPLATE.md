@@ -20,6 +20,7 @@ When editing `pr-*.md` for a pull request description:
 - **Use “Not included” for out-of-scope work** — list absent features plainly (e.g. persistence wiring, `DataTableContent`) without saying which later PR adds them.
 - **Avoid migration meta** — no “matches migration-execution Commits X–Y” or “PR summary updated in `pr-summaries/`” in the GitHub text.
 - **Prefer capability titles** — e.g. `# DataTable — Foundation + Core Hooks`, not `# DataTable — PR 1 Summary`.
+- **Summary uses bullets** — list each major deliverable or capability group (typically 3–7 items); optional final bullet for overall outcome in `@sndq/ui-v2`. Do not use a prose paragraph for `## Summary`.
 - **Documentation section** — include `## Documentation` only when the PR adds or updates user-facing docs under `apps/docs/` (e.g. `content/docs/blocks/data-table.mdx`). If there is no `apps/docs` change, omit the section entirely — do not mention missing docs, AGENTS.md, or “not included” doc notes in the GitHub body.
 
 Commit ranges, stage numbers, and cross-PR planning stay in `migration-execution.md` and `data-table.md` only.
@@ -37,7 +38,10 @@ Reference: [pr-1-foundation-core-hooks.md](./pr-1-foundation-core-hooks.md).
 
 ## Summary
 
-{1–3 sentences: what this PR delivers in @sndq/ui-v2. No future-PR references.}
+- {Major deliverable 1 — e.g. utils, component, or behavior group}
+- {Major deliverable 2}
+- {Major deliverable 3}
+- {Optional closing bullet: overall outcome in @sndq/ui-v2; no future-PR references}
 
 ## Design decisions
 

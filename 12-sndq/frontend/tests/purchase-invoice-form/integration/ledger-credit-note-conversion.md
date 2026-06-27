@@ -1,6 +1,6 @@
 # Integration Test Spec — Ledger Select: Credit Note Conversion
 
-**Status**: Not started
+**Status**: Partial (Cases 1–10, 12–13 implemented; Case 11 deferred)
 **Priority**: High
 **Test tier**: Integration (component)
 **Target test file**: `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/ledger-credit-note-conversion.test.tsx`
@@ -38,19 +38,19 @@ Verify that the `InlineLedgerSelect` component correctly:
 
 | # | Test case | Expected outcome | Status |
 |---|-----------|------------------|--------|
-| 1 | Expense tab renders 6xx options, Revenue tab renders 7xx options | Options correctly split by `displayCode` prefix | - [ ] |
-| 2 | Select expense option on invoice mode | `onChange` called, no dialog shown, no mode change | - [ ] |
-| 3 | Select revenue option on invoice mode | Confirmation dialog appears | - [ ] |
-| 4 | Confirm conversion dialog on invoice mode | `setMode('credit_note')` called, `invoiceTypeCode` set to `'381'` | - [ ] |
-| 5 | Confirm with 3 lines (2× 6xx, 1× 7xx) | Only the 2 6xx lines updated to selected 7xx; existing 7xx line preserved | - [ ] |
-| 6 | Cancel conversion dialog | No mode change, no `invoiceTypeCode` change, no line updates | - [ ] |
-| 7 | Select revenue option on credit_note mode | `onChange` called directly, no dialog shown | - [ ] |
-| 8 | Select revenue option on expense_note mode | Confirmation dialog appears (same as invoice mode) | - [ ] |
-| 9 | Lines with `costAccount` but no `code` field | Treated as expense class — included in bulk update | - [ ] |
-| 10 | Lines with `costAccount: undefined` | Updated during conversion — empty lines receive selected ledger | - [ ] |
-| 11 | Distribution sheet: select revenue option | Same dialog + bulk update flow triggered on outer invoice form | - [ ] |
-| 12 | FormHeader mode toggle after conversion | Mode and type code change; line `costAccount` values remain unchanged | - [ ] |
-| 13 | Backfilled 6xx value → open Revenue tab | Revenue list shows 7xx only; trigger still shows selected 6xx label | - [ ] |
+| 1 | Expense tab renders 6xx options, Revenue tab renders 7xx options | Options correctly split by `displayCode` prefix | - [x] |
+| 2 | Select expense option on invoice mode | `onChange` called, no dialog shown, no mode change | - [x] |
+| 3 | Select revenue option on invoice mode | Confirmation dialog appears | - [x] |
+| 4 | Confirm conversion dialog on invoice mode | `setMode('credit_note')` called, `invoiceTypeCode` set to `'381'` | - [x] |
+| 5 | Confirm with 3 lines (2× 6xx, 1× 7xx) | Only the 2 6xx lines updated to selected 7xx; existing 7xx line preserved | - [x] |
+| 6 | Cancel conversion dialog | No mode change, no `invoiceTypeCode` change, no line updates | - [x] |
+| 7 | Select revenue option on credit_note mode | `onChange` called directly, no dialog shown | - [x] |
+| 8 | Select revenue option on expense_note mode | Confirmation dialog appears (same as invoice mode) | - [x] |
+| 9 | Lines with `costAccount` but no `code` field | Treated as expense class — included in bulk update | - [x] |
+| 10 | Lines with `costAccount: undefined` | Updated during conversion — empty lines receive selected ledger | - [x] |
+| 11 | Distribution sheet: select revenue option | Same dialog + bulk update flow triggered on outer invoice form | - [ ] (deferred) |
+| 12 | FormHeader mode toggle after conversion | Mode and type code change; line `costAccount` values remain unchanged | - [x] |
+| 13 | Backfilled 6xx value → open Revenue tab | Revenue list shows 7xx only; trigger still shows selected 6xx label | - [x] |
 
 ---
 
@@ -571,10 +571,17 @@ it('FormHeader mode toggle does not modify line costAccount values', async () =>
 
 ## Implementation
 
-(to be filled after implementation)
-
-- **Date**: —
-- **Cases done**: 0 / 13
-- **Deviations**: —
-- **Dropped cases**: —
-- **Coverage gaps**: —
+- **Date**: 2026-06-25
+- **Cases done**: 12 / 13 (Case 11 deferred)
+- **Test files**:
+  - `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/ledger-credit-note-conversion.test.tsx` — Cases 1–10, 13
+  - `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/ledgerSelectIntegrationHelpers.tsx` — shared mocks, UI helpers, `CreditNoteConversionHarness`
+  - `sndq-fe/src/modules/financial/forms/purchase-invoice-v3/__tests__/integration/ModeSwitching.test.tsx` — Case 12
+- **Deviations**:
+  - Trigger query uses `/select a cost category/i` (placeholder) or clicks the Cost category field button when a value is already set — not `/cost category/i`
+  - `setupMockLedgerOptions` branches on `ACCOUNT_CLASS.REVENUE` (`'7'`) vs expenses default
+  - Case 13 asserts `getAllByText('601 - Maintenance')` length is 1 (trigger only) because the selected label remains visible while the popover is open
+  - Cases 9–10 also covered at hook level; integration tests assert end-to-end dialog → form state
+  - Case 11 (distribution sheet) deferred to follow-up PR
+- **Dropped cases**: none
+- **Coverage gaps**: Case 11 — `PurchaseInvoiceAmountDistributionSheet` outer-form conversion
